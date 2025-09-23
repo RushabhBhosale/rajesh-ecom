@@ -1,0 +1,104 @@
+"use client";
+
+import * as React from "react";
+import type { ColumnDef, ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Search } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+
+interface DataTableProps<TData, TValue> {
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  searchPlaceholder?: string;
+  searchKey?: string;
+  emptyState?: React.ReactNode;
+  className?: string;
+}
+
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  searchPlaceholder = "Search records...",
+  searchKey,
+  emptyState,
+  className,
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
+  const searchColumn = searchKey ? table.getColumn(searchKey) : null;
+  const searchValue = (searchColumn?.getFilterValue() as string) ?? "";
+
+  return (
+    <div className={cn("space-y-4", className)}>
+      {searchColumn ? (
+        <div className="flex w-full items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm">
+          <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <Input
+            value={searchValue}
+            onChange={(event) => searchColumn.setFilterValue(event.target.value)}
+            placeholder={searchPlaceholder}
+            className="h-8 border-0 px-0 shadow-none focus-visible:ring-0"
+          />
+        </div>
+      ) : null}
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-muted/40">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} colSpan={header.colSpan}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  {emptyState ?? "No records found"}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
