@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MAX_PRODUCT_HIGHLIGHTS, productConditions } from "@/lib/product-constants";
 import type { ProductSummary } from "@/lib/products";
+import type { CategorySummary } from "@/lib/categories";
 
 interface ProductFormProps {
   mode: "create" | "update";
@@ -43,6 +44,9 @@ type ProductFormValues = {
 export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: ProductFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Pick<CategorySummary, "id" | "name">[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   const schema = useMemo(
     () =>
@@ -87,8 +91,66 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = form;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCategories() {
+      setIsLoadingCategories(true);
+      setCategoriesError(null);
+
+      try {
+        const response = await fetch("/api/categories");
+        if (!response.ok) {
+          throw new Error("Failed to load categories");
+        }
+
+        const data = await response.json().catch(() => null);
+        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(data?.categories)
+          ? data.categories.filter(
+              (item: unknown): item is Pick<CategorySummary, "id" | "name"> =>
+                typeof item === "object" &&
+                item !== null &&
+                typeof (item as CategorySummary).id === "string" &&
+                typeof (item as CategorySummary).name === "string"
+            )
+          : [];
+
+        if (cancelled) {
+          return;
+        }
+
+        setCategories(fetched);
+
+        const currentCategory = getValues("category");
+        const hasCurrentInFetched = fetched.some((category) => category.name === currentCategory);
+        if ((!currentCategory || !hasCurrentInFetched) && fetched.length > 0) {
+          setValue("category", fetched[0].name, { shouldValidate: true });
+        }
+      } catch (error) {
+        console.error(error);
+        if (cancelled) {
+          return;
+        }
+        setCategories([]);
+        setCategoriesError("Unable to load categories. Please refresh and try again.");
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCategories(false);
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, setValue]);
 
   const submitHandler = handleSubmit(async (values) => {
     setServerError(null);
@@ -188,10 +250,37 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
           </div>
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
-            <Input id="category" placeholder="Ultrabook" {...register("category")} />
+            <select
+              id="category"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              disabled={isLoadingCategories || categories.length === 0}
+              {...register("category")}
+            >
+              {isLoadingCategories ? (
+                <option value="">Loading categories...</option>
+              ) : categories.length > 0 ? (
+                categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">No categories available</option>
+              )}
+            </select>
             {errors.category ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.category.message}
+              </p>
+            ) : null}
+            {categoriesError ? (
+              <p className="text-xs text-destructive" role="alert">
+                {categoriesError}
+              </p>
+            ) : null}
+            {!isLoadingCategories && categories.length === 0 && !categoriesError ? (
+              <p className="text-xs text-muted-foreground">
+                Create categories first so products can be assigned correctly.
               </p>
             ) : null}
           </div>
