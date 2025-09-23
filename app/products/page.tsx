@@ -14,14 +14,14 @@ export default async function ProductsPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 via-background to-background py-20 sm:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 via-background to-background py-16 sm:py-24">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,theme(colors.primary/20),transparent_55%)]" />
-        <div className="mx-auto max-w-5xl space-y-8 px-6 text-center">
+        <div className="mx-auto max-w-5xl space-y-8 px-4 text-center sm:px-6">
           <span className="inline-flex items-center justify-center rounded-full bg-secondary px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-secondary-foreground">
             Available inventory
           </span>
           <h1 className="text-4xl font-semibold text-foreground sm:text-5xl">Your next device, renewed</h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
             Each product listed here has been professionally refurbished, data-wiped, and certified for
             business-ready deployment. Filter by category to find the right fit for your team.
           </p>
@@ -37,10 +37,10 @@ export default async function ProductsPage() {
       </section>
 
       <section className="bg-background py-16 sm:py-24" id="catalogue">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6">
           <div className="space-y-3 text-center">
             <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Certified catalogue</h2>
-            <p className="text-muted-foreground">
+            <p className="mx-auto max-w-3xl text-muted-foreground">
               Laptops, tablets, monitors, and accessories—all renewed, stress-tested, and backed by
               warranty.
             </p>

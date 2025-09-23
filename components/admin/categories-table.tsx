@@ -67,6 +67,36 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
           <p className="text-xs">Create categories from the add category page to populate this list.</p>
         </div>
       }
+      renderMobileRow={(category) => {
+        const formatted = category.lastUpdated
+          ? new Date(category.lastUpdated).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+          : "-";
+        return (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Folder className="h-5 w-5 text-muted-foreground" aria-hidden />
+                <span className="text-base font-semibold text-foreground">{category.name}</span>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                {category.productCount} products
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {category.description || "No description provided."}
+            </p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Last updated: <span className="font-medium text-foreground">{formatted}</span>
+            </p>
+          </div>
+        );
+      }}
+      mobileEmptyState={
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">No categories found</p>
+          <p className="text-xs">Create categories from the add category page to populate this list.</p>
+        </div>
+      }
     />
   );
 }

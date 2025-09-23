@@ -10,21 +10,23 @@ export default async function HomePage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/15 via-background to-background py-20 sm:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/15 via-background to-background py-16 sm:py-20 lg:py-28">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,theme(colors.primary/20),transparent_55%)]" />
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
-          <div className="space-y-8 text-left">
-            <span className="inline-flex items-center rounded-full bg-secondary px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-secondary-foreground">
+        <div className="absolute -left-32 top-20 -z-10 hidden h-72 w-72 rounded-full bg-primary/10 blur-3xl sm:block" />
+        <div className="absolute -right-32 bottom-10 -z-10 hidden h-80 w-80 rounded-full bg-secondary/30 blur-3xl lg:block" />
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+          <div className="space-y-8 text-center lg:text-left">
+            <span className="inline-flex items-center justify-center rounded-full bg-secondary px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-secondary-foreground">
               Refurbished laptops & electronics
             </span>
             <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               Premium devices, renewed with precision and ready to perform
             </h1>
-            <p className="max-w-xl text-lg text-muted-foreground">
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground lg:mx-0">
               Discover enterprise-grade laptops, tablets, and accessories that undergo a 50-point
               quality check, professional refurbishment, and ship with reliable warranty coverage.
             </p>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
               <Button asChild size="lg">
                 <Link href="/products">Browse catalogue</Link>
               </Button>
@@ -71,9 +73,24 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-border/60 bg-background py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="border-y border-border/60 bg-background/95 py-10">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-6 px-4 text-muted-foreground sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60">Trusted by teams at</p>
+          <ul className="flex flex-wrap items-center gap-6 text-sm font-medium">
+            {[
+              "TechNova", "GreenGrid", "Orbit Labs", "InsightWorks", "RapidScale",
+            ].map((brand) => (
+              <li key={brand} className="rounded-full border border-border/60 px-4 py-1 text-foreground/80">
+                {brand}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="bg-background py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-2xl border border-border bg-secondary/40 p-8 shadow-sm">
               <h3 className="text-xl font-semibold text-foreground">Certified refurbishment</h3>
               <p className="mt-3 text-sm text-muted-foreground">
@@ -100,18 +117,18 @@ export default async function HomePage() {
       </section>
 
       <section className="bg-background py-16 sm:py-24" id="featured">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6">
           <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-            <div className="space-y-3">
+            <div className="space-y-3 text-center sm:text-left">
               <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">
                 Ready-to-ship highlights
               </h2>
-              <p className="max-w-2xl text-muted-foreground">
+              <p className="mx-auto max-w-2xl text-muted-foreground sm:mx-0">
                 Hand-picked devices with fresh batteries, SSD upgrades, and professional calibration
                 to fit remote, hybrid, or on-site teams.
               </p>
             </div>
-            <Button asChild variant="secondary" size="lg">
+            <Button asChild variant="secondary" size="lg" className="mx-auto sm:mx-0">
               <Link href="/products">View all products</Link>
             </Button>
           </div>
@@ -132,7 +149,7 @@ export default async function HomePage() {
       </section>
 
       <section className="border-t border-border/60 bg-secondary/40 py-16 sm:py-24">
-        <div className="mx-auto max-w-4xl space-y-6 px-6 text-center">
+        <div className="mx-auto max-w-4xl space-y-6 px-4 text-center sm:px-6">
           <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">
             Need a custom rollout or bulk refresh?
           </h2>

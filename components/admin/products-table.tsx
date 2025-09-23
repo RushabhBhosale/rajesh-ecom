@@ -113,6 +113,48 @@ export function ProductsTable({ data, onEdit, onDelete }: ProductsTableProps) {
           <p className="text-xs">Try adjusting your filters or add a new product.</p>
         </div>
       }
+      renderMobileRow={(product) => (
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{product.category}</p>
+            <h3 className="text-lg font-semibold text-foreground">{product.name}</h3>
+            <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span className="rounded-full bg-muted px-3 py-1 font-medium text-foreground">
+              {currencyFormatter.format(product.price)}
+            </span>
+            <span className="rounded-full bg-muted px-3 py-1 capitalize">{product.condition}</span>
+            <span className="rounded-full bg-muted px-3 py-1 font-medium">
+              {product.inStock ? "In stock" : "Out of stock"}
+            </span>
+            {product.featured ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <BadgeCheck className="h-4 w-4" aria-hidden /> Featured
+              </span>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => onEdit(product)} className="flex-1 min-[420px]:flex-none">
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 text-destructive hover:text-destructive min-[420px]:flex-none"
+              onClick={() => onDelete(product.id)}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+      mobileEmptyState={
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">No products found</p>
+          <p className="text-xs">Try adjusting your filters or add a new product.</p>
+        </div>
+      }
     />
   );
 }
