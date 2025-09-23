@@ -10,7 +10,9 @@ function getSecret() {
   if (!cachedSecret) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error("JWT_SECRET is not set. Add it to your environment variables.");
+      throw new Error(
+        "JWT_SECRET is not set. Add it to your environment variables."
+      );
     }
     cachedSecret = new TextEncoder().encode(secret);
   }
@@ -54,7 +56,7 @@ export async function middleware(request: NextRequest) {
     try {
       const payload = await verify(token);
       if (!payload.role || !protectedRoute.roles.includes(payload.role)) {
-        return NextResponse.redirect(new URL("/", request.url));
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     } catch (error) {
       console.error("Invalid token", error);
