@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductsTable } from "@/components/admin/products-table";
 import type { ProductSummary } from "@/lib/products";
@@ -44,8 +43,6 @@ export function ProductManager({ products }: ProductManagerProps) {
 
   return (
     <section className="space-y-8">
-      <ProductForm mode="create" onSuccess={() => router.refresh()} />
-
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-foreground">Inventory</CardTitle>
@@ -69,7 +66,6 @@ export function ProductManager({ products }: ProductManagerProps) {
           product={editingProduct}
           onSuccess={() => {
             setEditingProduct(null);
-            router.refresh();
           }}
           onCancel={() => setEditingProduct(null)}
         />

@@ -28,6 +28,7 @@ export function ProtectedAppShell({ user, navLinks, children }: ProtectedAppShel
   const pathname = usePathname();
 
   const links = navLinks.filter((link) => link.roles.includes(user.role));
+  const homeHref = links[0]?.href ?? "/";
 
   return (
     <div className="flex min-h-screen bg-muted/10">
@@ -44,7 +45,7 @@ export function ProtectedAppShell({ user, navLinks, children }: ProtectedAppShel
         )}
       >
         <div className="flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Link href={homeHref} className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/15 text-lg text-primary">
               R
             </span>
