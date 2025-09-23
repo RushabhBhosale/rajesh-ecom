@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Metadata } from "next";
 
 import { CategoriesTable } from "@/components/admin/categories-table";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listCategories } from "@/lib/categories";
 
@@ -13,18 +15,24 @@ export default async function AdminCategoriesPage() {
 
   return (
     <section className="space-y-10">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-semibold text-foreground">Category library</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Track the distribution of devices across product categories. Use search and sorting to surface
-          focus areas for merchandising or sourcing.
-        </p>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-3">
+          <h1 className="text-3xl font-semibold text-foreground">Category library</h1>
+          <p className="max-w-2xl text-muted-foreground">
+            Review every category available to assign to products and track how much stock belongs to each
+            one.
+          </p>
+        </div>
+        <Button asChild size="lg" className="sm:ml-auto">
+          <Link href="/admin/categories/new">Add category</Link>
+        </Button>
       </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl font-semibold text-foreground">All categories</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Each category aggregates the latest product count and refresh timestamp from the catalogue.
+            Category records are maintained separately so teams can prepare the taxonomy before adding
+            products.
           </p>
         </CardHeader>
         <CardContent>

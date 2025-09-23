@@ -20,6 +20,7 @@ interface ProductFormProps {
   product?: ProductSummary;
   onSuccess?: () => void;
   onCancel?: () => void;
+  redirectTo?: string;
 }
 
 const conditionLabels: Record<(typeof productConditions)[number], string> = {
@@ -39,7 +40,7 @@ type ProductFormValues = {
   highlights: string;
 };
 
-export function ProductForm({ mode, product, onSuccess, onCancel }: ProductFormProps) {
+export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: ProductFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -150,7 +151,11 @@ export function ProductForm({ mode, product, onSuccess, onCancel }: ProductFormP
           highlights: "",
         });
       }
-      router.refresh();
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.refresh();
+      }
       onSuccess?.();
     } catch (error) {
       console.error(error);

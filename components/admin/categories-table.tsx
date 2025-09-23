@@ -26,11 +26,20 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
         ),
       },
       {
+        accessorKey: "description",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
+        cell: ({ getValue }) => {
+          const description = getValue<string>();
+          if (!description) {
+            return <span className="text-xs text-muted-foreground">No description</span>;
+          }
+          return <span className="text-sm text-muted-foreground">{description}</span>;
+        },
+      },
+      {
         accessorKey: "productCount",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Products" align="right" />,
-        cell: ({ getValue }) => (
-          <div className="text-right font-semibold">{getValue<number>()}</div>
-        ),
+        cell: ({ getValue }) => <div className="text-right font-semibold">{getValue<number>()}</div>,
       },
       {
         accessorKey: "lastUpdated",
@@ -55,7 +64,7 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
           <FolderSearch className="h-10 w-10" aria-hidden />
           <p className="text-sm font-medium">No categories found</p>
-          <p className="text-xs">Add products with category information to populate this list.</p>
+          <p className="text-xs">Create categories from the add category page to populate this list.</p>
         </div>
       }
     />
