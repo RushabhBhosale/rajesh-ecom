@@ -10,13 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import {
+  useCartStore,
+  useCartHydration,
+  selectItemCount,
+} from "@/lib/stores/cart-store";
 
 const navLinks = [
   { href: "/", label: "Home" },
-  { href: "/products", label: "Shop all" },
-  { href: "#deals", label: "Today's deals" },
-  { href: "#categories", label: "Categories" },
-  { href: "#services", label: "Services" },
+  { href: "/products", label: "Products" },
+  { href: "/cart", label: "Cart" },
 ];
 
 const authLinks = [
@@ -31,8 +34,11 @@ export function SiteNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
-  const [isFetchingUser, setIsFetchingUser] = useState(false);
+  const [isFetchingUser, setIsFetchingUser] = useState(true);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const hasHydratedCart = useCartHydration();
+  const itemCount = useCartStore(selectItemCount);
+  const cartCount = hasHydratedCart ? Math.min(itemCount, 99) : 0;
 
   const shouldHide = HIDDEN_ON_PATHS.some((regex) => regex.test(pathname));
 
@@ -152,11 +158,8 @@ export function SiteNavbar() {
       <div className="hidden border-b border-border/60 bg-primary text-primary-foreground md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 text-xs font-semibold">
           <p>Free 2-day shipping on business orders over $499.</p>
-          <Link
-            href="#deals"
-            className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
-          >
-            Browse limited-time offers
+          <Link href="/products" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+            Browse featured inventory
           </Link>
         </div>
       </div>
@@ -271,6 +274,8 @@ export function SiteNavbar() {
                 </div>
               ) : null}
             </div>
+          ) : isFetchingUser ? (
+            <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
           ) : (
             authLinks.map((link) => (
               <Button
@@ -287,11 +292,16 @@ export function SiteNavbar() {
             asChild
             variant="outline"
             size="sm"
-            className="hidden items-center gap-2 rounded-full lg:flex"
+            className="relative hidden items-center gap-2 rounded-full lg:flex"
           >
-            <Link href="/products">
+            <Link href="/cart">
               <ShoppingCart className="h-4 w-4" aria-hidden />
               View cart
+              {cartCount > 0 ? (
+                <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
+                  {cartCount}
+                </span>
+              ) : null}
             </Link>
           </Button>
         </div>
@@ -378,6 +388,8 @@ export function SiteNavbar() {
                   }}
                 />
               </>
+            ) : isFetchingUser ? (
+              <div className="h-10 w-full animate-pulse rounded-lg bg-muted" />
             ) : (
               authLinks.map((link) => (
                 <Button
@@ -396,10 +408,18 @@ export function SiteNavbar() {
               variant="outline"
               size="sm"
               onClick={() => setMenuOpen(false)}
+              className="inline-flex items-center justify-between"
             >
-              <Link href="/products" className="inline-flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" aria-hidden />
-                View cart
+              <Link href="/cart" className="inline-flex w-full items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4" aria-hidden />
+                  View cart
+                </span>
+                {cartCount > 0 ? (
+                  <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
+                    {cartCount}
+                  </span>
+                ) : null}
               </Link>
             </Button>
           </div>

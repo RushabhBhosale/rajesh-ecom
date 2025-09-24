@@ -1,19 +1,11 @@
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { ProductCard } from "@/components/products/product-card";
+import { ProductsToolbar } from "@/components/products/products-toolbar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { listProducts } from "@/lib/products";
-import { Search, Filter, SlidersHorizontal, Package } from "lucide-react";
+import { getProductFacets, listProducts } from "@/lib/products";
+import type { ProductCondition } from "@/lib/product-constants";
+import { Package } from "lucide-react";
 
 export const metadata = {
   title: "Enterprise Products | Rajesh Renewed",
@@ -31,285 +23,145 @@ export default async function ProductsPage({
     sort?: string;
     minPrice?: string;
     maxPrice?: string;
+    q?: string;
   };
 }) {
-  const products = await listProducts({});
+  const facets = await getProductFacets();
 
-  // Get unique categories and conditions for filters
-  const categories = [...new Set(products.map((p) => p.category))];
-  const conditions = [...new Set(products.map((p) => p.condition))];
+  const allowedSortOptions = new Set([
+    "name-asc",
+    "name-desc",
+    "price-asc",
+    "price-desc",
+    "category-asc",
+    "created-desc",
+  ]);
+
+  const rawSearch = typeof searchParams.search === "string" ? searchParams.search : undefined;
+  const fallbackSearch = typeof searchParams.q === "string" ? searchParams.q : undefined;
+  const search = (rawSearch ?? fallbackSearch)?.trim();
+
+  const rawCategory = typeof searchParams.category === "string" ? searchParams.category : undefined;
+  const category = rawCategory && facets.categories.includes(rawCategory) ? rawCategory : undefined;
+
+  const rawCondition = typeof searchParams.condition === "string" ? searchParams.condition : undefined;
+  const condition =
+    rawCondition && facets.conditions.includes(rawCondition as ProductCondition)
+      ? (rawCondition as ProductCondition)
+      : undefined;
+
+  const minPrice = Number.isFinite(Number.parseInt(searchParams.minPrice ?? "", 10))
+    ? Number.parseInt(searchParams.minPrice as string, 10)
+    : undefined;
+
+  const maxPrice = Number.isFinite(Number.parseInt(searchParams.maxPrice ?? "", 10))
+    ? Number.parseInt(searchParams.maxPrice as string, 10)
+    : undefined;
+
+  const sort =
+    typeof searchParams.sort === "string" && allowedSortOptions.has(searchParams.sort)
+      ? searchParams.sort
+      : undefined;
+
+  const products = await listProducts({
+    search,
+    category,
+    condition,
+    minPrice,
+    maxPrice,
+    sort,
+  });
+
+  const filterSnapshot = {
+    search: search ?? undefined,
+    category: category ?? undefined,
+    condition: condition ?? undefined,
+    minPrice: typeof minPrice === "number" ? String(minPrice) : undefined,
+    maxPrice: typeof maxPrice === "number" ? String(maxPrice) : undefined,
+    sort: sort ?? undefined,
+  };
+
+  const emptyState = !products.length;
 
   return (
-    <main className="flex min-h-screen flex-col bg-background">
-      {/* Simplified Header */}
-      <section className="border-b border-slate-200 bg-slate-50/50 py-12">
+    <main className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100">
+      <section className="relative border-b border-slate-200/80 bg-white/90 py-12 backdrop-blur">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,theme(colors.slate.200/40),transparent_70%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                Enterprise Products
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl space-y-3">
+              <p className="inline-flex items-center rounded-full border border-slate-200 bg-slate-900/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                Enterprise Catalog
+              </p>
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                Purpose-Built Hardware for Modern Teams
               </h1>
-              <p className="mt-2 text-slate-600">
-                {products.length} certified devices available
+              <p className="text-lg text-slate-600">
+                Explore certified refurbished and factory-sealed devices with transparent pricing, condition insight, and fast deployment support.
               </p>
             </div>
-            <Button
-              asChild
-              variant="outline"
-              className="border-slate-300 text-slate-700"
-            >
-              <Link href="/register">Request Enterprise Pricing</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Search and Filters Section */}
-      <section className="border-b border-slate-200 bg-white py-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Search Bar */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="pl-10 border-slate-300 focus:border-slate-500 focus:ring-slate-500"
-                defaultValue={searchParams.search || ""}
-              />
-            </div>
-
-            {/* Filters and Sorting */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Category Filter */}
-              <Select defaultValue={searchParams.category || "all"}>
-                <SelectTrigger className="w-40 border-slate-300">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Condition Filter */}
-              <Select defaultValue={searchParams.condition || "all"}>
-                <SelectTrigger className="w-40 border-slate-300">
-                  <SelectValue placeholder="Condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Conditions</SelectItem>
-                  {conditions.map((condition) => (
-                    <SelectItem key={condition} value={condition}>
-                      {condition === "refurbished" ? "Refurbished" : "New"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Price Range */}
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  placeholder="Min ₹"
-                  className="w-24 border-slate-300"
-                  defaultValue={searchParams.minPrice || ""}
-                />
-                <span className="text-slate-400">-</span>
-                <Input
-                  type="number"
-                  placeholder="Max ₹"
-                  className="w-24 border-slate-300"
-                  defaultValue={searchParams.maxPrice || ""}
-                />
+            <div className="flex flex-col items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-6 shadow-sm">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Available inventory
+                </p>
+                <p className="text-4xl font-bold text-slate-900">{products.length}</p>
+                <p className="text-sm text-slate-500">
+                  Devices ready for immediate procurement
+                </p>
               </div>
-
-              {/* Sort Options */}
-              <Select defaultValue={searchParams.sort || "name-asc"}>
-                <SelectTrigger className="w-44 border-slate-300">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">Name A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name Z-A</SelectItem>
-                  <SelectItem value="price-asc">Price Low to High</SelectItem>
-                  <SelectItem value="price-desc">Price High to Low</SelectItem>
-                  <SelectItem value="category-asc">Category A-Z</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Clear Filters */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-slate-600 hover:text-slate-900"
-              >
-                Clear Filters
+              <Button asChild className="rounded-full px-6">
+                <Link href="/register">Request enterprise pricing</Link>
               </Button>
             </div>
           </div>
-
-          {/* Active Filters Display */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {searchParams.search && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Search: "{searchParams.search}"
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {searchParams.category && searchParams.category !== "all" && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Category: {searchParams.category}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {searchParams.condition && searchParams.condition !== "all" && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Condition: {searchParams.condition}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {(searchParams.minPrice || searchParams.maxPrice) && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Price: ₹{searchParams.minPrice || "0"} - ₹
-                {searchParams.maxPrice || "∞"}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-          </div>
         </div>
       </section>
 
-      {/* Products Grid */}
-      <section className="flex-1 bg-background py-8">
+      <ProductsToolbar
+        categories={facets.categories}
+        conditions={facets.conditions}
+        priceRange={facets.priceRange}
+        filters={filterSnapshot}
+        resultCount={products.length}
+      />
+
+      <section className="flex-1 py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <Suspense
-            fallback={
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-96 animate-pulse rounded-lg bg-slate-200"
-                  />
-                ))}
+          {emptyState ? (
+            <div className="mx-auto max-w-3xl rounded-3xl border border-dashed border-slate-300 bg-white/70 p-12 text-center shadow-sm">
+              <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-slate-100">
+                <Package className="h-10 w-10 text-slate-400" />
               </div>
-            }
-          >
-            {products.length ? (
-              <>
-                {/* Results Summary */}
-                <div className="mb-6 flex items-center justify-between">
-                  <p className="text-sm text-slate-600">
-                    Showing {products.length} products
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
-                    <span>View:</span>
-                    <button className="rounded border border-slate-300 p-1 hover:bg-slate-50">
-                      <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                      </div>
-                    </button>
-                    <button className="rounded border border-slate-300 p-1 hover:bg-slate-50">
-                      <div className="flex h-4 w-4 flex-col gap-0.5">
-                        <div className="h-1 bg-slate-400"></div>
-                        <div className="h-1 bg-slate-400"></div>
-                        <div className="h-1 bg-slate-400"></div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Products Grid */}
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      id={product.id}
-                      className="scroll-mt-24"
-                    >
-                      <ProductCard product={product} showCta={true} />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-12 flex items-center justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="border-slate-300"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300 bg-slate-900 text-white"
-                  >
-                    1
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    2
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    3
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="flex min-h-96 flex-col items-center justify-center text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
-                  <Package className="h-10 w-10 text-slate-400" />
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                  No products found
-                </h3>
-                <p className="mt-2 text-slate-600">
-                  Try adjusting your search criteria or browse all categories.
-                </p>
-                <Button asChild className="mt-6" variant="outline">
-                  <Link href="/products">View All Products</Link>
+              <h3 className="mt-6 text-2xl font-semibold text-slate-900">
+                No products match your filters yet
+              </h3>
+              <p className="mt-3 text-base text-slate-600">
+                Adjust your search, broaden the price band, or reset filters to explore the full catalog.
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Button variant="outline" asChild className="rounded-full border-slate-300">
+                  <Link href="/products">Clear filters</Link>
                 </Button>
               </div>
-            )}
-          </Suspense>
+            </div>
+          ) : (
+            <div className="space-y-10">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                  Showing {products.length} curated devices
+                </p>
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((product) => (
+                  <div key={product.id} id={product.id} className="scroll-mt-28">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </main>

@@ -14,6 +14,21 @@ export const productPayloadSchema = z.object({
     .or(z.literal(""))
     .optional()
     .default(""),
+  galleryImages: z
+    .array(
+      z
+        .string()
+        .url("Enter a valid image URL")
+        .trim()
+    )
+    .max(12, "You can add up to 12 gallery images")
+    .optional()
+    .default([]),
+  richDescription: z
+    .string()
+    .max(20000, "Rich description is too long")
+    .optional()
+    .default(""),
   featured: z.boolean().optional().default(false),
   inStock: z.boolean().optional().default(true),
   highlights: z

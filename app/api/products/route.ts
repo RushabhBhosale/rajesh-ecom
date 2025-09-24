@@ -5,12 +5,32 @@ import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { productPayloadSchema } from "@/lib/product-validation";
 import { listProducts } from "@/lib/products";
+import { sanitizeRichText } from "@/lib/sanitize-html";
 import { ProductModel } from "@/models/product";
 
 function sanitizeHighlights(highlights: string[] | undefined) {
   return Array.isArray(highlights)
     ? highlights.map((item) => item.trim()).filter((item) => item.length > 0)
     : [];
+}
+
+function sanitizeGallery(images: string[] | undefined) {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return images
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item) {
+        return false;
+      }
+      if (seen.has(item)) {
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
 }
 
 export async function GET(request: Request) {
@@ -46,6 +66,8 @@ export async function POST(request: Request) {
 
     const payload = productPayloadSchema.parse(await request.json());
     const highlights = sanitizeHighlights(payload.highlights);
+    const galleryImages = sanitizeGallery(payload.galleryImages);
+    const richDescription = sanitizeRichText(payload.richDescription?.trim() ?? "");
 
     await connectDB();
     await ProductModel.create({
@@ -55,6 +77,8 @@ export async function POST(request: Request) {
       price: payload.price,
       condition: payload.condition,
       imageUrl: payload.imageUrl ?? "",
+      galleryImages,
+      richDescription,
       featured: payload.featured ?? false,
       inStock: payload.inStock ?? true,
       highlights,

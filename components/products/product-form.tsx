@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -24,6 +24,7 @@ import {
 } from "@/lib/product-constants";
 import type { ProductSummary } from "@/lib/products";
 import type { CategorySummary } from "@/lib/categories";
+import { RichTextEditor } from "@/components/products/rich-text-editor";
 
 interface ProductFormProps {
   mode: "create" | "update";
@@ -48,6 +49,8 @@ type ProductFormValues = {
   featured: boolean;
   inStock: boolean;
   highlights: string;
+  galleryImages: { url: string }[];
+  richDescription: string;
 };
 
 export function ProductForm({
@@ -80,6 +83,22 @@ export function ProductForm({
           .url("Enter a valid URL")
           .or(z.literal(""))
           .default(""),
+        galleryImages: z
+          .array(
+            z.object({
+              url: z
+                .string()
+                .trim()
+                .url("Enter a valid URL")
+                .or(z.literal(""))
+                .default(""),
+            })
+          )
+          .max(12, "You can add up to 12 gallery images"),
+        richDescription: z
+          .string()
+          .max(20000, "Rich description is too long")
+          .default(""),
         featured: z.boolean().default(false),
         inStock: z.boolean().default(true),
         highlights: z
@@ -91,7 +110,7 @@ export function ProductForm({
     []
   );
 
-  const form = useForm({
+  const form = useForm<ProductFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: product?.name ?? "",
@@ -100,6 +119,9 @@ export function ProductForm({
       price: product?.price ?? 0,
       condition: product?.condition ?? "refurbished",
       imageUrl: product?.imageUrl ?? "",
+      galleryImages:
+        product?.galleryImages?.map((url) => ({ url }))?.slice(0, 12) ?? [],
+      richDescription: product?.richDescription ?? "",
       featured: product?.featured ?? false,
       inStock: product?.inStock ?? true,
       highlights: product?.highlights?.join("\n") ?? "",
@@ -112,8 +134,18 @@ export function ProductForm({
     reset,
     getValues,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = form;
+
+  const {
+    fields: galleryFields,
+    append: appendGallery,
+    remove: removeGallery,
+  } = useFieldArray({
+    control,
+    name: "galleryImages",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +222,11 @@ export function ProductForm({
       return;
     }
 
+    const galleryImages = values.galleryImages
+      .map((entry) => entry.url.trim())
+      .filter((url, index, arr) => url.length > 0 && arr.indexOf(url) === index)
+      .slice(0, 12);
+
     const payload = {
       name: values.name,
       category: values.category,
@@ -197,6 +234,8 @@ export function ProductForm({
       price: values.price,
       condition: values.condition,
       imageUrl: values.imageUrl,
+      galleryImages,
+      richDescription: values.richDescription.trim(),
       featured: values.featured,
       inStock: values.inStock,
       highlights,
@@ -235,6 +274,8 @@ export function ProductForm({
           price: 0,
           condition: "refurbished",
           imageUrl: "",
+          galleryImages: [],
+          richDescription: "",
           featured: false,
           inStock: true,
           highlights: "",
@@ -284,6 +325,57 @@ export function ProductForm({
                 {errors.name.message}
               </p>
             ) : null}
+          </div>
+          <div className="space-y-3 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Gallery images</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add alternate angles, lifestyle shots, or packaging imagery. Provide secure (https) links; the first three appear below the main photo on the product page.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendGallery({ url: "" })}
+                disabled={galleryFields.length >= 12}
+              >
+                Add image
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {galleryFields.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No gallery media yet.
+                </p>
+              ) : null}
+              {galleryFields.map((field, index) => (
+                <div key={field.id} className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      placeholder="https://images.example.com/gallery.jpg"
+                      {...register(`galleryImages.${index}.url`)}
+                      aria-invalid={Boolean(errors.galleryImages?.[index]?.url)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeGallery(index)}
+                      aria-label="Remove gallery image"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                  {errors.galleryImages?.[index]?.url?.message ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {errors.galleryImages[index]?.url?.message}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
@@ -358,7 +450,7 @@ export function ProductForm({
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL</Label>
+            <Label htmlFor="imageUrl">Primary image URL</Label>
             <Input
               id="imageUrl"
               placeholder="https://images.example.com/device.jpg"
@@ -369,6 +461,9 @@ export function ProductForm({
                 {errors.imageUrl.message}
               </p>
             ) : null}
+            <p className="text-xs text-muted-foreground">
+              Shown on listing cards and as the default hero image. Use a 1200×900px (or similar) high-quality photo.
+            </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="description">Description</Label>
@@ -381,6 +476,28 @@ export function ProductForm({
             {errors.description ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.description.message}
+              </p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Appears near the top of the detail page and in product teasers.
+            </p>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="richDescription">Rich product story</Label>
+            <Controller
+              control={control}
+              name="richDescription"
+              render={({ field: { value, onChange } }) => (
+                <RichTextEditor
+                  value={value}
+                  onChange={onChange}
+                  placeholder="Start writing... add images, videos, and formatted text."
+                />
+              )}
+            />
+            {errors.richDescription ? (
+              <p className="text-sm text-destructive" role="alert">
+                {errors.richDescription.message}
               </p>
             ) : null}
           </div>

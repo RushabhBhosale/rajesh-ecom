@@ -34,6 +34,15 @@ const ProductSchema = new Schema(
       default: "",
       trim: true,
     },
+    galleryImages: {
+      type: [String],
+      default: [],
+    },
+    richDescription: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     highlights: {
       type: [String],
       default: [],

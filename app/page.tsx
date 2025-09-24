@@ -127,7 +127,7 @@ export default async function HomePage() {
               <Button
                 asChild
                 size="lg"
-                className="rounded-md px-8 py-3 text-base font-semibold bg-slate-900 hover:bg-slate-800"
+                className="rounded-full px-8 py-3 text-base font-semibold bg-slate-900 hover:bg-slate-800"
               >
                 <Link href="/products">Explore Enterprise Solutions</Link>
               </Button>
@@ -135,7 +135,7 @@ export default async function HomePage() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="rounded-md px-8 py-3 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
+                className="rounded-full px-8 py-3 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
               >
                 <Link href="/register">Request Enterprise Pricing</Link>
               </Button>
