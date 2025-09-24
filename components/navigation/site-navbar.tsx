@@ -11,12 +11,12 @@ import { Input } from "@/components/ui/input";
 import type { SessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
+import { useCart } from "../cart/cart-provider";
+
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Shop all" },
-  { href: "#deals", label: "Today's deals" },
-  { href: "#categories", label: "Categories" },
-  { href: "#services", label: "Services" },
+  { href: "/cart", label: "Cart" },
 ];
 
 const authLinks = [
@@ -28,6 +28,7 @@ const HIDDEN_ON_PATHS = [/^\/dashboard/, /^\/admin/, /^\/superadmin/];
 
 export function SiteNavbar() {
   const pathname = usePathname();
+  const { itemCount } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
@@ -153,7 +154,7 @@ export function SiteNavbar() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 text-xs font-semibold">
           <p>Free 2-day shipping on business orders over $499.</p>
           <Link
-            href="#deals"
+            href="/products"
             className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
           >
             Browse limited-time offers
@@ -172,18 +173,20 @@ export function SiteNavbar() {
             Rajesh Renewed
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "transition-colors hover:text-foreground",
-                  pathname === link.href ? "text-foreground" : undefined
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks
+              .filter((link) => link.href !== "/cart")
+              .map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "transition-colors hover:text-foreground",
+                    pathname === link.href ? "text-foreground" : undefined
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
           </nav>
         </div>
         <form
@@ -210,7 +213,7 @@ export function SiteNavbar() {
             <span className="sr-only">Search</span>
           </Button>
         </form>
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           {currentUser ? (
             <div className="relative" ref={userMenuRef}>
               <button
@@ -289,9 +292,17 @@ export function SiteNavbar() {
             size="sm"
             className="hidden items-center gap-2 rounded-full lg:flex"
           >
-            <Link href="/products">
+            <Link
+              href="/cart"
+              className="relative inline-flex items-center gap-2"
+            >
               <ShoppingCart className="h-4 w-4" aria-hidden />
-              View cart
+              <span>Cart</span>
+              {itemCount > 0 ? (
+                <span className="absolute -right-3 -top-2 inline-flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow">
+                  {itemCount}
+                </span>
+              ) : null}
             </Link>
           </Button>
         </div>
@@ -397,9 +408,14 @@ export function SiteNavbar() {
               size="sm"
               onClick={() => setMenuOpen(false)}
             >
-              <Link href="/products" className="inline-flex items-center gap-2">
+              <Link href="/cart" className="inline-flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4" aria-hidden />
-                View cart
+                <span>Cart</span>
+                {itemCount > 0 ? (
+                  <span className="ml-1 inline-flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {itemCount}
+                  </span>
+                ) : null}
               </Link>
             </Button>
           </div>

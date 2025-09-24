@@ -14,6 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { listProducts } from "@/lib/products";
 import { Search, Filter, SlidersHorizontal, Package } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { listProductCategories, listProducts } from "@/lib/products";
 
 export const metadata = {
   title: "Enterprise Products | Rajesh Renewed",
@@ -34,6 +36,51 @@ export default async function ProductsPage({
   };
 }) {
   const products = await listProducts({});
+interface ProductsPageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+function parseNumber(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  const qParam = typeof searchParams?.q === "string" ? searchParams?.q : "";
+  const categoryParam = typeof searchParams?.category === "string" ? searchParams?.category : "";
+  const sortParam = typeof searchParams?.sort === "string" ? searchParams?.sort : "";
+  const stockParam = typeof searchParams?.stock === "string" ? searchParams?.stock : "";
+  const minPrice = parseNumber(typeof searchParams?.minPrice === "string" ? searchParams?.minPrice : undefined);
+  const maxPrice = parseNumber(typeof searchParams?.maxPrice === "string" ? searchParams?.maxPrice : undefined);
+
+  const sort = ["newest", "price-asc", "price-desc"].includes(sortParam) ? (sortParam as "newest" | "price-asc" | "price-desc") : "newest";
+  const searchQuery = qParam.trim();
+  const category = categoryParam.trim() || undefined;
+  const inStockOnly = stockParam === "in-stock";
+
+  const [products, categories] = await Promise.all([
+    listProducts({
+      searchQuery,
+      category,
+      sort,
+      inStockOnly,
+      minPrice: minPrice ?? undefined,
+      maxPrice: maxPrice ?? undefined,
+    }),
+    listProductCategories(),
+  ]);
+
+  const filtersActive = Boolean(
+    searchQuery ||
+      category ||
+      inStockOnly ||
+      (typeof minPrice === "number" && !Number.isNaN(minPrice)) ||
+      (typeof maxPrice === "number" && !Number.isNaN(maxPrice)) ||
+      sort !== "newest",
+  );
 
   // Get unique categories and conditions for filters
   const categories = [...new Set(products.map((p) => p.category))];
@@ -64,252 +111,133 @@ export default async function ProductsPage({
         </div>
       </section>
 
-      {/* Search and Filters Section */}
-      <section className="border-b border-slate-200 bg-white py-6">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            {/* Search Bar */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="pl-10 border-slate-300 focus:border-slate-500 focus:ring-slate-500"
-                defaultValue={searchParams.search || ""}
-              />
-            </div>
-
-            {/* Filters and Sorting */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Category Filter */}
-              <Select defaultValue={searchParams.category || "all"}>
-                <SelectTrigger className="w-40 border-slate-300">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Condition Filter */}
-              <Select defaultValue={searchParams.condition || "all"}>
-                <SelectTrigger className="w-40 border-slate-300">
-                  <SelectValue placeholder="Condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Conditions</SelectItem>
-                  {conditions.map((condition) => (
-                    <SelectItem key={condition} value={condition}>
-                      {condition === "refurbished" ? "Refurbished" : "New"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Price Range */}
-              <div className="flex items-center gap-2">
+      <section className="bg-background py-16 sm:py-24" id="catalogue">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
+          <div className="space-y-3 text-center">
+            <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Certified catalogue</h2>
+            <p className="mx-auto max-w-3xl text-muted-foreground">
+              Laptops, tablets, monitors, and accessories—all renewed, stress-tested, and backed by warranty.
+            </p>
+          </div>
+          <form className="grid gap-6 rounded-3xl border border-border/60 bg-card/95 p-6 shadow-sm shadow-primary/5 sm:p-8" method="get">
+            <div className="grid gap-4 md:grid-cols-[1fr_220px_200px]">
+              <div className="space-y-2">
+                <Label htmlFor="search">Search catalogue</Label>
                 <Input
-                  type="number"
-                  placeholder="Min ₹"
-                  className="w-24 border-slate-300"
-                  defaultValue={searchParams.minPrice || ""}
-                />
-                <span className="text-slate-400">-</span>
-                <Input
-                  type="number"
-                  placeholder="Max ₹"
-                  className="w-24 border-slate-300"
-                  defaultValue={searchParams.maxPrice || ""}
+                  id="search"
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Search for models, accessories, or specifications"
+                  className="h-11 rounded-full"
                 />
               </div>
-
-              {/* Sort Options */}
-              <Select defaultValue={searchParams.sort || "name-asc"}>
-                <SelectTrigger className="w-44 border-slate-300">
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">Name A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name Z-A</SelectItem>
-                  <SelectItem value="price-asc">Price Low to High</SelectItem>
-                  <SelectItem value="price-desc">Price High to Low</SelectItem>
-                  <SelectItem value="category-asc">Category A-Z</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Clear Filters */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-slate-600 hover:text-slate-900"
-              >
-                Clear Filters
-              </Button>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  name="category"
+                  defaultValue={category ?? ""}
+                  className="h-11 w-full rounded-full border border-border/70 bg-background px-4 text-sm font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sort">Sort by</Label>
+                <select
+                  id="sort"
+                  name="sort"
+                  defaultValue={sort}
+                  className="h-11 w-full rounded-full border border-border/70 bg-background px-4 text-sm font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="newest">Newest arrivals</option>
+                  <option value="price-asc">Price: Low to high</option>
+                  <option value="price-desc">Price: High to low</option>
+                </select>
+              </div>
             </div>
-          </div>
-
-          {/* Active Filters Display */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {searchParams.search && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Search: "{searchParams.search}"
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {searchParams.category && searchParams.category !== "all" && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Category: {searchParams.category}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {searchParams.condition && searchParams.condition !== "all" && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Condition: {searchParams.condition}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-            {(searchParams.minPrice || searchParams.maxPrice) && (
-              <Badge
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                Price: ₹{searchParams.minPrice || "0"} - ₹
-                {searchParams.maxPrice || "∞"}
-                <button className="ml-2 hover:text-slate-900">×</button>
-              </Badge>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Products Grid */}
-      <section className="flex-1 bg-background py-8">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <Suspense
-            fallback={
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-96 animate-pulse rounded-lg bg-slate-200"
+            <div className="grid gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))_auto] md:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="minPrice">Min price</Label>
+                <Input
+                  id="minPrice"
+                  name="minPrice"
+                  type="number"
+                  min={0}
+                  defaultValue={typeof minPrice === "number" ? String(minPrice) : ""}
+                  placeholder="₹"
+                  className="h-11 rounded-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxPrice">Max price</Label>
+                <Input
+                  id="maxPrice"
+                  name="maxPrice"
+                  type="number"
+                  min={0}
+                  defaultValue={typeof maxPrice === "number" ? String(maxPrice) : ""}
+                  placeholder="₹"
+                  className="h-11 rounded-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-foreground">Availability</span>
+                <label className="flex items-center gap-2 rounded-full border border-border/60 bg-muted/50 px-4 py-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="stock"
+                    value="in-stock"
+                    defaultChecked={inStockOnly}
+                    className="size-4 rounded border-border/70 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
-                ))}
+                  In stock only
+                </label>
               </div>
-            }
-          >
-            {products.length ? (
-              <>
-                {/* Results Summary */}
-                <div className="mb-6 flex items-center justify-between">
-                  <p className="text-sm text-slate-600">
-                    Showing {products.length} products
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
-                    <span>View:</span>
-                    <button className="rounded border border-slate-300 p-1 hover:bg-slate-50">
-                      <div className="grid h-4 w-4 grid-cols-2 gap-0.5">
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                        <div className="bg-slate-400"></div>
-                      </div>
-                    </button>
-                    <button className="rounded border border-slate-300 p-1 hover:bg-slate-50">
-                      <div className="flex h-4 w-4 flex-col gap-0.5">
-                        <div className="h-1 bg-slate-400"></div>
-                        <div className="h-1 bg-slate-400"></div>
-                        <div className="h-1 bg-slate-400"></div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Products Grid */}
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      id={product.id}
-                      className="scroll-mt-24"
-                    >
-                      <ProductCard product={product} showCta={true} />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-12 flex items-center justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="border-slate-300"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300 bg-slate-900 text-white"
-                  >
-                    1
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    2
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    3
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="flex min-h-96 flex-col items-center justify-center text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
-                  <Package className="h-10 w-10 text-slate-400" />
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                  No products found
-                </h3>
-                <p className="mt-2 text-slate-600">
-                  Try adjusting your search criteria or browse all categories.
-                </p>
-                <Button asChild className="mt-6" variant="outline">
-                  <Link href="/products">View All Products</Link>
+              <div className="flex items-center justify-end gap-3">
+                <Button type="submit" className="rounded-full px-6">
+                  Apply filters
                 </Button>
+                {filtersActive ? (
+                  <Button asChild variant="ghost" type="button" className="rounded-full">
+                    <Link href="/products">Reset</Link>
+                  </Button>
+                ) : null}
               </div>
+            </div>
+          </form>
+          <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">
+              {products.length ? `${products.length} products` : "No products"}
+            </p>
+            {filtersActive ? (
+              <p className="text-sm text-muted-foreground">
+                Showing results that match your filters. Adjust the controls above to explore more inventory.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Browse curated refurbished hardware ready to deploy within 48 hours.
+              </p>
             )}
-          </Suspense>
+          </div>
+          {products.length ? (
+            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
+              {products.map((product) => (
+                <div key={product.id} id={product.id} className="scroll-mt-24">
+                  <ProductCard product={product} showCta={false} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-secondary/40 px-6 py-20 text-center text-muted-foreground">
+              No products match your filters yet. Clear filters or check back soon for newly renewed hardware.
+            </div>
+          )}
         </div>
       </section>
     </main>
