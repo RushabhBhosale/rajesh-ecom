@@ -1,11 +1,27 @@
 "use client";
 
-import { useTransition } from "react";
+import { type ComponentProps, type ReactNode, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
-export function LogoutButton() {
+interface LogoutButtonProps {
+  className?: string;
+  variant?: ComponentProps<typeof Button>["variant"];
+  size?: ComponentProps<typeof Button>["size"];
+  children?: ReactNode;
+  redirectTo?: string;
+  onLogout?: () => void;
+}
+
+export function LogoutButton({
+  className,
+  variant = "ghost",
+  size,
+  children,
+  redirectTo = "/",
+  onLogout,
+}: LogoutButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -14,15 +30,16 @@ export function LogoutButton() {
       try {
         await fetch("/api/auth/logout", { method: "POST" });
       } finally {
-        router.replace("/login");
+        onLogout?.();
+        router.replace(redirectTo);
         router.refresh();
       }
     });
   }
 
   return (
-    <Button variant="ghost" onClick={logout} disabled={isPending}>
-      {isPending ? "Signing out..." : "Sign out"}
+    <Button variant={variant} size={size} className={className} onClick={logout} disabled={isPending}>
+      {children ?? (isPending ? "Signing out..." : "Sign out")}
     </Button>
   );
 }
