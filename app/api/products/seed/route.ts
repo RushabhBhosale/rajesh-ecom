@@ -24,6 +24,7 @@ export async function POST() {
           { name },
           {
             $setOnInsert: {
+              name,
               description: `${name} devices available through Rajesh Control's refurbishment programme.`,
             },
           },
@@ -35,11 +36,29 @@ export async function POST() {
     const batchId = Date.now();
     const dummyProducts = createDummyProductBatch(50, batchId);
 
-    await ProductModel.insertMany(dummyProducts, { ordered: false });
+    const operations = dummyProducts.map((product) => ({
+      updateOne: {
+        filter: { name: product.name },
+        update: { $setOnInsert: product },
+        upsert: true,
+      },
+    }));
+
+    const result = await ProductModel.bulkWrite(operations, { ordered: false });
+    const inserted = result.upsertedCount ?? 0;
+    const message =
+      inserted > 0
+        ? `Created ${inserted} dummy products`
+        : "Dummy products already exist";
 
     return NextResponse.json(
-      { message: `Created ${dummyProducts.length} dummy products`, batchId },
-      { status: 201 },
+      {
+        message,
+        batchId,
+        inserted,
+        matched: result.matchedCount ?? 0,
+      },
+      { status: inserted > 0 ? 201 : 200 },
     );
   } catch (error) {
     console.error("Failed to seed products", error);
