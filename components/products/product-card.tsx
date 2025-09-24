@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProductSummary } from "@/lib/products";
+
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
+import { Button } from "@/components/ui/button";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -68,16 +70,19 @@ export function ProductCard({ product, showCta = true }: ProductCardProps) {
             </ul>
           ) : null}
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm uppercase text-muted-foreground">Starting at</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Starting at</p>
             <p className="text-2xl font-semibold text-primary">{formatCurrency(product.price)}</p>
           </div>
-          {showCta ? (
-            <Button asChild variant="secondary">
-              <Link href={`/products#${product.id}`}>View details</Link>
-            </Button>
-          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <AddToCartButton product={product} className="rounded-full px-6" />
+            {showCta ? (
+              <Button asChild variant="outline" className="rounded-full px-6">
+                <Link href={`/products#${product.id}`}>View details</Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
       </CardContent>
     </Card>
