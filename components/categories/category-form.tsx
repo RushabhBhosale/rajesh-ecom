@@ -8,7 +8,13 @@ import { toast } from "sonner";
 
 import { categoryPayloadSchema } from "@/lib/category-validation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +33,7 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const form = useForm<CategoryFormValues>({
+  const form = useForm({
     resolver: zodResolver(categoryPayloadSchema),
     defaultValues: {
       name: "",
@@ -49,7 +55,10 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
       const response = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: values.name, description: values.description }),
+        body: JSON.stringify({
+          name: values.name,
+          description: values.description,
+        }),
       });
 
       if (!response.ok) {
@@ -57,7 +66,8 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
         const message = data?.error
           ? typeof data.error === "string"
             ? data.error
-            : Object.values<string[]>(data.error)[0]?.[0] ?? "Unable to create category"
+            : Object.values<string[]>(data.error)[0]?.[0] ??
+              "Unable to create category"
           : "Unable to create category";
         setServerError(message);
         toast.error(message);
@@ -83,9 +93,12 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-foreground">Add a new category</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-foreground">
+          Add a new category
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Organise your catalogue by creating categories before assigning them to products.
+          Organise your catalogue by creating categories before assigning them
+          to products.
         </p>
       </CardHeader>
       <form onSubmit={onSubmit} className="space-y-6">
@@ -108,7 +121,8 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
               {...register("description")}
             />
             <p className="text-xs text-muted-foreground">
-              Optional. Helps team members choose the right category during product creation.
+              Optional. Helps team members choose the right category during
+              product creation.
             </p>
             {errors.description ? (
               <p className="text-sm text-destructive" role="alert">

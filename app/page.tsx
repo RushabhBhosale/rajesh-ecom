@@ -8,6 +8,9 @@ import {
   ShieldCheck,
   Sparkles,
   Truck,
+  CheckCircle,
+  Award,
+  Users,
 } from "lucide-react";
 
 import { ProductCard } from "@/components/products/product-card";
@@ -15,35 +18,45 @@ import { Button } from "@/components/ui/button";
 import { listProducts } from "@/lib/products";
 
 export default async function HomePage() {
-  const featured = await listProducts({ featuredOnly: true, inStockOnly: true, limit: 8 });
+  const featured = await listProducts({
+    featuredOnly: true,
+    inStockOnly: true,
+    limit: 8,
+  });
   const popular = await listProducts({ inStockOnly: true, limit: 12 });
   const curated = featured.length ? featured : popular;
   const trending = curated.slice(0, 4);
   const seenIds = new Set(trending.map((item) => item.id));
-  const moreToExplore = popular.filter((product) => !seenIds.has(product.id)).slice(0, 6);
+  const moreToExplore = popular
+    .filter((product) => !seenIds.has(product.id))
+    .slice(0, 6);
 
   const categories = [
     {
-      name: "Laptops",
-      description: "Certified ThinkPad, Latitude & EliteBook models ready for deployment.",
+      name: "Enterprise Laptops",
+      description:
+        "Certified ThinkPad, Latitude & EliteBook workstations with enterprise-grade specifications.",
       href: "/products?category=Laptops",
       icon: Laptop,
     },
     {
-      name: "Tablets & 2-in-1",
-      description: "Surface, iPad, and convertible devices with fresh batteries.",
+      name: "Mobile Computing",
+      description:
+        "Surface Pro, iPad, and convertible devices optimized for productivity and collaboration.",
       href: "/products?category=Tablets",
       icon: MonitorSmartphone,
     },
     {
-      name: "Accessories",
-      description: "Docking stations, monitors, keyboards, and essential peripherals.",
+      name: "Professional Accessories",
+      description:
+        "Docking stations, enterprise monitors, and certified peripherals for seamless workflows.",
       href: "/products?category=Accessories",
       icon: PackageCheck,
     },
     {
-      name: "Audio & collaboration",
-      description: "Noise-cancelling headsets and conferencing gear for hybrid teams.",
+      name: "Collaboration Technology",
+      description:
+        "Professional headsets, conferencing solutions, and audio equipment for hybrid workforces.",
       href: "/products?category=Audio",
       icon: Headphones,
     },
@@ -51,18 +64,21 @@ export default async function HomePage() {
 
   const services = [
     {
-      title: "Express shipping",
-      description: "Nationwide 2-day delivery with real-time tracking on every order.",
+      title: "Enterprise Logistics",
+      description:
+        "Nationwide deployment with asset tracking, white-glove delivery, and real-time visibility across your entire fleet.",
       icon: Truck,
     },
     {
-      title: "Trusted warranty",
-      description: "6-month hardware coverage and rapid-swap support from certified technicians.",
+      title: "Comprehensive Warranty",
+      description:
+        "Industry-leading 6-month hardware coverage with advance replacement and certified technician support.",
       icon: ShieldCheck,
     },
     {
-      title: "Easy refresh",
-      description: "Trade-in and buy-back programs that keep your device fleet modern and sustainable.",
+      title: "Lifecycle Management",
+      description:
+        "Strategic refresh planning with trade-in programs and asset disposition services for sustainable IT operations.",
       icon: RefreshCcw,
     },
   ];
@@ -70,77 +86,113 @@ export default async function HomePage() {
   const testimonials = [
     {
       quote:
-        "Rajesh Renewed equips 300+ of our consultants every year. Devices arrive imaged, tagged, and ready for day one.",
+        "Rajesh Renewed has equipped over 300 consultants annually with consistently reliable, deployment-ready devices. Their quality assurance and logistics capabilities are exceptional.",
       author: "Priya N.",
       role: "IT Director, Horizon Analytics",
     },
     {
       quote:
-        "The 48-hour dispatch and swap program keeps our remote workforce productive without ballooning budgets.",
+        "The rapid replacement program and 48-hour fulfillment ensures our distributed workforce maintains productivity while optimizing our hardware budget by 40%.",
       author: "Michael R.",
       role: "Operations Lead, Northwind Logistics",
     },
   ];
 
+  const stats = [
+    { label: "Enterprise Clients", value: "500+", icon: Users },
+    { label: "Devices Deployed", value: "25K+", icon: Laptop },
+    { label: "Quality Rating", value: "99.2%", icon: Award },
+  ];
+
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-secondary/50 pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-28">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,theme(colors.primary/25),transparent_60%)]" />
-        <div className="absolute -right-24 top-10 -z-10 size-[26rem] rounded-full bg-secondary/50 blur-3xl" />
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-background to-slate-100/50 pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-32">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,theme(colors.slate.200/40),transparent_70%)]" />
+        <div className="absolute -right-32 top-16 -z-10 size-[32rem] rounded-full bg-slate-200/30 blur-3xl" />
+        <div className="mx-auto grid max-w-7xl gap-16 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="space-y-8 text-center lg:text-left">
-            <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-primary">
-              Rajesh renewed marketplace
-            </span>
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Enterprise tech that feels brand new—without the new price tag
+            <div className="inline-flex items-center justify-center rounded-full bg-slate-900/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 border border-slate-200">
+              <Award className="mr-2 h-3 w-3" />
+              Trusted Enterprise Partner
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              Enterprise Technology Solutions for Modern Businesses
             </h1>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground lg:mx-0">
-              Outfit your teams with expertly refurbished laptops, tablets, and accessories. Every device ships ready to deploy with imaging, QA checks, and dependable warranty coverage.
+            <p className="mx-auto max-w-2xl text-xl leading-8 text-slate-600 lg:mx-0">
+              Deploy certified, professionally refurbished enterprise hardware
+              with confidence. Every device undergoes rigorous quality assurance
+              and ships deployment-ready with comprehensive warranty coverage.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-              <Button asChild size="lg" className="rounded-full px-8">
-                <Link href="/products">Shop best sellers</Link>
+              <Button
+                asChild
+                size="lg"
+                className="rounded-md px-8 py-3 text-base font-semibold bg-slate-900 hover:bg-slate-800"
+              >
+                <Link href="/products">Explore Enterprise Solutions</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-full px-8">
-                <Link href="/register">Set up business pricing</Link>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="rounded-md px-8 py-3 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                <Link href="/register">Request Enterprise Pricing</Link>
               </Button>
             </div>
-            <dl className="grid gap-6 pt-6 text-muted-foreground sm:grid-cols-3">
-              <div className="rounded-2xl border border-border/60 bg-background/90 p-4 shadow-sm">
-                <Sparkles className="mb-3 h-5 w-5 text-primary" aria-hidden />
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/80">Certified QA</dt>
-                <dd className="text-lg font-semibold text-foreground">50-point inspection</dd>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-background/90 p-4 shadow-sm">
-                <ShieldCheck className="mb-3 h-5 w-5 text-primary" aria-hidden />
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/80">Warranty</dt>
-                <dd className="text-lg font-semibold text-foreground">6-month coverage</dd>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-background/90 p-4 shadow-sm">
-                <Truck className="mb-3 h-5 w-5 text-primary" aria-hidden />
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/80">Dispatch</dt>
-                <dd className="text-lg font-semibold text-foreground">48-hour shipping</dd>
-              </div>
-            </dl>
+
+            {/* Stats Section */}
+            <div className="grid gap-8 pt-8 sm:grid-cols-3 border-t border-slate-200/60">
+              {stats.map(({ label, value, icon: Icon }) => (
+                <div key={label} className="text-center lg:text-left">
+                  <div className="flex items-center justify-center lg:justify-start mb-2">
+                    <Icon className="h-5 w-5 text-slate-700 mr-2" />
+                    <dt className="text-sm font-semibold text-slate-600">
+                      {label}
+                    </dt>
+                  </div>
+                  <dd className="text-2xl font-bold text-slate-900">{value}</dd>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="relative rounded-3xl border border-primary/20 bg-card/80 p-8 shadow-xl shadow-primary/10">
-            <div className="absolute -left-10 top-10 hidden size-32 rounded-full bg-primary/10 blur-3xl lg:block" />
-            <div className="absolute -right-10 bottom-10 hidden size-32 rounded-full bg-secondary/50 blur-3xl lg:block" />
+
+          <div className="relative rounded-2xl border border-slate-200 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
+            <div className="absolute -left-8 top-8 hidden size-24 rounded-full bg-slate-100/80 blur-2xl lg:block" />
+            <div className="absolute -right-8 bottom-8 hidden size-24 rounded-full bg-slate-200/60 blur-2xl lg:block" />
             <div className="relative space-y-6">
-              <h2 className="text-2xl font-semibold text-foreground">Why teams choose Rajesh Renewed</h2>
-              <ul className="space-y-4 text-sm text-muted-foreground">
+              <h2 className="text-2xl font-bold text-slate-900">
+                Enterprise Advantages
+              </h2>
+              <ul className="space-y-4 text-sm text-slate-600">
                 <li className="flex items-start gap-3">
-                  <Sparkles className="mt-1 h-4 w-4 text-primary" aria-hidden />
-                  Premium grade components, thermal repaste, and minimum 80% battery health on every unit.
+                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>
+                    Rigorous 50-point quality inspection with certified
+                    component validation and minimum 85% battery capacity
+                    guarantee.
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <PackageCheck className="mt-1 h-4 w-4 text-primary" aria-hidden />
-                  Imaging, asset tagging, and kitting tailored to onboarding flows for hybrid and remote teams.
+                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>
+                    Custom imaging, asset tagging, and configuration management
+                    tailored to your organizational requirements.
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <RefreshCcw className="mt-1 h-4 w-4 text-primary" aria-hidden />
-                  Flexible refresh cycles with buy-back credits that keep budgets predictable.
+                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>
+                    Strategic lifecycle planning with predictable refresh cycles
+                    and sustainable asset disposition programs.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>
+                    Dedicated account management with priority support and
+                    volume pricing for enterprise deployments.
+                  </span>
                 </li>
               </ul>
             </div>
@@ -148,12 +200,24 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-border/60 bg-background/95 py-10">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-6 px-4 text-muted-foreground sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60">Trusted by teams at</p>
+      <section className="border-y border-slate-200 bg-slate-50/50 py-12">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-8 px-4 text-slate-600 sm:px-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Trusted by Leading Organizations
+          </p>
           <ul className="flex flex-wrap items-center gap-6 text-sm font-medium">
-            {["TechNova", "GreenGrid", "Orbit Labs", "InsightWorks", "RapidScale", "BlueOrbit"].map((brand) => (
-              <li key={brand} className="rounded-full border border-border/60 px-4 py-1 text-foreground/80">
+            {[
+              "TechNova Solutions",
+              "GreenGrid Energy",
+              "Orbit Laboratories",
+              "InsightWorks Consulting",
+              "RapidScale Technologies",
+              "BlueOrbit Systems",
+            ].map((brand) => (
+              <li
+                key={brand}
+                className="rounded-md border border-slate-200 bg-white px-4 py-2 text-slate-700 shadow-sm"
+              >
                 {brand}
               </li>
             ))}
@@ -161,18 +225,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-background py-16 sm:py-20" id="deals">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div className="space-y-2 text-center sm:text-left">
-              <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Today's featured deals</h2>
-              <p className="text-muted-foreground">
-                Limited-time savings on our most requested work-from-anywhere devices.
-              </p>
-            </div>
-            <Button asChild variant="secondary" size="lg" className="mx-auto sm:mx-0 rounded-full">
-              <Link href="/products">View all offers</Link>
-            </Button>
+      <section className="bg-background py-20 sm:py-24" id="solutions">
+        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+              Featured Enterprise Solutions
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Discover our most requested enterprise-grade devices, thoroughly
+              tested and certified for business deployment.
+            </p>
           </div>
           {trending.length ? (
             <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
@@ -183,56 +245,86 @@ export default async function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-6 py-16 text-center text-muted-foreground">
-              New inventory will appear here once added from the admin panel.
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">
+              <PackageCheck className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+              <p className="text-lg font-medium">
+                Solutions catalog loading...
+              </p>
+              <p className="text-sm mt-2">
+                New enterprise inventory will be displayed here once available.
+              </p>
             </div>
           )}
         </div>
       </section>
 
-      <section className="bg-secondary/40 py-16 sm:py-20" id="categories">
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
-          <div className="space-y-3 text-center">
-            <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Shop by category</h2>
-            <p className="text-muted-foreground">
-              Discover curated collections tailored to finance, engineering, design, and support teams.
+      <section className="bg-slate-50 py-20 sm:py-24" id="categories">
+        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+              Enterprise Product Categories
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Comprehensive technology solutions designed for finance,
+              engineering, creative, and operational teams.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-8 sm:grid-cols-2">
             {categories.map(({ name, description, href, icon: Icon }) => (
               <Link
                 key={name}
                 href={href}
-                className="group rounded-3xl border border-border/70 bg-background p-6 transition-transform hover:-translate-y-1 hover:shadow-lg"
+                className="group rounded-2xl border border-slate-200 bg-white p-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-slate-300"
               >
                 <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground">{name}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-slate-800">
+                      {name}
+                    </h3>
+                    <p className="mt-3 text-base text-slate-600 leading-relaxed">
+                      {description}
+                    </p>
                   </div>
-                  <span className="inline-flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Icon className="h-5 w-5" aria-hidden />
+                  <div className="ml-6 flex-shrink-0">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-hover:bg-slate-200 transition-colors">
+                      <Icon className="h-6 w-6" />
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-6 flex items-center text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                  <span>Explore Solutions</span>
+                  <span
+                    className="ml-2 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  >
+                    →
                   </span>
                 </div>
-                <p className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
-                  Shop now
-                  <span aria-hidden>→</span>
-                </p>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-background py-16 sm:py-20" id="featured">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div className="space-y-2 text-center sm:text-left">
-              <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">More to explore</h2>
-              <p className="text-muted-foreground">Handpicked gear to round out your workspace refresh.</p>
+      <section className="bg-background py-20 sm:py-24" id="inventory">
+        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+            <div className="space-y-3">
+              <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+                Additional Enterprise Inventory
+              </h2>
+              <p className="text-lg text-slate-600">
+                Carefully selected devices to complete your technology
+                ecosystem.
+              </p>
             </div>
-            <Button asChild variant="outline" size="lg" className="mx-auto sm:mx-0 rounded-full">
-              <Link href="/products">Browse full catalogue</Link>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="rounded-md border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <Link href="/products">View Complete Catalog</Link>
             </Button>
           </div>
           {moreToExplore.length ? (
@@ -244,70 +336,107 @@ export default async function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-secondary/30 px-6 py-16 text-center text-muted-foreground">
-              Add more products from the admin console to populate this section.
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">
+              <Laptop className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+              <p className="text-lg font-medium">
+                Expanding inventory selection...
+              </p>
+              <p className="text-sm mt-2">
+                Additional enterprise products will be available here shortly.
+              </p>
             </div>
           )}
         </div>
       </section>
 
-      <section className="bg-secondary/30 py-16 sm:py-20" id="services">
-        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
-          <div className="space-y-3 text-center">
-            <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Services that scale with you</h2>
-            <p className="text-muted-foreground">
-              From onboarding to lifecycle planning, Rajesh Renewed keeps your teams supported.
+      <section className="bg-slate-50 py-20 sm:py-24" id="services">
+        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+              Enterprise Services & Support
+            </h2>
+            <p className="mt-4 text-lg text-slate-600">
+              Comprehensive service offerings designed to support your
+              organization's technology infrastructure and growth.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-3">
             {services.map(({ title, description, icon: Icon }) => (
               <div
                 key={title}
-                className="rounded-3xl border border-border/60 bg-background p-6 text-center shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm hover:shadow-md transition-shadow"
               >
-                <span className="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                  <Icon className="h-8 w-8 text-slate-700" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">
+                  {title}
+                </h3>
+                <p className="text-base text-slate-600 leading-relaxed">
+                  {description}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-background py-16 sm:py-20">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-semibold text-foreground sm:text-4xl">Loved by modern IT teams</h2>
-            <p className="text-muted-foreground">
-              Transparent device grades, predictable pricing, and people-first support have made us the trusted partner for thousands of refreshed workstations.
+      <section className="bg-background py-20 sm:py-24">
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+              Trusted by Enterprise IT Leaders
+            </h2>
+            <p className="text-lg text-slate-600 leading-relaxed">
+              Our commitment to transparent device grading, predictable
+              enterprise pricing, and dedicated support has established us as
+              the preferred partner for thousands of successful technology
+              deployments across diverse industries.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-1">
               {testimonials.map((testimonial) => (
                 <figure
                   key={testimonial.author}
-                  className="rounded-3xl border border-border/60 bg-secondary/40 p-6 text-left shadow-sm"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-8 shadow-sm"
                 >
-                  <blockquote className="text-sm text-foreground">“{testimonial.quote}”</blockquote>
-                  <figcaption className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    {testimonial.author} · {testimonial.role}
+                  <blockquote className="text-base text-slate-700 leading-relaxed mb-6">
+                    "{testimonial.quote}"
+                  </blockquote>
+                  <figcaption className="text-sm font-semibold text-slate-900">
+                    {testimonial.author}
+                    <span className="font-normal text-slate-600">
+                      {" "}
+                      · {testimonial.role}
+                    </span>
                   </figcaption>
                 </figure>
               ))}
             </div>
           </div>
-          <div className="rounded-3xl border border-border/60 bg-secondary/40 p-8 text-center shadow-sm">
-            <h3 className="text-2xl font-semibold text-foreground">Need a custom rollout or bulk refresh?</h3>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Partner with our refurbishment experts for asset imaging, logistics, and lifecycle planning tailored to your workforce.
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+            <h3 className="text-2xl font-bold text-slate-900 mb-4">
+              Ready to Scale Your Technology?
+            </h3>
+            <p className="text-base text-slate-600 mb-8 leading-relaxed">
+              Partner with our enterprise specialists for custom deployment
+              solutions, asset management, and strategic lifecycle planning
+              tailored to your organization's unique requirements.
             </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg" className="rounded-full px-8">
-                <Link href="/register">Talk to sales</Link>
+            <div className="space-y-4">
+              <Button
+                asChild
+                size="lg"
+                className="w-full rounded-md bg-slate-900 hover:bg-slate-800 text-base font-semibold"
+              >
+                <Link href="/register">Schedule Enterprise Consultation</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-full px-8">
-                <Link href="/login">Existing customer sign in</Link>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full rounded-md border-slate-300 text-slate-700 hover:bg-slate-50 text-base font-semibold"
+              >
+                <Link href="/login">Access Customer Portal</Link>
               </Button>
             </div>
           </div>

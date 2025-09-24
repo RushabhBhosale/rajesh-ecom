@@ -67,7 +67,10 @@ export function SiteNavbar() {
         const data: { user: SessionUser | null } = await response.json();
         setCurrentUser(data.user ?? null);
       } catch (error) {
-        if (isActive && !(error instanceof DOMException && error.name === "AbortError")) {
+        if (
+          isActive &&
+          !(error instanceof DOMException && error.name === "AbortError")
+        ) {
           setCurrentUser(null);
         }
       } finally {
@@ -87,7 +90,10 @@ export function SiteNavbar() {
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     }
@@ -146,15 +152,23 @@ export function SiteNavbar() {
       <div className="hidden border-b border-border/60 bg-primary text-primary-foreground md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 text-xs font-semibold">
           <p>Free 2-day shipping on business orders over $499.</p>
-          <Link href="#deals" className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
+          <Link
+            href="#deals"
+            className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
+          >
             Browse limited-time offers
           </Link>
         </div>
       </div>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 text-base font-semibold text-foreground">
-            <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">R</span>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-base font-semibold text-foreground"
+          >
+            <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              R
+            </span>
             Rajesh Renewed
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
@@ -164,7 +178,7 @@ export function SiteNavbar() {
                 href={link.href}
                 className={cn(
                   "transition-colors hover:text-foreground",
-                  pathname === link.href ? "text-foreground" : undefined,
+                  pathname === link.href ? "text-foreground" : undefined
                 )}
               >
                 {link.label}
@@ -172,15 +186,26 @@ export function SiteNavbar() {
             ))}
           </nav>
         </div>
-        <form className="relative hidden flex-1 max-w-md lg:max-w-2xl md:block" action="/products" role="search">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <form
+          className="relative hidden flex-1 max-w-md lg:max-w-2xl md:block"
+          action="/products"
+          role="search"
+        >
+          <Search
+            className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
           <Input
             name="q"
             placeholder="Search for laptops, tablets, accessories..."
             className="h-11 rounded-full border-border/70 bg-muted/70 pl-10 pr-14 text-sm"
             aria-label="Search products"
           />
-          <Button type="submit" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full">
+          <Button
+            type="submit"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full"
+          >
             <Search className="h-4 w-4" aria-hidden />
             <span className="sr-only">Search</span>
           </Button>
@@ -192,7 +217,7 @@ export function SiteNavbar() {
                 type="button"
                 className={cn(
                   "flex items-center gap-2 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  isFetchingUser && "opacity-75",
+                  isFetchingUser && "opacity-75"
                 )}
                 onClick={() => setUserMenuOpen((prev) => !prev)}
                 aria-haspopup="menu"
@@ -213,9 +238,15 @@ export function SiteNavbar() {
                   className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-border/60 bg-background/95 p-2 text-sm shadow-lg"
                 >
                   <div className="space-y-1 rounded-md bg-muted/40 p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in</p>
-                    <p className="truncate font-semibold text-foreground">{currentUser.name || currentUser.email}</p>
-                    <p className="truncate text-xs text-muted-foreground">{currentUser.email}</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Signed in
+                    </p>
+                    <p className="truncate font-semibold text-foreground">
+                      {currentUser.name || currentUser.email}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {currentUser.email}
+                    </p>
                   </div>
                   {accountLink ? (
                     <Button
@@ -232,19 +263,32 @@ export function SiteNavbar() {
                     variant="ghost"
                     size="sm"
                     className="mt-1 w-full justify-start"
-                    onLogout={() => setUserMenuOpen(false)}
+                    onLogout={() => {
+                      setUserMenuOpen(false);
+                      setCurrentUser(null);
+                    }}
                   />
                 </div>
               ) : null}
             </div>
           ) : (
             authLinks.map((link) => (
-              <Button key={link.href} asChild variant={link.primary ? "default" : "ghost"} size="sm">
+              <Button
+                key={link.href}
+                asChild
+                variant={link.primary ? "default" : "ghost"}
+                size="sm"
+              >
                 <Link href={link.href}>{link.label}</Link>
               </Button>
             ))
           )}
-          <Button asChild variant="outline" size="sm" className="hidden items-center gap-2 rounded-full lg:flex">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden items-center gap-2 rounded-full lg:flex"
+          >
             <Link href="/products">
               <ShoppingCart className="h-4 w-4" aria-hidden />
               View cart
@@ -257,7 +301,11 @@ export function SiteNavbar() {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label={menuOpen ? "Close navigation" : "Open navigation"}
         >
-          {menuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
+          {menuOpen ? (
+            <X className="h-5 w-5" aria-hidden />
+          ) : (
+            <Menu className="h-5 w-5" aria-hidden />
+          )}
         </button>
       </div>
       {menuOpen ? (
@@ -269,7 +317,11 @@ export function SiteNavbar() {
               className="h-11 rounded-full border-border/70 bg-muted/70 pl-4 pr-12 text-sm"
               aria-label="Search products"
             />
-            <Button type="submit" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full">
+            <Button
+              type="submit"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full"
+            >
               <Search className="h-4 w-4" aria-hidden />
               <span className="sr-only">Search</span>
             </Button>
@@ -282,7 +334,9 @@ export function SiteNavbar() {
                 onClick={() => setMenuOpen(false)}
                 className={cn(
                   "rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
-                  pathname === link.href ? "bg-muted/60 text-foreground" : undefined,
+                  pathname === link.href
+                    ? "bg-muted/60 text-foreground"
+                    : undefined
                 )}
               >
                 {link.label}
@@ -293,9 +347,15 @@ export function SiteNavbar() {
             {currentUser ? (
               <>
                 <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in</p>
-                  <p className="font-semibold text-foreground">{currentUser.name || currentUser.email}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Signed in
+                  </p>
+                  <p className="font-semibold text-foreground">
+                    {currentUser.name || currentUser.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser.email}
+                  </p>
                 </div>
                 {accountLink ? (
                   <Button
@@ -312,7 +372,10 @@ export function SiteNavbar() {
                   variant="outline"
                   size="sm"
                   className="justify-start"
-                  onLogout={() => setMenuOpen(false)}
+                  onLogout={() => {
+                    setMenuOpen(false);
+                    setCurrentUser(null);
+                  }}
                 />
               </>
             ) : (
@@ -328,7 +391,12 @@ export function SiteNavbar() {
                 </Button>
               ))
             )}
-            <Button asChild variant="outline" size="sm" onClick={() => setMenuOpen(false)}>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              onClick={() => setMenuOpen(false)}
+            >
               <Link href="/products" className="inline-flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4" aria-hidden />
                 View cart

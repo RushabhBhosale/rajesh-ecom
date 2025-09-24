@@ -8,11 +8,20 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MAX_PRODUCT_HIGHLIGHTS, productConditions } from "@/lib/product-constants";
+import {
+  MAX_PRODUCT_HIGHLIGHTS,
+  productConditions,
+} from "@/lib/product-constants";
 import type { ProductSummary } from "@/lib/products";
 import type { CategorySummary } from "@/lib/categories";
 
@@ -41,10 +50,18 @@ type ProductFormValues = {
   highlights: string;
 };
 
-export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: ProductFormProps) {
+export function ProductForm({
+  mode,
+  product,
+  onSuccess,
+  onCancel,
+  redirectTo,
+}: ProductFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Pick<CategorySummary, "id" | "name">[]>([]);
+  const [categories, setCategories] = useState<
+    Pick<CategorySummary, "id" | "name">[]
+  >([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
@@ -53,7 +70,9 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
       z.object({
         name: z.string().min(3, "Name must be at least 3 characters"),
         category: z.string().min(2, "Category must be at least 2 characters"),
-        description: z.string().min(10, "Description must be at least 10 characters"),
+        description: z
+          .string()
+          .min(10, "Description must be at least 10 characters"),
         price: z.coerce.number().min(0, "Price must be 0 or greater"),
         condition: z.enum(productConditions),
         imageUrl: z
@@ -72,7 +91,7 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
     []
   );
 
-  const form = useForm<ProductFormValues>({
+  const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: product?.name ?? "",
@@ -110,7 +129,9 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
         }
 
         const data = await response.json().catch(() => null);
-        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(data?.categories)
+        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(
+          data?.categories
+        )
           ? data.categories.filter(
               (item: unknown): item is Pick<CategorySummary, "id" | "name"> =>
                 typeof item === "object" &&
@@ -127,7 +148,9 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
         setCategories(fetched);
 
         const currentCategory = getValues("category");
-        const hasCurrentInFetched = fetched.some((category) => category.name === currentCategory);
+        const hasCurrentInFetched = fetched.some(
+          (category) => category.name === currentCategory
+        );
         if ((!currentCategory || !hasCurrentInFetched) && fetched.length > 0) {
           setValue("category", fetched[0].name, { shouldValidate: true });
         }
@@ -137,7 +160,9 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
           return;
         }
         setCategories([]);
-        setCategoriesError("Unable to load categories. Please refresh and try again.");
+        setCategoriesError(
+          "Unable to load categories. Please refresh and try again."
+        );
       } finally {
         if (!cancelled) {
           setIsLoadingCategories(false);
@@ -178,7 +203,8 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
     };
 
     try {
-      const endpoint = mode === "create" ? "/api/products" : `/api/products/${product?.id}`;
+      const endpoint =
+        mode === "create" ? "/api/products" : `/api/products/${product?.id}`;
       const method = mode === "create" ? "POST" : "PUT";
 
       const response = await fetch(endpoint, {
@@ -192,7 +218,8 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
         const message = data?.error
           ? typeof data.error === "string"
             ? data.error
-            : Object.values<string[]>(data.error)[0]?.[0] ?? "Unable to save product"
+            : Object.values<string[]>(data.error)[0]?.[0] ??
+              "Unable to save product"
           : "Unable to save product";
         setServerError(message);
         toast.error(message);
@@ -227,21 +254,31 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
     }
   });
 
-  const title = mode === "create" ? "Add a new product" : `Update ${product?.name ?? "product"}`;
+  const title =
+    mode === "create"
+      ? "Add a new product"
+      : `Update ${product?.name ?? "product"}`;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-foreground">{title}</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-foreground">
+          {title}
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Fill in product details to showcase laptops and electronics in the storefront.
+          Fill in product details to showcase laptops and electronics in the
+          storefront.
         </p>
       </CardHeader>
       <form onSubmit={submitHandler} className="space-y-6">
         <CardContent className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="name">Product name</Label>
-            <Input id="name" placeholder="ThinkPad X1 Carbon" {...register("name")} />
+            <Input
+              id="name"
+              placeholder="ThinkPad X1 Carbon"
+              {...register("name")}
+            />
             {errors.name ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.name.message}
@@ -278,7 +315,9 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
                 {categoriesError}
               </p>
             ) : null}
-            {!isLoadingCategories && categories.length === 0 && !categoriesError ? (
+            {!isLoadingCategories &&
+            categories.length === 0 &&
+            !categoriesError ? (
               <p className="text-xs text-muted-foreground">
                 Create categories first so products can be assigned correctly.
               </p>
@@ -286,7 +325,13 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
           </div>
           <div className="space-y-2">
             <Label htmlFor="price">Price (₹)</Label>
-            <Input id="price" type="number" step="0.01" min="0" {...register("price", { valueAsNumber: true })} />
+            <Input
+              id="price"
+              type="number"
+              step="0.01"
+              min="0"
+              {...register("price", { valueAsNumber: true })}
+            />
             {errors.price ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.price.message}
@@ -314,7 +359,11 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
           </div>
           <div className="space-y-2">
             <Label htmlFor="imageUrl">Image URL</Label>
-            <Input id="imageUrl" placeholder="https://images.example.com/device.jpg" {...register("imageUrl")} />
+            <Input
+              id="imageUrl"
+              placeholder="https://images.example.com/device.jpg"
+              {...register("imageUrl")}
+            />
             {errors.imageUrl ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.imageUrl.message}
@@ -344,7 +393,8 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
               {...register("highlights")}
             />
             <p className="text-xs text-muted-foreground">
-              Showcase key selling points, warranty terms, or bundled accessories.
+              Showcase key selling points, warranty terms, or bundled
+              accessories.
             </p>
             {errors.highlights ? (
               <p className="text-sm text-destructive" role="alert">
@@ -380,12 +430,21 @@ export function ProductForm({ mode, product, onSuccess, onCancel, redirectTo }: 
         </CardContent>
         <CardFooter className="flex flex-col justify-end gap-3 sm:flex-row">
           {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
           ) : null}
           <Button type="submit" className="sm:ml-auto" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : mode === "create" ? "Create product" : "Save changes"}
+            {isSubmitting
+              ? "Saving..."
+              : mode === "create"
+              ? "Create product"
+              : "Save changes"}
           </Button>
         </CardFooter>
       </form>
