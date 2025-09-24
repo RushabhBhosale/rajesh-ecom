@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Search, ShoppingCart, X } from "lucide-react";
 
+import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { SessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -27,8 +29,114 @@ const HIDDEN_ON_PATHS = [/^\/dashboard/, /^\/admin/, /^\/superadmin/];
 export function SiteNavbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
+  const [isFetchingUser, setIsFetchingUser] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const shouldHide = HIDDEN_ON_PATHS.some((regex) => regex.test(pathname));
+
+  useEffect(() => {
+    if (shouldHide) {
+      setCurrentUser(null);
+      setIsFetchingUser(false);
+      return;
+    }
+
+    let isActive = true;
+    const controller = new AbortController();
+
+    async function fetchUser() {
+      setIsFetchingUser(true);
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          signal: controller.signal,
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+
+        const data: { user: SessionUser | null } = await response.json();
+        setCurrentUser(data.user ?? null);
+      } catch (error) {
+        if (isActive && !(error instanceof DOMException && error.name === "AbortError")) {
+          setCurrentUser(null);
+        }
+      } finally {
+        if (isActive) {
+          setIsFetchingUser(false);
+        }
+      }
+    }
+
+    fetchUser();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [pathname, shouldHide]);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setUserMenuOpen(false);
+  }, [pathname]);
+
+  const accountLink = useMemo(() => {
+    if (!currentUser) {
+      return null;
+    }
+
+    if (currentUser.role === "superadmin") {
+      return { href: "/superadmin", label: "Super admin" };
+    }
+
+    if (currentUser.role === "admin") {
+      return { href: "/admin", label: "Dashboard" };
+    }
+
+    return null;
+  }, [currentUser]);
+
+  const userInitial = useMemo(() => {
+    if (!currentUser) {
+      return "";
+    }
+
+    const source = currentUser.name || currentUser.email || "";
+    return source.charAt(0).toUpperCase();
+  }, [currentUser]);
+
   if (shouldHide) {
     return null;
   }
@@ -78,11 +186,64 @@ export function SiteNavbar() {
           </Button>
         </form>
         <div className="hidden items-center gap-2 md:flex">
-          {authLinks.map((link) => (
-            <Button key={link.href} asChild variant={link.primary ? "default" : "ghost"} size="sm">
-              <Link href={link.href}>{link.label}</Link>
-            </Button>
-          ))}
+          {currentUser ? (
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                className={cn(
+                  "flex items-center gap-2 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isFetchingUser && "opacity-75",
+                )}
+                onClick={() => setUserMenuOpen((prev) => !prev)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                aria-label="Account options"
+                disabled={isFetchingUser}
+              >
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  {userInitial || "U"}
+                </span>
+                <span className="hidden max-w-[140px] truncate md:inline">
+                  {currentUser.name || currentUser.email}
+                </span>
+              </button>
+              {userMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-border/60 bg-background/95 p-2 text-sm shadow-lg"
+                >
+                  <div className="space-y-1 rounded-md bg-muted/40 p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in</p>
+                    <p className="truncate font-semibold text-foreground">{currentUser.name || currentUser.email}</p>
+                    <p className="truncate text-xs text-muted-foreground">{currentUser.email}</p>
+                  </div>
+                  {accountLink ? (
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 w-full justify-start"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Link href={accountLink.href}>{accountLink.label}</Link>
+                    </Button>
+                  ) : null}
+                  <LogoutButton
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 w-full justify-start"
+                    onLogout={() => setUserMenuOpen(false)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            authLinks.map((link) => (
+              <Button key={link.href} asChild variant={link.primary ? "default" : "ghost"} size="sm">
+                <Link href={link.href}>{link.label}</Link>
+              </Button>
+            ))
+          )}
           <Button asChild variant="outline" size="sm" className="hidden items-center gap-2 rounded-full lg:flex">
             <Link href="/products">
               <ShoppingCart className="h-4 w-4" aria-hidden />
@@ -129,17 +290,44 @@ export function SiteNavbar() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2">
-            {authLinks.map((link) => (
-              <Button
-                key={link.href}
-                asChild
-                variant={link.primary ? "default" : "outline"}
-                size="sm"
-                onClick={() => setMenuOpen(false)}
-              >
-                <Link href={link.href}>{link.label}</Link>
-              </Button>
-            ))}
+            {currentUser ? (
+              <>
+                <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Signed in</p>
+                  <p className="font-semibold text-foreground">{currentUser.name || currentUser.email}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                </div>
+                {accountLink ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMenuOpen(false)}
+                    className="justify-start"
+                  >
+                    <Link href={accountLink.href}>{accountLink.label}</Link>
+                  </Button>
+                ) : null}
+                <LogoutButton
+                  variant="outline"
+                  size="sm"
+                  className="justify-start"
+                  onLogout={() => setMenuOpen(false)}
+                />
+              </>
+            ) : (
+              authLinks.map((link) => (
+                <Button
+                  key={link.href}
+                  asChild
+                  variant={link.primary ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
+              ))
+            )}
             <Button asChild variant="outline" size="sm" onClick={() => setMenuOpen(false)}>
               <Link href="/products" className="inline-flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4" aria-hidden />
