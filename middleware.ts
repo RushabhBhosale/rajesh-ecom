@@ -40,6 +40,18 @@ async function verify(token: string) {
   return payload;
 }
 
+function getRedirectPath(role?: Role | null) {
+  if (role === "superadmin") {
+    return "/superadmin";
+  }
+
+  if (role === "admin") {
+    return "/admin";
+  }
+
+  return "/";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_NAME)?.value ?? null;
@@ -56,7 +68,8 @@ export async function middleware(request: NextRequest) {
     try {
       const payload = await verify(token);
       if (!payload.role || !protectedRoute.roles.includes(payload.role)) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        const redirectPath = getRedirectPath(payload.role);
+        return NextResponse.redirect(new URL(redirectPath, request.url));
       }
     } catch (error) {
       console.error("Invalid token", error);
@@ -72,8 +85,9 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      await verify(token);
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      const payload = await verify(token);
+      const redirectPath = getRedirectPath(payload.role);
+      return NextResponse.redirect(new URL(redirectPath, request.url));
     } catch (error) {
       return NextResponse.next();
     }

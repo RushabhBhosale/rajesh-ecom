@@ -63,6 +63,18 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
 
+  const getRedirectPath = (role?: string | null) => {
+    if (role === "superadmin") {
+      return "/superadmin";
+    }
+
+    if (role === "admin") {
+      return "/admin";
+    }
+
+    return "/";
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
     try {
@@ -86,9 +98,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
+      const data: { user?: { role?: string | null } } | null = await response
+        .json()
+        .catch(() => null);
+
       toast.success(mode === "login" ? "Signed in successfully" : "Account created");
       reset();
-      router.replace("/dashboard");
+      router.replace(getRedirectPath(data?.user?.role));
       router.refresh();
     } catch (fetchError) {
       console.error(fetchError);
