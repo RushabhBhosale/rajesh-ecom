@@ -30,7 +30,7 @@ describe('AuthForm', () => {
   it('submits login form and shows success toast', async () => {
     (global.fetch as vi.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ user: { id: '1' } }),
+      json: async () => ({ user: { id: '1', role: 'user' } }),
     });
 
     render(<AuthForm mode="login" />);
@@ -54,6 +54,35 @@ describe('AuthForm', () => {
     });
 
     expect(toast.success).toHaveBeenCalled();
-    expect(globalThis.__NEXT_TEST_ROUTER__?.replace).toHaveBeenCalledWith('/dashboard');
+    expect(globalThis.__NEXT_TEST_ROUTER__?.replace).toHaveBeenCalledWith('/');
+  });
+
+  it('redirects admin users to the admin area', async () => {
+    (global.fetch as vi.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: { id: '1', role: 'admin' } }),
+    });
+
+    render(<AuthForm mode="login" />);
+
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'admin@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    fireEvent.submit(screen.getByRole('button', { name: /sign in/i }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/auth/login',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+    });
+
+    expect(globalThis.__NEXT_TEST_ROUTER__?.replace).toHaveBeenCalledWith('/admin');
   });
 });
