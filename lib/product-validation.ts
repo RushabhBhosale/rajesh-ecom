@@ -2,6 +2,26 @@ import { z } from "zod";
 
 import { MAX_PRODUCT_HIGHLIGHTS, productConditions } from "@/lib/product-constants";
 
+function isRelativeUpload(path: string) {
+  return path.startsWith("/uploads/");
+}
+
+function validateUrlOrUpload(value: string) {
+  if (!value) {
+    return true;
+  }
+  if (isRelativeUpload(value)) {
+    return true;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const productPayloadSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   category: z.string().min(2, "Category must be at least 2 characters"),
@@ -10,16 +30,16 @@ export const productPayloadSchema = z.object({
   condition: z.enum(productConditions),
   imageUrl: z
     .string()
-    .url("Enter a valid image URL")
-    .or(z.literal(""))
+    .trim()
+    .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
     .optional()
     .default(""),
   galleryImages: z
     .array(
       z
         .string()
-        .url("Enter a valid image URL")
         .trim()
+        .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
     )
     .max(12, "You can add up to 12 gallery images")
     .optional()

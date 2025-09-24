@@ -10,6 +10,9 @@ import {
   Truck,
   CheckCircle,
   Award,
+  Wrench,
+  Recycle,
+  Headset,
   Users,
 } from "lucide-react";
 
@@ -106,101 +109,108 @@ export default async function HomePage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-background to-slate-100/50 pb-20 pt-16 sm:pb-24 sm:pt-20 lg:pb-32">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,theme(colors.slate.200/40),transparent_70%)]" />
-        <div className="absolute -right-32 top-16 -z-10 size-[32rem] rounded-full bg-slate-200/30 blur-3xl" />
-        <div className="mx-auto grid max-w-7xl gap-16 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="space-y-8 text-center lg:text-left">
-            <div className="inline-flex items-center justify-center rounded-full bg-slate-900/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 border border-slate-200">
-              <Award className="mr-2 h-3 w-3" />
-              Trusted Enterprise Partner
+      <section
+        id="enterprise-hero"
+        aria-labelledby="enterprise-hero-heading"
+        className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-background to-slate-100/60 py-16 sm:py-20 lg:py-28"
+      >
+        {/* background tint + soft blobs */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-slate-950/[0.04] dark:bg-slate-950/25" />
+          <div className="absolute inset-0 bg-[radial-gradient(50rem_30rem_at_-10%_-10%,theme(colors.slate.200/35),transparent_60%)]" />
+          <div className="absolute -right-32 top-16 size-[28rem] rounded-full bg-slate-200/40 blur-3xl" />
+        </div>
+
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          {/* Left: headline + copy + CTAs + stats */}
+          <div className="space-y-7 text-center lg:text-left">
+            <div className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-900/5 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+              <Award className="mr-2 h-3.5 w-3.5" />
+              Enterprise Ready
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              Enterprise Technology Solutions for Modern Businesses
+
+            <h1
+              id="enterprise-hero-heading"
+              className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl"
+            >
+              Refurbished hardware, deployment-ready.
             </h1>
-            <p className="mx-auto max-w-2xl text-xl leading-8 text-slate-600 lg:mx-0">
-              Deploy certified, professionally refurbished enterprise hardware
-              with confidence. Every device undergoes rigorous quality assurance
-              and ships deployment-ready with comprehensive warranty coverage.
+
+            <p className="text-lg leading-7 text-slate-600">
+              Certified devices with warranty, imaging, and asset tagging
+              included. Scale faster with predictable refresh cycles and
+              priority support— without paying new-device premiums.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+
+            <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <Button
                 asChild
                 size="lg"
-                className="rounded-full px-8 py-3 text-base font-semibold bg-slate-900 hover:bg-slate-800"
+                className="rounded-full px-7 font-semibold bg-slate-900 hover:bg-slate-800"
               >
-                <Link href="/products">Explore Enterprise Solutions</Link>
+                <Link href="/products">Shop inventory</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 size="lg"
-                className="rounded-full px-8 py-3 text-base font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
+                className="rounded-full px-7 font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
               >
-                <Link href="/register">Request Enterprise Pricing</Link>
+                <Link href="/register">Get pricing</Link>
               </Button>
             </div>
 
-            {/* Stats Section */}
-            <div className="grid gap-8 pt-8 sm:grid-cols-3 border-t border-slate-200/60">
-              {stats.map(({ label, value, icon: Icon }) => (
-                <div key={label} className="text-center lg:text-left">
-                  <div className="flex items-center justify-center lg:justify-start mb-2">
-                    <Icon className="h-5 w-5 text-slate-700 mr-2" />
-                    <dt className="text-sm font-semibold text-slate-600">
-                      {label}
-                    </dt>
-                  </div>
-                  <dd className="text-2xl font-bold text-slate-900">{value}</dd>
+            {/* compact stats */}
+            <dl className="grid grid-cols-3 gap-6 pt-4">
+              {[
+                { value: "10k+", label: "Devices shipped" },
+                { value: "50+", label: "QA checklist" },
+                { value: "1 Year", label: "Warranty" },
+              ].map((s) => (
+                <div key={s.label} className="text-center lg:text-left">
+                  <dd className="text-2xl font-bold text-slate-900">
+                    {s.value}
+                  </dd>
+                  <dt className="text-xs text-slate-600">{s.label}</dt>
                 </div>
               ))}
-            </div>
+            </dl>
           </div>
 
-          <div className="relative rounded-2xl border border-slate-200 bg-white/80 p-8 shadow-xl backdrop-blur-sm">
-            <div className="absolute -left-8 top-8 hidden size-24 rounded-full bg-slate-100/80 blur-2xl lg:block" />
-            <div className="absolute -right-8 bottom-8 hidden size-24 rounded-full bg-slate-200/60 blur-2xl lg:block" />
-            <div className="relative space-y-6">
-              <h2 className="text-2xl font-bold text-slate-900">
-                Enterprise Advantages
-              </h2>
-              <ul className="space-y-4 text-sm text-slate-600">
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
-                  <span>
-                    Rigorous 50-point quality inspection with certified
-                    component validation and minimum 85% battery capacity
-                    guarantee.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
-                  <span>
-                    Custom imaging, asset tagging, and configuration management
-                    tailored to your organizational requirements.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
-                  <span>
-                    Strategic lifecycle planning with predictable refresh cycles
-                    and sustainable asset disposition programs.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 h-5 w-5 text-green-600 flex-shrink-0" />
-                  <span>
-                    Dedicated account management with priority support and
-                    volume pricing for enterprise deployments.
-                  </span>
-                </li>
-              </ul>
-            </div>
+          {/* Right: fewer cards, more substance */}
+          <div className="grid gap-4">
+            <article className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition hover:shadow-md">
+              <div className="mb-3 inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Certified quality & longevity
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Each unit passes a 50-point inspection, component validation,
+                and battery health checks (≥85% capacity). Devices ship clean,
+                tested, and ready to enroll into your MDM.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition hover:shadow-md">
+              <div className="mb-3 inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
+                <Wrench className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Deployment services that scale
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Custom imaging, asset tags, and on-arrival configuration reduce
+                desk time. Pair with volume pricing and priority SLA for smooth
+                rollouts across teams and sites.
+              </p>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-slate-50/50 py-12">
+      <section className="border-y border-slate-200 bg-white py-12">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-8 px-4 text-slate-600 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
             Trusted by Leading Organizations
@@ -328,7 +338,7 @@ export default async function HomePage() {
             </Button>
           </div>
           {moreToExplore.length ? (
-            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
               {moreToExplore.map((product) => (
                 <div key={product.id} className="scroll-mt-24">
                   <ProductCard product={product} />

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, Filter, SlidersHorizontal, X } from "lucide-react";
 
@@ -119,7 +125,7 @@ export function ProductsToolbar({
   );
 
   const activeFilters = useMemo(() => {
-    const items: Array<{ key: keyof ProductFilters; label: string }> = [];
+    const items: any = [];
     if (filters.search) {
       items.push({ key: "search", label: `Search: "${filters.search}"` });
     }
@@ -127,7 +133,10 @@ export function ProductsToolbar({
       items.push({ key: "category", label: `Category: ${filters.category}` });
     }
     if (filters.condition && filters.condition !== "all") {
-      items.push({ key: "condition", label: `Condition: ${filters.condition}` });
+      items.push({
+        key: "condition",
+        label: `Condition: ${filters.condition}`,
+      });
     }
     if (filters.minPrice || filters.maxPrice) {
       const min = filters.minPrice ?? "0";
@@ -138,14 +147,21 @@ export function ProductsToolbar({
       items.push({ key: "sort", label: `Sort: ${filters.sort}` });
     }
     return items;
-  }, [filters.category, filters.condition, filters.maxPrice, filters.minPrice, filters.search, filters.sort]);
+  }, [
+    filters.category,
+    filters.condition,
+    filters.maxPrice,
+    filters.minPrice,
+    filters.search,
+    filters.sort,
+  ]);
 
   return (
     <section className="border-b border-slate-200/80 bg-white/80 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-center lg:gap-6">
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full max-w-[250px]">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Search products"
@@ -166,10 +182,12 @@ export function ProductsToolbar({
               ) : null}
             </div>
 
-            <div className="grid flex-1 grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Select
                 value={filters.category ?? "all"}
-                onValueChange={(value) => updateParams({ category: value === "all" ? null : value })}
+                onValueChange={(value) =>
+                  updateParams({ category: value === "all" ? null : value })
+                }
                 disabled={isPending}
               >
                 <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
@@ -188,7 +206,9 @@ export function ProductsToolbar({
 
               <Select
                 value={filters.condition ?? "all"}
-                onValueChange={(value) => updateParams({ condition: value === "all" ? null : value })}
+                onValueChange={(value) =>
+                  updateParams({ condition: value === "all" ? null : value })
+                }
                 disabled={isPending}
               >
                 <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
@@ -204,24 +224,30 @@ export function ProductsToolbar({
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 shadow-sm">
+              {/* <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 shadow-sm">
                 <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  ₹
-                  <span>Price</span>
+                  ₹<span>Price</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm">
                   <Input
                     inputMode="numeric"
                     value={minPriceValue}
                     onChange={(event) => setMinPriceValue(event.target.value)}
-                    onBlur={(event) => handlePriceCommit("minPrice", event.target.value)}
+                    onBlur={(event) =>
+                      handlePriceCommit("minPrice", event.target.value)
+                    }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        handlePriceCommit("minPrice", (event.target as HTMLInputElement).value);
+                        handlePriceCommit(
+                          "minPrice",
+                          (event.target as HTMLInputElement).value
+                        );
                       }
                     }}
-                    placeholder={priceRange.minPrice ? `${priceRange.minPrice}` : "Min"}
+                    placeholder={
+                      priceRange.minPrice ? `${priceRange.minPrice}` : "Min"
+                    }
                     className="h-8 w-20 border-0 bg-transparent text-slate-700 placeholder:text-slate-400 focus-visible:ring-0"
                     aria-label="Minimum price"
                   />
@@ -230,23 +256,34 @@ export function ProductsToolbar({
                     inputMode="numeric"
                     value={maxPriceValue}
                     onChange={(event) => setMaxPriceValue(event.target.value)}
-                    onBlur={(event) => handlePriceCommit("maxPrice", event.target.value)}
+                    onBlur={(event) =>
+                      handlePriceCommit("maxPrice", event.target.value)
+                    }
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         event.preventDefault();
-                        handlePriceCommit("maxPrice", (event.target as HTMLInputElement).value);
+                        handlePriceCommit(
+                          "maxPrice",
+                          (event.target as HTMLInputElement).value
+                        );
                       }
                     }}
-                    placeholder={priceRange.maxPrice ? `${priceRange.maxPrice}` : "Max"}
-                    className="h-8 w-20 border-0 bg-transparent text-slate-700 placeholder:text-slate-400 focus-visible:ring-0"
+                    placeholder={
+                      priceRange.maxPrice ? `${priceRange.maxPrice}` : "Max"
+                    }
+                    className="h-8 w-10 border-0 bg-transparent text-slate-700 placeholder:text-slate-400 focus-visible:ring-0"
                     aria-label="Maximum price"
                   />
                 </div>
-              </div>
+              </div> */}
 
               <Select
                 value={filters.sort ?? "created-desc"}
-                onValueChange={(value) => updateParams({ sort: value === "created-desc" ? null : value })}
+                onValueChange={(value) =>
+                  updateParams({
+                    sort: value === "created-desc" ? null : value,
+                  })
+                }
                 disabled={isPending}
               >
                 <SelectTrigger className="h-11 min-w-[10rem] rounded-full border-slate-300">
@@ -289,10 +326,10 @@ export function ProductsToolbar({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+          {/* <Badge variant="secondary" className="bg-slate-100 text-slate-700">
             {resultCount} result{resultCount === 1 ? "" : "s"}
-          </Badge>
-          {activeFilters.map((item) => (
+          </Badge> */}
+          {activeFilters.map((item: any) => (
             <Badge
               key={item.key}
               variant="outline"
@@ -321,7 +358,10 @@ export function ProductsToolbar({
                     return;
                   }
 
-                  updateParams({ [item.key]: null } as Record<string, string | null>);
+                  updateParams({ [item.key]: null } as Record<
+                    string,
+                    string | null
+                  >);
                 }}
                 aria-label={`Remove ${item.label}`}
               >
@@ -331,7 +371,7 @@ export function ProductsToolbar({
           ))}
         </div>
 
-        <div className="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/60 px-4 py-3 text-sm text-slate-600 shadow-sm">
+        {/* <div className="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/60 px-4 py-3 text-sm text-slate-600 shadow-sm">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="font-semibold text-slate-700">
               {resultCount ? "Tailor the catalog" : "No products available"}
@@ -339,15 +379,18 @@ export function ProductsToolbar({
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
               <span>Price band:</span>
               <span className="font-semibold text-slate-700">
-                {formatCurrency(priceRange.minPrice)} – {formatCurrency(priceRange.maxPrice)}
+                {formatCurrency(priceRange.minPrice)} –{" "}
+                {formatCurrency(priceRange.maxPrice)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
               <span>Categories:</span>
-              <span className="font-semibold text-slate-700">{categories.length}</span>
+              <span className="font-semibold text-slate-700">
+                {categories.length}
+              </span>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </section>
   );

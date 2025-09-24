@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -67,6 +67,8 @@ export function ProductForm({
   >([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [isUploadingPrimary, setIsUploadingPrimary] = useState(false);
+  const [galleryUploadingIndex, setGalleryUploadingIndex] = useState<number | null>(null);
 
   const schema = useMemo(
     () =>
@@ -80,8 +82,21 @@ export function ProductForm({
         condition: z.enum(productConditions),
         imageUrl: z
           .string()
-          .url("Enter a valid URL")
-          .or(z.literal(""))
+          .trim()
+          .superRefine((val, ctx) => {
+            if (!val) {
+              return;
+            }
+            if (val.startsWith("/uploads/")) {
+              return;
+            }
+            try {
+              // eslint-disable-next-line no-new
+              new URL(val);
+            } catch {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid URL or upload an image" });
+            }
+          })
           .default(""),
         galleryImages: z
           .array(
@@ -89,8 +104,19 @@ export function ProductForm({
               url: z
                 .string()
                 .trim()
-                .url("Enter a valid URL")
-                .or(z.literal(""))
+                .superRefine((val, ctx) => {
+                  if (!val) {
+                    return;
+                  }
+                  if (val.startsWith("/uploads/")) {
+                    return;
+                  }
+                  try {
+                    new URL(val);
+                  } catch {
+                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid URL or upload an image" });
+                  }
+                })
                 .default(""),
             })
           )
@@ -110,7 +136,7 @@ export function ProductForm({
     []
   );
 
-  const form = useForm<ProductFormValues>({
+  const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: product?.name ?? "",
@@ -300,6 +326,65 @@ export function ProductForm({
       ? "Add a new product"
       : `Update ${product?.name ?? "product"}`;
 
+  async function uploadImageFile(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/uploads/images", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error ?? "Upload failed");
+    }
+
+    const data = (await response.json()) as { url: string };
+    return data.url;
+  }
+
+  async function handlePrimaryFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      setIsUploadingPrimary(true);
+      const url = await uploadImageFile(file);
+      setValue("imageUrl", url, { shouldValidate: true });
+      toast.success("Primary image uploaded");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploadingPrimary(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleGalleryFileChange(
+    event: ChangeEvent<HTMLInputElement>,
+    index: number
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      setGalleryUploadingIndex(index);
+      const url = await uploadImageFile(file);
+      setValue(`galleryImages.${index}.url`, url, { shouldValidate: true });
+      toast.success("Gallery image uploaded");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setGalleryUploadingIndex(null);
+      event.target.value = "";
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -331,7 +416,9 @@ export function ProductForm({
               <div>
                 <Label>Gallery images</Label>
                 <p className="text-xs text-muted-foreground">
-                  Add alternate angles, lifestyle shots, or packaging imagery. Provide secure (https) links; the first three appear below the main photo on the product page.
+                  Add alternate angles, lifestyle shots, or packaging imagery.
+                  Provide secure (https) links; the first three appear below the
+                  main photo on the product page.
                 </p>
               </div>
               <Button
@@ -367,6 +454,18 @@ export function ProductForm({
                     >
                       ×
                     </Button>
+                    <label className="inline-flex cursor-pointer items-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => handleGalleryFileChange(event, index)}
+                        disabled={galleryUploadingIndex === index}
+                      />
+                      <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        {galleryUploadingIndex === index ? "Uploading…" : "Choose"}
+                      </span>
+                    </label>
                   </div>
                   {errors.galleryImages?.[index]?.url?.message ? (
                     <p className="text-sm text-destructive" role="alert">
@@ -462,8 +561,26 @@ export function ProductForm({
               </p>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              Shown on listing cards and as the default hero image. Use a 1200×900px (or similar) high-quality photo.
+              Shown on listing cards and as the default hero image. Use a
+              1200×900px (or similar) high-quality photo.
             </p>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePrimaryFileChange}
+                  disabled={isUploadingPrimary}
+                />
+                <span className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                  {isUploadingPrimary ? "Uploading…" : "Choose file"}
+                </span>
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {isUploadingPrimary ? "Uploading image…" : "Upload directly from your computer."}
+              </span>
+            </div>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="description">Description</Label>
@@ -489,7 +606,7 @@ export function ProductForm({
               name="richDescription"
               render={({ field: { value, onChange } }) => (
                 <RichTextEditor
-                  value={value}
+                  value={value!}
                   onChange={onChange}
                   placeholder="Start writing... add images, videos, and formatted text."
                 />

@@ -37,29 +37,45 @@ export default async function ProductsPage({
     "created-desc",
   ]);
 
-  const rawSearch = typeof searchParams.search === "string" ? searchParams.search : undefined;
-  const fallbackSearch = typeof searchParams.q === "string" ? searchParams.q : undefined;
+  const rawSearch =
+    typeof searchParams.search === "string" ? searchParams.search : undefined;
+  const fallbackSearch =
+    typeof searchParams.q === "string" ? searchParams.q : undefined;
   const search = (rawSearch ?? fallbackSearch)?.trim();
 
-  const rawCategory = typeof searchParams.category === "string" ? searchParams.category : undefined;
-  const category = rawCategory && facets.categories.includes(rawCategory) ? rawCategory : undefined;
+  const rawCategory =
+    typeof searchParams.category === "string"
+      ? searchParams.category
+      : undefined;
+  const category =
+    rawCategory && facets.categories.includes(rawCategory)
+      ? rawCategory
+      : undefined;
 
-  const rawCondition = typeof searchParams.condition === "string" ? searchParams.condition : undefined;
+  const rawCondition =
+    typeof searchParams.condition === "string"
+      ? searchParams.condition
+      : undefined;
   const condition =
     rawCondition && facets.conditions.includes(rawCondition as ProductCondition)
       ? (rawCondition as ProductCondition)
       : undefined;
 
-  const minPrice = Number.isFinite(Number.parseInt(searchParams.minPrice ?? "", 10))
+  const minPrice = Number.isFinite(
+    Number.parseInt(searchParams.minPrice ?? "", 10)
+  )
     ? Number.parseInt(searchParams.minPrice as string, 10)
     : undefined;
 
-  const maxPrice = Number.isFinite(Number.parseInt(searchParams.maxPrice ?? "", 10))
+  const maxPrice = Number.isFinite(
+    Number.parseInt(searchParams.maxPrice ?? "", 10)
+  )
     ? Number.parseInt(searchParams.maxPrice as string, 10)
     : undefined;
 
   const sort =
-    typeof searchParams.sort === "string" && allowedSortOptions.has(searchParams.sort)
+    typeof searchParams.sort === "string" &&
+    allowedSortOptions.has(searchParams.sort)
       ? searchParams.sort
       : undefined;
 
@@ -85,7 +101,7 @@ export default async function ProductsPage({
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100">
-      <section className="relative border-b border-slate-200/80 bg-white/90 py-12 backdrop-blur">
+      {/* <section className="relative border-b border-slate-200/80 bg-white/90 py-12 backdrop-blur">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,theme(colors.slate.200/40),transparent_70%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -116,7 +132,7 @@ export default async function ProductsPage({
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       <ProductsToolbar
         categories={facets.categories}
@@ -137,10 +153,15 @@ export default async function ProductsPage({
                 No products match your filters yet
               </h3>
               <p className="mt-3 text-base text-slate-600">
-                Adjust your search, broaden the price band, or reset filters to explore the full catalog.
+                Adjust your search, broaden the price band, or reset filters to
+                explore the full catalog.
               </p>
               <div className="mt-6 flex justify-center">
-                <Button variant="outline" asChild className="rounded-full border-slate-300">
+                <Button
+                  variant="outline"
+                  asChild
+                  className="rounded-full border-slate-300"
+                >
                   <Link href="/products">Clear filters</Link>
                 </Button>
               </div>
@@ -153,9 +174,13 @@ export default async function ProductsPage({
                 </p>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-6 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {products.map((product) => (
-                  <div key={product.id} id={product.id} className="scroll-mt-28">
+                  <div
+                    key={product.id}
+                    id={product.id}
+                    className="scroll-mt-28"
+                  >
                     <ProductCard product={product} />
                   </div>
                 ))}
