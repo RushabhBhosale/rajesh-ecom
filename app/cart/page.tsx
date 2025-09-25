@@ -161,8 +161,8 @@ export default function CartPage() {
           </div>
 
           <div className="space-y-4">
-            <Button size="lg" className="w-full rounded-full">
-              Proceed to checkout
+            <Button asChild size="lg" className="w-full rounded-full">
+              <Link href="/checkout">Proceed to checkout</Link>
             </Button>
             <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-xs text-slate-500">
               <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />

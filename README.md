@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rajesh Renewed Storefront
 
-## Getting Started
+Next.js storefront and management console for Rajesh Renewed, featuring catalogue management, protected admin tools, and integrated checkout with Razorpay support.
 
-First, run the development server:
+## Environment variables
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Create a `.env.local` file with the following keys before running the app:
+
+```
+MONGODB_URI=...
+JWT_SECRET=...
+RAZORPAY_KEY_ID=...
+RAZORPAY_KEY_SECRET=...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Razorpay credentials are required for online payments. Without them the checkout API will reject Razorpay payments; cash-on-delivery will continue to work.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Getting started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Install dependencies and start the development server:
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Visit [http://localhost:3000](http://localhost:3000) to view the storefront. Admin routes such as `/admin/orders` require an authenticated admin user.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checkout flow overview
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Customers review their cart and proceed to `/checkout` to submit contact, shipping, and payment details.
+- Cash on delivery orders are recorded immediately and surface in the admin “Orders” table.
+- Razorpay payments create a gateway order, open the hosted checkout, and verify the signature server-side before confirming the order and logging a transaction.
+- Every order creates a matching transaction entry (pending for COD, paid for successful Razorpay payments) that appears under `/admin/transactions`.
 
-## Deploy on Vercel
+## Admin views
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Orders** (`/admin/orders`): Search and review order totals, customer information, and payment states.
+- **Transactions** (`/admin/transactions`): Monitor Razorpay captures and COD commitments linked to their order references.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Testing
+
+Run the existing Vitest suite with:
+
+```bash
+npm test
+```
+
+Additional end-to-end payment tests will require mocking the Razorpay API; the current suite focuses on unit coverage.

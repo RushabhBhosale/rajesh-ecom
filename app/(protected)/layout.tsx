@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import type { Role } from "@/models/user";
 
 const navLinks: Array<{ href: string; label: string; roles: Role[] }> = [
+  { href: "/admin/orders", label: "Orders", roles: ["admin", "superadmin"] },
+  { href: "/admin/transactions", label: "Transactions", roles: ["admin", "superadmin"] },
   { href: "/admin/products", label: "Product listing", roles: ["admin", "superadmin"] },
   { href: "/admin/products/new", label: "Add product", roles: ["admin", "superadmin"] },
   { href: "/admin/categories", label: "Category listing", roles: ["admin", "superadmin"] },
