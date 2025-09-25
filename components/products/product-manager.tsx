@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -8,15 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductsTable } from "@/components/admin/products-table";
 import type { ProductSummary } from "@/lib/products";
 
-import { ProductForm } from "./product-form";
-
 interface ProductManagerProps {
   products: ProductSummary[];
 }
 
 export function ProductManager({ products }: ProductManagerProps) {
   const router = useRouter();
-  const [editingProduct, setEditingProduct] = useState<ProductSummary | null>(null);
 
   async function handleDelete(id: string) {
     const confirmed = window.confirm("Are you sure you want to delete this product?");
@@ -53,23 +49,11 @@ export function ProductManager({ products }: ProductManagerProps) {
         <CardContent>
           <ProductsTable
             data={products}
-            onEdit={(product) => setEditingProduct(product)}
+            onEdit={(product) => router.push(`/admin/products/${product.id}/edit`)}
             onDelete={handleDelete}
           />
         </CardContent>
       </Card>
-
-      {editingProduct ? (
-        <ProductForm
-          key={editingProduct.id}
-          mode="update"
-          product={editingProduct}
-          onSuccess={() => {
-            setEditingProduct(null);
-          }}
-          onCancel={() => setEditingProduct(null)}
-        />
-      ) : null}
     </section>
   );
 }

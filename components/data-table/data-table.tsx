@@ -69,13 +69,16 @@ export function DataTable<TData, TValue>({
   return (
     <div className={cn("space-y-4", className)}>
       {searchColumn ? (
-        <div className="flex w-full items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm shadow-sm">
-          <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+        <div className="flex w-full flex-col gap-3 rounded-xl border border-border/60 bg-background/95 p-3 text-sm shadow-sm sm:flex-row sm:items-center">
+          <div className="inline-flex items-center gap-2 text-muted-foreground">
+            <Search className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-semibold uppercase tracking-[0.22em]">Search</span>
+          </div>
           <Input
             value={searchValue}
             onChange={(event) => searchColumn.setFilterValue(event.target.value)}
             placeholder={searchPlaceholder}
-            className="h-8 border-0 px-0 shadow-none focus-visible:ring-0"
+            className="h-9 w-full border-0 bg-muted/40 px-3 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
       ) : null}

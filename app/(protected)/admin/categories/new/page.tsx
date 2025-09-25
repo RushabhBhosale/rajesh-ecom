@@ -10,13 +10,12 @@ export const metadata: Metadata = {
 
 export default function NewCategoryPage() {
   return (
-    <section className="space-y-10">
+    <section className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-3">
-          <h1 className="text-3xl font-semibold text-foreground">Create a category</h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Define a category before adding products so the catalogue stays organised and easier to browse.
-          </p>
+          <h1 className="text-3xl font-semibold text-foreground">
+            Create a category
+          </h1>
         </div>
         <Button asChild variant="outline">
           <Link href="/admin/categories">Back to categories</Link>

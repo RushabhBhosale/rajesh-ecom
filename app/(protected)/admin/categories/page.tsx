@@ -14,14 +14,12 @@ export default async function AdminCategoriesPage() {
   const categories = await listCategories();
 
   return (
-    <section className="space-y-10">
+    <section className="space-y-4">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-3">
-          <h1 className="text-3xl font-semibold text-foreground">Category library</h1>
-          <p className="max-w-2xl text-muted-foreground">
-            Review every category available to assign to products and track how much stock belongs to each
-            one.
-          </p>
+          <h1 className="text-3xl font-semibold text-foreground">
+            Category library
+          </h1>
         </div>
         <Button asChild size="lg" className="sm:ml-auto">
           <Link href="/admin/categories/new">Add category</Link>
@@ -29,10 +27,12 @@ export default async function AdminCategoriesPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-foreground">All categories</CardTitle>
+          <CardTitle className="text-2xl font-semibold text-foreground">
+            All categories
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Category records are maintained separately so teams can prepare the taxonomy before adding
-            products.
+            Category records are maintained separately so teams can prepare the
+            taxonomy before adding products.
           </p>
         </CardHeader>
         <CardContent>
