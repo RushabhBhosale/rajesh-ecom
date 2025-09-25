@@ -94,6 +94,15 @@ export async function listOrders(): Promise<OrderSummary[]> {
   return (orders ?? []).map(mapOrder);
 }
 
+export async function listOrdersByUser(userId: string): Promise<OrderSummary[]> {
+  await connectDB();
+  const orders = await OrderModel.find({ userId })
+    .sort({ createdAt: -1 })
+    .lean<OrderDocument[]>();
+
+  return (orders ?? []).map(mapOrder);
+}
+
 export async function getOrderById(id: string): Promise<OrderSummary | null> {
   await connectDB();
   const order = await OrderModel.findById(id).lean<OrderDocument | null>();

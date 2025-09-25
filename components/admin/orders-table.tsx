@@ -2,10 +2,15 @@
 
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 import { Clock, CreditCard, PackageCheck } from "lucide-react";
+import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { ORDER_STATUSES, type OrderStatusValue, getOrderStatusLabel } from "@/lib/order-status";
 import type { OrderSummary } from "@/lib/orders";
 
 interface OrdersTableProps {
@@ -34,6 +39,82 @@ function formatPaymentLabel(method: string) {
 }
 
 export function OrdersTable({ data }: OrdersTableProps) {
+  const router = useRouter();
+  const [orders, setOrders] = React.useState<OrderSummary[]>(data);
+  const [updating, setUpdating] = React.useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = React.useState<OrderStatusValue | "all">("all");
+
+  React.useEffect(() => {
+    setOrders(data);
+  }, [data]);
+
+  const handleStatusChange = React.useCallback(
+    async (orderId: string, status: OrderStatusValue) => {
+      setUpdating(orderId);
+      try {
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+            typeof payload?.error === "string"
+              ? payload.error
+              : Array.isArray(payload?.error?.status)
+                ? payload.error.status[0]
+                : "Unable to update status";
+          toast.error(message ?? "Unable to update status");
+          return;
+        }
+        const updatedOrder: OrderSummary | null = payload?.order ?? null;
+        if (updatedOrder) {
+          setOrders((prev) =>
+            prev.map((order) => (order.id === updatedOrder.id ? updatedOrder : order))
+          );
+        }
+        toast.success("Order status updated");
+        router.refresh();
+      } catch (error) {
+        console.error(error);
+        toast.error("Unable to update status");
+      } finally {
+        setUpdating(null);
+      }
+    },
+    [router]
+  );
+
+  const renderStatusControl = React.useCallback(
+    (order: OrderSummary) => {
+      const isUpdating = updating === order.id;
+      return (
+        <Select
+          value={order.status}
+          onValueChange={(value) => {
+            if (value !== order.status) {
+              void handleStatusChange(order.id, value as OrderStatusValue);
+            }
+          }}
+          disabled={isUpdating}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            {ORDER_STATUSES.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    },
+    [handleStatusChange, updating]
+  );
+
   const columns = React.useMemo<ColumnDef<OrderSummary>[]>(
     () => [
       {
@@ -79,18 +160,68 @@ export function OrdersTable({ data }: OrdersTableProps) {
       {
         accessorKey: "status",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ getValue }) => (
-          <span className="text-sm capitalize text-muted-foreground">{getValue<string>()}</span>
-        ),
+        cell: ({ row }) => renderStatusControl(row.original),
       },
     ],
-    []
+    [renderStatusControl]
   );
 
+  const filteredData = React.useMemo(() => {
+    if (statusFilter === "all") {
+      return orders;
+    }
+    return orders.filter((order) => order.status === statusFilter);
+  }, [orders, statusFilter]);
+
+  const statusSummary = React.useMemo(() => {
+    const counts = ORDER_STATUSES.map((status) => ({ value: status.value, label: status.label, count: 0 }));
+    const total = orders.length;
+    const map = new Map(counts.map((entry) => [entry.value, entry]));
+    for (const order of orders) {
+      const entry = map.get(order.status as OrderStatusValue);
+      if (entry) {
+        entry.count += 1;
+      }
+    }
+    return { counts, total };
+  }, [orders]);
+
   return (
-    <DataTable
-      columns={columns}
-      data={data}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className={cn(
+            "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+            statusFilter === "all"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border/70 bg-white text-muted-foreground hover:border-primary/50 hover:text-foreground"
+          )}
+          onClick={() => setStatusFilter("all")}
+        >
+          All <span className="ml-1 text-xs text-muted-foreground">({statusSummary.total})</span>
+        </button>
+        {statusSummary.counts.map((status) => (
+          <button
+            key={status.value}
+            type="button"
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors capitalize",
+              statusFilter === status.value
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border/70 bg-white text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            )}
+            onClick={() => setStatusFilter(status.value)}
+          >
+            {status.label}
+            <span className="ml-1 text-xs text-muted-foreground">({status.count})</span>
+          </button>
+        ))}
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={filteredData}
       searchKey="customerName"
       searchPlaceholder="Search orders by customer"
       emptyState={
@@ -112,7 +243,7 @@ export function OrdersTable({ data }: OrdersTableProps) {
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-foreground">{currencyFormatter.format(order.total)}</p>
-              <p className="text-xs capitalize text-muted-foreground">{order.status}</p>
+              <p className="text-xs text-muted-foreground">{getOrderStatusLabel(order.status)}</p>
             </div>
           </div>
           <div>
@@ -125,14 +256,16 @@ export function OrdersTable({ data }: OrdersTableProps) {
             <span>{formatPaymentLabel(order.paymentMethod)}</span>
             <span className="uppercase tracking-wide">{order.paymentStatus}</span>
           </div>
+          <div>{renderStatusControl(order)}</div>
         </div>
       )}
-      mobileEmptyState={
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">No orders yet</p>
-          <p className="text-xs">Orders placed through checkout will appear here.</p>
-        </div>
-      }
-    />
+        mobileEmptyState={
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">No orders yet</p>
+            <p className="text-xs">Orders placed through checkout will appear here.</p>
+          </div>
+        }
+      />
+    </div>
   );
 }

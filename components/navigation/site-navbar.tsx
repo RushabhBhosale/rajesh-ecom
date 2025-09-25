@@ -138,6 +138,10 @@ export function SiteNavbar() {
       return { href: "/admin", label: "Dashboard" };
     }
 
+    if (currentUser.role === "user") {
+      return { href: "/dashboard", label: "My orders" };
+    }
+
     return null;
   }, [currentUser]);
 

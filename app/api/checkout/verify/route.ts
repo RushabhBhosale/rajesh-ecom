@@ -50,6 +50,7 @@ export async function POST(request: Request) {
 
     await OrderModel.findByIdAndUpdate(order._id, {
       paymentStatus: "paid",
+      status: "processing",
       razorpayPaymentId: payload.razorpayPaymentId,
       razorpaySignature: payload.razorpaySignature,
     });

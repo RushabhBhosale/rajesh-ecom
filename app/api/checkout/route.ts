@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { checkoutPayloadSchema } from "@/lib/checkout-validation";
 import { connectDB } from "@/lib/db";
+import { sendOrderConfirmationEmail } from "@/lib/mailer";
 import { getRazorpayClient, getRazorpayKeyId } from "@/lib/razorpay";
 import { OrderModel } from "@/models/order";
 import { ProductModel, type ProductDocument } from "@/models/product";
@@ -71,8 +72,8 @@ export async function POST(request: Request) {
       total,
       currency: "INR",
       paymentMethod: payload.paymentMethod,
-      paymentStatus: payload.paymentMethod === "cod" ? "pending" : "pending",
-      status: "processing",
+      paymentStatus: "pending",
+      status: "placed",
       notes: payload.notes ?? "",
     });
 
@@ -81,11 +82,40 @@ export async function POST(request: Request) {
       amount: total,
       currency: "INR",
       paymentMethod: payload.paymentMethod,
-      status: payload.paymentMethod === "cod" ? "pending" : "pending",
+      status: "pending",
       gateway: payload.paymentMethod === "razorpay" ? "razorpay" : "manual",
     });
 
+    const emailPayload = {
+      to: order.customerEmail,
+      customerName: order.customerName,
+      orderId: order._id.toString(),
+      orderNumber: order._id.toString().slice(-6).toUpperCase(),
+      status: order.status,
+      paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : "Razorpay",
+      paymentStatus: order.paymentStatus,
+      total,
+      currency: order.currency,
+      items: orderItems.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,
+      })),
+      shippingAddress: {
+        line1: payload.addressLine1,
+        line2: payload.addressLine2 ?? "",
+        city: payload.city,
+        state: payload.state,
+        postalCode: payload.postalCode,
+        country: payload.country,
+      },
+    };
+
     if (payload.paymentMethod === "cod") {
+      void sendOrderConfirmationEmail(emailPayload).catch((error) => {
+        console.error("Order confirmation email failed", error);
+      });
       return NextResponse.json(
         {
           orderId: order._id.toString(),
@@ -119,6 +149,10 @@ export async function POST(request: Request) {
       await TransactionModel.findByIdAndUpdate(transaction._id, {
         razorpayOrderId: razorpayOrder.id,
         status: "pending",
+      });
+
+      void sendOrderConfirmationEmail(emailPayload).catch((error) => {
+        console.error("Order confirmation email failed", error);
       });
 
       return NextResponse.json(

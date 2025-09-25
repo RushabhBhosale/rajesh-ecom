@@ -1,5 +1,7 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
+import { ORDER_STATUS_VALUES } from "@/lib/order-status";
+
 const addressSchema = new Schema(
   {
     line1: { type: String, required: true, trim: true },
@@ -27,11 +29,10 @@ const orderItemSchema = new Schema(
 
 const paymentMethods = ["cod", "razorpay"] as const;
 const paymentStatuses = ["pending", "paid", "failed"] as const;
-const orderStatuses = ["processing", "completed", "cancelled"] as const;
 
 type PaymentMethod = (typeof paymentMethods)[number];
 type PaymentStatus = (typeof paymentStatuses)[number];
-type OrderStatus = (typeof orderStatuses)[number];
+type OrderStatus = (typeof ORDER_STATUS_VALUES)[number];
 
 const OrderSchema = new Schema(
   {
@@ -47,7 +48,7 @@ const OrderSchema = new Schema(
     currency: { type: String, default: "INR" },
     paymentMethod: { type: String, enum: paymentMethods, required: true },
     paymentStatus: { type: String, enum: paymentStatuses, default: "pending" },
-    status: { type: String, enum: orderStatuses, default: "processing" },
+    status: { type: String, enum: ORDER_STATUS_VALUES, default: "placed" },
     razorpayOrderId: { type: String, default: "", trim: true },
     razorpayPaymentId: { type: String, default: "", trim: true },
     razorpaySignature: { type: String, default: "", trim: true },

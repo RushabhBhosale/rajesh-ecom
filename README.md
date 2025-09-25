@@ -11,9 +11,15 @@ MONGODB_URI=...
 JWT_SECRET=...
 RAZORPAY_KEY_ID=...
 RAZORPAY_KEY_SECRET=...
+SMTP_HOST=...
+SMTP_PORT=...
+SMTP_FROM="Rajesh Renewed <noreply@example.com>"
+# Optional when your SMTP server requires authentication
+SMTP_USER=...
+SMTP_PASS=...
 ```
 
-The Razorpay credentials are required for online payments. Without them the checkout API will reject Razorpay payments; cash-on-delivery will continue to work.
+The Razorpay credentials are required for online payments. Without them the checkout API will reject Razorpay payments; cash-on-delivery will continue to work. SMTP settings enable order confirmation emails—if omitted the checkout will succeed but email is skipped and a warning is logged.
 
 ## Getting started
 
@@ -35,8 +41,12 @@ Visit [http://localhost:3000](http://localhost:3000) to view the storefront. Adm
 
 ## Admin views
 
-- **Orders** (`/admin/orders`): Search and review order totals, customer information, and payment states.
+- **Orders** (`/admin/orders`): Search and review order totals, customer information, payment states, and update order statuses (Placed → Processing → Dispatched → Delivered, etc.).
 - **Transactions** (`/admin/transactions`): Monitor Razorpay captures and COD commitments linked to their order references.
+
+## Customer dashboard
+
+Authenticated buyers can visit `/dashboard` to see every order they have placed, including current status, payment details, and itemised shipping information.
 
 ## Testing
 
