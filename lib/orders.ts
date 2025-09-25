@@ -30,6 +30,7 @@ export interface OrderSummary {
   updatedAt: string;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
+  razorpaySignature: string | null;
   shippingAddress: {
     line1: string;
     line2?: string;
@@ -73,6 +74,7 @@ function mapOrder(order: OrderDocument): OrderSummary {
     updatedAt: order.updatedAt?.toISOString?.() ?? new Date().toISOString(),
     razorpayOrderId: order.razorpayOrderId || null,
     razorpayPaymentId: order.razorpayPaymentId || null,
+    razorpaySignature: order.razorpaySignature || null,
     shippingAddress: {
       line1: order.shippingAddress?.line1 ?? "",
       line2: order.shippingAddress?.line2 ?? "",
@@ -106,6 +108,15 @@ export async function listOrdersByUser(userId: string): Promise<OrderSummary[]> 
 export async function getOrderById(id: string): Promise<OrderSummary | null> {
   await connectDB();
   const order = await OrderModel.findById(id).lean<OrderDocument | null>();
+  if (!order) {
+    return null;
+  }
+  return mapOrder(order);
+}
+
+export async function getOrderForUser(orderId: string, userId: string): Promise<OrderSummary | null> {
+  await connectDB();
+  const order = await OrderModel.findOne({ _id: orderId, userId }).lean<OrderDocument | null>();
   if (!order) {
     return null;
   }

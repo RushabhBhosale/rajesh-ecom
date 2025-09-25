@@ -48,7 +48,7 @@ const OrderSchema = new Schema(
     currency: { type: String, default: "INR" },
     paymentMethod: { type: String, enum: paymentMethods, required: true },
     paymentStatus: { type: String, enum: paymentStatuses, default: "pending" },
-    status: { type: String, enum: ORDER_STATUS_VALUES, default: "placed" },
+    status: { type: String, enum: [...ORDER_STATUS_VALUES], default: "placed" },
     razorpayOrderId: { type: String, default: "", trim: true },
     razorpayPaymentId: { type: String, default: "", trim: true },
     razorpaySignature: { type: String, default: "", trim: true },

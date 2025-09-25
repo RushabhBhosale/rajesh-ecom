@@ -46,7 +46,7 @@ export function ProductCard({ product, href }: ProductCardProps) {
           <div className="text-[11px] uppercase tracking-wide text-slate-500">
             {product.category}
           </div>
-          <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">
+          <h3 className="line-clamp-2 text-sm font-semibold text-slate-900 truncate">
             {product.name}
           </h3>
 

@@ -1,8 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { Package } from "lucide-react";
+import { Maximize2, Package } from "lucide-react";
+import "yet-another-react-lightbox/styles.css";
+
+const Lightbox = dynamic(() => import("yet-another-react-lightbox"), { ssr: false });
 
 interface ProductMediaGalleryProps {
   name: string;
@@ -26,23 +30,22 @@ export function ProductMediaGallery({
     return unique.slice(0, 12);
   }, [galleryImages, primaryImage]);
 
-  const [active, setActive] = useState<string | null>(media[0] ?? null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
-    setActive((prev) => {
-      if (prev && media.includes(prev)) {
-        return prev;
-      }
-      return media[0] ?? null;
-    });
+    setActiveIndex((prev) => (media[prev] ? prev : 0));
   }, [media]);
+
+  const activeImage = media[activeIndex] ?? null;
+  const slides = useMemo(() => media.map((src) => ({ src })), [media]);
 
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-inner">
-        {active ? (
+        {activeImage ? (
           <Image
-            src={active}
+            src={activeImage}
             alt={name}
             width={1200}
             height={900}
@@ -55,17 +58,27 @@ export function ProductMediaGallery({
             <span className="text-sm font-medium">Add gallery images to showcase this device</span>
           </div>
         )}
+        {activeImage && media.length ? (
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="absolute right-4 top-4 inline-flex items-center justify-center rounded-full bg-white/90 p-2 text-slate-700 shadow-sm transition hover:bg-white"
+            aria-label="View image in fullscreen"
+          >
+            <Maximize2 className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
       </div>
 
       {media.length > 1 ? (
         <div className="flex flex-wrap gap-3">
-          {media.slice(0, 3).map((url) => {
-            const isActive = url === active;
+          {media.slice(0, 3).map((url, index) => {
+            const isActive = index === activeIndex;
             return (
               <button
                 key={url}
                 type="button"
-                onClick={() => setActive(url)}
+                onClick={() => setActiveIndex(index)}
                 className={`relative h-20 w-20 overflow-hidden rounded-xl border transition-all ${
                   isActive
                     ? "border-primary ring-2 ring-primary/50"
@@ -78,6 +91,16 @@ export function ProductMediaGallery({
             );
           })}
         </div>
+      ) : null}
+
+      {slides.length ? (
+        <Lightbox
+          open={lightboxOpen}
+          close={() => setLightboxOpen(false)}
+          index={activeIndex}
+          slides={slides}
+          on={{ view: ({ index }) => setActiveIndex(index) }}
+        />
       ) : null}
     </div>
   );

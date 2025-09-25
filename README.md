@@ -46,7 +46,7 @@ Visit [http://localhost:3000](http://localhost:3000) to view the storefront. Adm
 
 ## Customer dashboard
 
-Authenticated buyers can visit `/dashboard` to see every order they have placed, including current status, payment details, and itemised shipping information.
+Authenticated buyers can visit `/dashboard/orders` to review every order with live status, Razorpay metadata, and initiate return requests when eligible.
 
 ## Testing
 

@@ -53,19 +53,23 @@ export async function POST(request: Request) {
 
     const user = await getCurrentUser();
 
+    const shippingAddress = {
+      line1: payload.addressLine1,
+      line2: payload.addressLine2 ?? "",
+      city: payload.city,
+      state: payload.state,
+      postalCode: payload.postalCode,
+      country: payload.country || "India",
+    };
+
+    const customerPhone = payload.customerPhone;
+
     const order = await OrderModel.create({
       userId: user?.id ?? null,
       customerName: payload.customerName,
       customerEmail: payload.customerEmail,
-      customerPhone: payload.customerPhone,
-      shippingAddress: {
-        line1: payload.addressLine1,
-        line2: payload.addressLine2 ?? "",
-        city: payload.city,
-        state: payload.state,
-        postalCode: payload.postalCode,
-        country: payload.country,
-      },
+      customerPhone: customerPhone,
+      shippingAddress,
       items: orderItems,
       subtotal,
       tax,
@@ -103,12 +107,12 @@ export async function POST(request: Request) {
         total: item.price * item.quantity,
       })),
       shippingAddress: {
-        line1: payload.addressLine1,
-        line2: payload.addressLine2 ?? "",
-        city: payload.city,
-        state: payload.state,
-        postalCode: payload.postalCode,
-        country: payload.country,
+        line1: shippingAddress.line1,
+        line2: shippingAddress.line2,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        postalCode: shippingAddress.postalCode,
+        country: shippingAddress.country,
       },
     };
 

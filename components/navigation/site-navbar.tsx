@@ -139,7 +139,7 @@ export function SiteNavbar() {
     }
 
     if (currentUser.role === "user") {
-      return { href: "/dashboard", label: "My orders" };
+      return { href: "/dashboard/orders", label: "My orders" };
     }
 
     return null;

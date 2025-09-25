@@ -1,14 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useRouter } from "next/navigation";
 import { Clock, CreditCard, PackageCheck } from "lucide-react";
-import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrderStatusSelect } from "@/components/admin/order-status-select";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUSES, type OrderStatusValue, getOrderStatusLabel } from "@/lib/order-status";
 import type { OrderSummary } from "@/lib/orders";
@@ -39,81 +38,7 @@ function formatPaymentLabel(method: string) {
 }
 
 export function OrdersTable({ data }: OrdersTableProps) {
-  const router = useRouter();
-  const [orders, setOrders] = React.useState<OrderSummary[]>(data);
-  const [updating, setUpdating] = React.useState<string | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<OrderStatusValue | "all">("all");
-
-  React.useEffect(() => {
-    setOrders(data);
-  }, [data]);
-
-  const handleStatusChange = React.useCallback(
-    async (orderId: string, status: OrderStatusValue) => {
-      setUpdating(orderId);
-      try {
-        const response = await fetch(`/api/orders/${orderId}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        });
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
-          const message =
-            typeof payload?.error === "string"
-              ? payload.error
-              : Array.isArray(payload?.error?.status)
-                ? payload.error.status[0]
-                : "Unable to update status";
-          toast.error(message ?? "Unable to update status");
-          return;
-        }
-        const updatedOrder: OrderSummary | null = payload?.order ?? null;
-        if (updatedOrder) {
-          setOrders((prev) =>
-            prev.map((order) => (order.id === updatedOrder.id ? updatedOrder : order))
-          );
-        }
-        toast.success("Order status updated");
-        router.refresh();
-      } catch (error) {
-        console.error(error);
-        toast.error("Unable to update status");
-      } finally {
-        setUpdating(null);
-      }
-    },
-    [router]
-  );
-
-  const renderStatusControl = React.useCallback(
-    (order: OrderSummary) => {
-      const isUpdating = updating === order.id;
-      return (
-        <Select
-          value={order.status}
-          onValueChange={(value) => {
-            if (value !== order.status) {
-              void handleStatusChange(order.id, value as OrderStatusValue);
-            }
-          }}
-          disabled={isUpdating}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            {ORDER_STATUSES.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    },
-    [handleStatusChange, updating]
-  );
 
   const columns = React.useMemo<ColumnDef<OrderSummary>[]>(
     () => [
@@ -160,31 +85,45 @@ export function OrdersTable({ data }: OrdersTableProps) {
       {
         accessorKey: "status",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => renderStatusControl(row.original),
+        cell: ({ row }) => (
+          <OrderStatusSelect orderId={row.original.id} status={row.original.status as OrderStatusValue} />
+        ),
+      },
+      {
+        id: "view",
+        header: () => <span className="sr-only">View</span>,
+        cell: ({ row }) => (
+          <Link
+            href={`/admin/orders/${row.original.id}`}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            View order
+          </Link>
+        ),
       },
     ],
-    [renderStatusControl]
+    []
   );
 
   const filteredData = React.useMemo(() => {
     if (statusFilter === "all") {
-      return orders;
+      return data;
     }
-    return orders.filter((order) => order.status === statusFilter);
-  }, [orders, statusFilter]);
+    return data.filter((order) => order.status === statusFilter);
+  }, [data, statusFilter]);
 
   const statusSummary = React.useMemo(() => {
     const counts = ORDER_STATUSES.map((status) => ({ value: status.value, label: status.label, count: 0 }));
-    const total = orders.length;
+    const total = data.length;
     const map = new Map(counts.map((entry) => [entry.value, entry]));
-    for (const order of orders) {
+    for (const order of data) {
       const entry = map.get(order.status as OrderStatusValue);
       if (entry) {
         entry.count += 1;
       }
     }
     return { counts, total };
-  }, [orders]);
+  }, [data]);
 
   return (
     <div className="space-y-4">
