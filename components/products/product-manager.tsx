@@ -37,6 +37,44 @@ export function ProductManager({ products }: ProductManagerProps) {
     }
   }
 
+  async function handleDuplicate(product: ProductSummary) {
+    try {
+      const payload = {
+        name: `${product.name} (Copy)`,
+        category: product.category,
+        description: product.description,
+        price: product.price,
+        condition: product.condition,
+        imageUrl: product.imageUrl ?? "",
+        galleryImages: product.galleryImages ?? [],
+        richDescription: product.richDescription ?? "",
+        featured: product.featured,
+        inStock: product.inStock,
+        highlights: product.highlights ?? [],
+        colors: product.colors ?? [],
+      };
+
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const message = data?.error ?? "Unable to duplicate product";
+        toast.error(typeof message === "string" ? message : "Unable to duplicate product");
+        return;
+      }
+
+      toast.success("Product duplicated");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to duplicate product. Please try again.");
+    }
+  }
+
   return (
     <section className="space-y-8">
       <Card>
@@ -51,6 +89,7 @@ export function ProductManager({ products }: ProductManagerProps) {
             data={products}
             onEdit={(product) => router.push(`/admin/products/${product.id}/edit`)}
             onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
           />
         </CardContent>
       </Card>

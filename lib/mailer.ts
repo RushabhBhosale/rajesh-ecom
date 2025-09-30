@@ -43,6 +43,7 @@ interface OrderEmailItem {
   quantity: number;
   price: number;
   total: number;
+  color?: string | null;
 }
 
 interface OrderEmailPayload {
@@ -78,7 +79,10 @@ function renderAddress(address: OrderEmailPayload["shippingAddress"]) {
 
 function renderItems(items: OrderEmailItem[]) {
   return items
-    .map((item) => `${item.name} (x${item.quantity}) — ${formatCurrency(item.total)}`)
+    .map(
+      (item) =>
+        `${item.name}${item.color ? ` (${item.color})` : ""} (x${item.quantity}) — ${formatCurrency(item.total)}`
+    )
     .join("\n");
 }
 
@@ -110,7 +114,7 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
       ${payload.items
         .map(
           (item) =>
-            `<li><strong>${item.name}</strong> (x${item.quantity}) — ${formatCurrency(item.total)}</li>`
+            `<li><strong>${item.name}</strong>${item.color ? ` (${item.color})` : ""} (x${item.quantity}) — ${formatCurrency(item.total)}</li>`
         )
         .join("")}
     </ul>

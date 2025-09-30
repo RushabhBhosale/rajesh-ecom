@@ -49,6 +49,7 @@ type ProductFormValues = {
   featured: boolean;
   inStock: boolean;
   highlights: string;
+  colors: string;
   galleryImages: { url: string }[];
   richDescription: string;
 };
@@ -132,6 +133,11 @@ export function ProductForm({
           .max(800, "Highlights should be under 800 characters")
           .optional()
           .default(""),
+        colors: z
+          .string()
+          .max(400, "Colours should be under 400 characters")
+          .optional()
+          .default(""),
       }),
     []
   );
@@ -151,6 +157,7 @@ export function ProductForm({
       featured: product?.featured ?? false,
       inStock: product?.inStock ?? true,
       highlights: product?.highlights?.join("\n") ?? "",
+      colors: product?.colors?.join("\n") ?? "",
     },
   });
 
@@ -248,6 +255,28 @@ export function ProductForm({
       return;
     }
 
+    const rawColors = values.colors
+      .split(/[,\n]/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+    const uniqueColors = rawColors.filter(
+      (item, index) =>
+        rawColors.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index
+    );
+
+    if (values.colors.trim() && uniqueColors.length === 0) {
+      setServerError("Please enter at least one colour or leave the field empty.");
+      return;
+    }
+
+    if (uniqueColors.length > 12) {
+      setServerError("You can add up to 12 colours.");
+      return;
+    }
+
+    const colors = uniqueColors;
+
     const galleryImages = values.galleryImages
       .map((entry) => entry.url.trim())
       .filter((url, index, arr) => url.length > 0 && arr.indexOf(url) === index)
@@ -265,6 +294,7 @@ export function ProductForm({
       featured: values.featured,
       inStock: values.inStock,
       highlights,
+      colors,
     };
 
     try {
@@ -305,6 +335,7 @@ export function ProductForm({
           featured: false,
           inStock: true,
           highlights: "",
+          colors: "",
         });
       }
       if (redirectTo) {
@@ -615,6 +646,23 @@ export function ProductForm({
             {errors.richDescription ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.richDescription.message}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="colors">Colour options</Label>
+            <Textarea
+              id="colors"
+              placeholder="Enter one colour per line or separate with commas."
+              className="min-h-[80px]"
+              {...register("colors")}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave blank if the product has no colour variations.
+            </p>
+            {errors.colors ? (
+              <p className="text-sm text-destructive" role="alert">
+                {errors.colors.message}
               </p>
             ) : null}
           </div>

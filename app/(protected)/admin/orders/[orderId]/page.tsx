@@ -69,9 +69,15 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
               <h2 className="text-lg font-semibold text-foreground">Items</h2>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 {order.items.map((item) => (
-                  <li key={item.productId} className="flex items-center justify-between gap-3">
+                  <li
+                    key={`${item.productId}-${item.color ?? "default"}`}
+                    className="flex items-center justify-between gap-3"
+                  >
                     <div>
                       <p className="font-medium text-foreground">{item.name}</p>
+                      {item.color ? (
+                        <p className="text-xs text-muted-foreground">Colour: {item.color}</p>
+                      ) : null}
                       <p className="text-xs">Qty {item.quantity}</p>
                     </div>
                     <span className="font-semibold text-foreground">{formatCurrency(item.total)}</span>

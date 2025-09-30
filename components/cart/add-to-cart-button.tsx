@@ -19,9 +19,19 @@ interface AddToCartButtonProps {
   };
   size?: "default" | "sm" | "lg";
   variant?: "default" | "secondary" | "outline";
+  selectedColor?: string | null;
+  requireColor?: boolean;
+  onMissingColor?: () => void;
 }
 
-export function AddToCartButton({ product, size = "default", variant = "default" }: AddToCartButtonProps) {
+export function AddToCartButton({
+  product,
+  size = "default",
+  variant = "default",
+  selectedColor,
+  requireColor = false,
+  onMissingColor,
+}: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [isPending, startTransition] = useTransition();
 
@@ -38,10 +48,18 @@ export function AddToCartButton({ product, size = "default", variant = "default"
           return;
         }
 
+        const normalizedColor = selectedColor?.trim() ?? "";
+        if (requireColor && !normalizedColor) {
+          toast.error("Please select a colour before adding to cart.");
+          onMissingColor?.();
+          return;
+        }
+
         startTransition(() => {
           addItem(
             {
               productId: product.id,
+              color: normalizedColor || null,
               name: product.name,
               price: product.price,
               imageUrl: product.imageUrl,
@@ -51,7 +69,9 @@ export function AddToCartButton({ product, size = "default", variant = "default"
             1
           );
           toast.success("Added to cart", {
-            description: `${product.name} was added to your cart`,
+            description: `${product.name}${
+              normalizedColor ? ` (${normalizedColor})` : ""
+            } was added to your cart`,
           });
         });
       }}

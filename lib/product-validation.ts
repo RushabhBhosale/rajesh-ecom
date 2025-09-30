@@ -59,6 +59,11 @@ export const productPayloadSchema = z.object({
     )
     .optional()
     .default([]),
+  colors: z
+    .array(z.string().min(1, "Colour name cannot be empty"))
+    .max(12, "You can add up to 12 colours")
+    .optional()
+    .default([]),
 });
 
 export type ProductPayload = z.infer<typeof productPayloadSchema>;

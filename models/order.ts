@@ -23,6 +23,7 @@ const orderItemSchema = new Schema(
     imageUrl: { type: String, default: "", trim: true },
     category: { type: String, default: "", trim: true },
     condition: { type: String, default: "", trim: true },
+    color: { type: String, default: "", trim: true },
   },
   { _id: false }
 );

@@ -3,6 +3,12 @@ import { z } from "zod";
 export const checkoutItemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.number().int().positive().max(10),
+  color: z
+    .string()
+    .trim()
+    .max(120, "Colour name is too long")
+    .optional()
+    .nullable(),
 });
 
 export const checkoutPayloadSchema = z.object({

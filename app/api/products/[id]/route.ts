@@ -33,6 +33,25 @@ function sanitizeGallery(images: string[] | undefined) {
     });
 }
 
+function sanitizeColors(colors: string[] | undefined) {
+  if (!Array.isArray(colors)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return colors
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item) {
+        return false;
+      }
+      if (seen.has(item.toLowerCase())) {
+        return false;
+      }
+      seen.add(item.toLowerCase());
+      return true;
+    });
+}
+
 function isValidId(id: string) {
   return mongoose.Types.ObjectId.isValid(id);
 }
@@ -64,6 +83,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     const highlights = sanitizeHighlights(payload.highlights);
     const galleryImages = sanitizeGallery(payload.galleryImages);
     const richDescription = sanitizeRichText(payload.richDescription?.trim() ?? "");
+    const colors = sanitizeColors(payload.colors);
 
     await connectDB();
     const updated = await ProductModel.findByIdAndUpdate(
@@ -81,6 +101,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
           featured: payload.featured ?? false,
           inStock: payload.inStock ?? true,
           highlights,
+          colors,
         },
       },
       { new: true }
