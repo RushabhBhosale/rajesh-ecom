@@ -13,6 +13,7 @@ interface ProductsTableProps {
   data: ProductSummary[];
   onEdit: (product: ProductSummary) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (product: ProductSummary) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
@@ -21,7 +22,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-export function ProductsTable({ data, onEdit, onDelete }: ProductsTableProps) {
+export function ProductsTable({ data, onEdit, onDelete, onDuplicate }: ProductsTableProps) {
   const columns = React.useMemo<ColumnDef<ProductSummary>[]>(
     () => [
       {
@@ -84,6 +85,9 @@ export function ProductsTable({ data, onEdit, onDelete }: ProductsTableProps) {
             <Button variant="outline" size="sm" onClick={() => onEdit(row.original)}>
               Edit
             </Button>
+            <Button variant="outline" size="sm" onClick={() => onDuplicate(row.original)}>
+              Duplicate
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -97,7 +101,7 @@ export function ProductsTable({ data, onEdit, onDelete }: ProductsTableProps) {
         enableSorting: false,
       },
     ],
-    [onEdit, onDelete],
+    [onEdit, onDelete, onDuplicate],
   );
 
   return (
@@ -137,6 +141,14 @@ export function ProductsTable({ data, onEdit, onDelete }: ProductsTableProps) {
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => onEdit(product)} className="flex-1 min-[420px]:flex-none">
               Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onDuplicate(product)}
+              className="flex-1 min-[420px]:flex-none"
+            >
+              Duplicate
             </Button>
             <Button
               variant="ghost"

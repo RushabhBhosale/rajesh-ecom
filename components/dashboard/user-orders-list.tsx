@@ -120,10 +120,16 @@ export function UserOrdersList({ orders: initialOrders }: UserOrdersListProps) {
                 <h4 className="text-sm font-semibold text-foreground">Items</h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {order.items.map((item) => (
-                    <li key={`${order.id}-${item.productId}`} className="flex items-center justify-between gap-3">
+                    <li
+                      key={`${order.id}-${item.productId}-${item.color ?? "default"}`}
+                      className="flex items-center justify-between gap-3"
+                    >
                       <span>
                         {item.name}
-                        <span className="text-xs text-muted-foreground"> × {item.quantity}</span>
+                        {item.color ? (
+                          <span className="ml-1 text-xs text-muted-foreground">({item.color})</span>
+                        ) : null}
+                        <span className="ml-1 text-xs text-muted-foreground">× {item.quantity}</span>
                       </span>
                       <span className="font-semibold text-foreground">
                         {formatCurrency(item.total)}

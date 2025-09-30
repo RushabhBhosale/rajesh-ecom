@@ -227,6 +227,7 @@ export function CheckoutForm() {
           items: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
+            color: item.color ?? null,
           })),
         }),
       });
@@ -457,9 +458,15 @@ export function CheckoutForm() {
         <div className="space-y-4 divide-y divide-slate-200/80">
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.productId} className="flex items-start justify-between gap-3">
+              <div
+                key={`${item.productId}-${item.color ?? "default"}`}
+                className="flex items-start justify-between gap-3"
+              >
                 <div>
                   <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                  {item.color ? (
+                    <p className="text-xs text-slate-500">Colour: {item.color}</p>
+                  ) : null}
                   <p className="text-xs text-slate-500">
                     Qty {item.quantity} · {formatCurrency(item.price)} each
                   </p>

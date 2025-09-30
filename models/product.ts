@@ -51,6 +51,10 @@ const ProductSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    colors: {
+      type: [String],
+      default: [],
+    },
     inStock: {
       type: Boolean,
       default: true,

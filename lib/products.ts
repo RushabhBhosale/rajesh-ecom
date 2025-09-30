@@ -16,6 +16,7 @@ export interface ProductSummary {
   richDescription: string | null;
   highlights: string[];
   featured: boolean;
+  colors: string[];
   inStock: boolean;
   createdAt: string;
   updatedAt: string;
@@ -60,6 +61,11 @@ function mapProduct(product: ProductDocument): ProductSummary {
       ? product.highlights.filter((item): item is string => Boolean(item && item.trim()))
       : [],
     featured: Boolean(product.featured),
+    colors: Array.isArray(product.colors)
+      ? product.colors
+          .map((item) => item.trim())
+          .filter((item, index, arr) => item.length > 0 && arr.indexOf(item) === index)
+      : [],
     inStock: Boolean(product.inStock),
     createdAt: product.createdAt ? product.createdAt.toISOString() : new Date().toISOString(),
     updatedAt: product.updatedAt ? product.updatedAt.toISOString() : new Date().toISOString(),

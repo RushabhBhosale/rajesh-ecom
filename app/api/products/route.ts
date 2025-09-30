@@ -33,6 +33,25 @@ function sanitizeGallery(images: string[] | undefined) {
     });
 }
 
+function sanitizeColors(colors: string[] | undefined) {
+  if (!Array.isArray(colors)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return colors
+    .map((item) => item.trim())
+    .filter((item) => {
+      if (!item) {
+        return false;
+      }
+      if (seen.has(item.toLowerCase())) {
+        return false;
+      }
+      seen.add(item.toLowerCase());
+      return true;
+    });
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -68,6 +87,7 @@ export async function POST(request: Request) {
     const highlights = sanitizeHighlights(payload.highlights);
     const galleryImages = sanitizeGallery(payload.galleryImages);
     const richDescription = sanitizeRichText(payload.richDescription?.trim() ?? "");
+    const colors = sanitizeColors(payload.colors);
 
     await connectDB();
     await ProductModel.create({
@@ -82,6 +102,7 @@ export async function POST(request: Request) {
       featured: payload.featured ?? false,
       inStock: payload.inStock ?? true,
       highlights,
+      colors,
     });
 
     return NextResponse.json({ message: "Product created" }, { status: 201 });

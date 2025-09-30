@@ -32,6 +32,9 @@ export async function POST(request: Request) {
       if (!product) {
         throw new Error(`Product not found: ${item.productId}`);
       }
+      const color = typeof item.color === "string" && item.color.trim().length > 0
+        ? item.color.trim()
+        : null;
       return {
         productId: product._id,
         name: product.name,
@@ -40,6 +43,7 @@ export async function POST(request: Request) {
         imageUrl: product.imageUrl ?? "",
         category: product.category ?? "",
         condition: product.condition ?? "",
+        color,
       };
     });
 
@@ -105,6 +109,7 @@ export async function POST(request: Request) {
         quantity: item.quantity,
         price: item.price,
         total: item.price * item.quantity,
+        color: item.color,
       })),
       shippingAddress: {
         line1: shippingAddress.line1,

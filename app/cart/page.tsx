@@ -101,7 +101,10 @@ export default function CartPage() {
       <div className="mx-auto mt-10 grid w-full max-w-[90vw] gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           {items.map((item) => (
-            <CartLineItem key={item.productId} item={item} />
+            <CartLineItem
+              key={`${item.productId}-${item.color ?? "default"}`}
+              item={item}
+            />
           ))}
 
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white/70 px-4 py-4 shadow-sm">
