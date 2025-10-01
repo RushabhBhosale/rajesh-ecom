@@ -8,13 +8,6 @@ import { Plus, Minus } from "lucide-react";
 import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatCurrency } from "@/lib/currency";
 import {
   useCartHydration,
@@ -23,6 +16,7 @@ import {
   MAX_CART_QUANTITY,
 } from "@/lib/stores/cart-store";
 import type { ProductSummary } from "@/lib/products";
+import { cn } from "@/lib/utils";
 
 interface ProductPurchaseSectionProps {
   product: ProductSummary & { inStock: boolean };
@@ -99,21 +93,32 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Colour
               </p>
-              <Select
-                value={selectedColor ?? ""}
-                onValueChange={(value) => setSelectedColor(value)}
-              >
-                <SelectTrigger className="min-w-[140px] rounded-full border-slate-300 bg-white text-sm font-semibold">
-                  <SelectValue placeholder="Select colour" />
-                </SelectTrigger>
-                <SelectContent>
-                  {product.colors.map((color) => (
-                    <SelectItem key={color} value={color}>
-                      {color}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {product.colors.map((color) => {
+                  const isSelected = color === selectedColor;
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(color)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
+                        isSelected
+                          ? "border-slate-900 bg-white text-slate-900 shadow-sm"
+                          : "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                      )}
+                      aria-pressed={isSelected}
+                    >
+                      <span
+                        className="size-5 rounded-full border border-slate-200"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      />
+                      <span>{color}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
           {showQuantity ? (
