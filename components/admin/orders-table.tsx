@@ -125,6 +125,25 @@ export function OrdersTable({ data }: OrdersTableProps) {
     return { counts, total };
   }, [data]);
 
+  const renderStatusControl = React.useCallback(
+    (order: OrderSummary) => (
+      <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="font-medium uppercase tracking-wide">Status</span>
+          <span>{getOrderStatusLabel(order.status)}</span>
+        </div>
+        <OrderStatusSelect orderId={order.id} status={order.status as OrderStatusValue} />
+        <Link
+          href={`/admin/orders/${order.id}`}
+          className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+        >
+          View order details
+        </Link>
+      </div>
+    ),
+    []
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">

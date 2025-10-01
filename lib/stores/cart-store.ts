@@ -134,8 +134,24 @@ export const useCartStore = create<CartState>()(
   )
 );
 
-export const selectCartItems = (state: CartState) =>
-  state.items.map((item) => ({ ...item, color: normalizeColor(item.color) }));
+export const selectCartItems = (() => {
+  let lastItems: CartItem[] | null = null;
+  let cached: CartItem[] = [];
+
+  return (state: CartState) => {
+    if (state.items === lastItems) {
+      return cached;
+    }
+
+    lastItems = state.items;
+    cached = state.items.map((item) => ({
+      ...item,
+      color: normalizeColor(item.color),
+    }));
+
+    return cached;
+  };
+})();
 export const selectItemCount = (state: CartState) =>
   state.items.reduce((total, item) => total + item.quantity, 0);
 export const selectSubtotal = (state: CartState) =>
