@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -16,6 +16,10 @@ export function OrderStatusSelect({ orderId, status }: OrderStatusSelectProps) {
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<OrderStatusValue>(status);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    setCurrentStatus(status);
+  }, [status]);
 
   const handleChange = useCallback(
     async (nextStatus: OrderStatusValue) => {
