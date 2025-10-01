@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -39,6 +40,138 @@ const conditionLabels: Record<(typeof productConditions)[number], string> = {
   new: "Brand new",
 };
 
+interface ColorOptionsEditorProps {
+  value: string[];
+  onChange: (colors: string[]) => void;
+  onBlur?: () => void;
+  error?: string;
+  onClearErrors?: () => void;
+}
+
+function ColorOptionsEditor({
+  value,
+  onChange,
+  onBlur,
+  error,
+  onClearErrors,
+}: ColorOptionsEditorProps) {
+  const [colorInput, setColorInput] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const normalizedValue = Array.isArray(value) ? value : [];
+  const reachedLimit = normalizedValue.length >= 12;
+  const trimmedInput = colorInput.trim();
+  const canAddColor = trimmedInput.length > 0;
+  const errorMessage = localError ?? error ?? null;
+
+  function handleAddColor() {
+    const trimmed = trimmedInput;
+    if (!trimmed) {
+      setLocalError("Enter a colour name before adding.");
+      return;
+    }
+    const exists = normalizedValue.some(
+      (item) => item.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setLocalError("That colour has already been added.");
+      return;
+    }
+    if (normalizedValue.length >= 12) {
+      setLocalError("You can add up to 12 colours.");
+      return;
+    }
+
+    const next = [...normalizedValue, trimmed];
+    setLocalError(null);
+    setColorInput("");
+    onClearErrors?.();
+    onChange(next);
+    onBlur?.();
+  }
+
+  function handleRemoveColor(index: number) {
+    const next = normalizedValue.filter((_, itemIndex) => itemIndex !== index);
+    setLocalError(null);
+    onClearErrors?.();
+    onChange(next);
+    onBlur?.();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          id="colors"
+          value={colorInput}
+          placeholder="Enter a colour name or hex value"
+          onChange={(event) => {
+            setColorInput(event.target.value);
+            if (localError) {
+              setLocalError(null);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              handleAddColor();
+            }
+          }}
+          className="sm:max-w-[260px]"
+          aria-describedby="colors-helper"
+          aria-invalid={Boolean(errorMessage)}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleAddColor}
+          disabled={!canAddColor || reachedLimit}
+          className="w-full sm:w-auto"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Add colour
+        </Button>
+      </div>
+      {normalizedValue.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {normalizedValue.map((color, index) => (
+            <div
+              key={`${color}-${index}`}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm"
+            >
+              <span
+                className="size-5 rounded-full border border-slate-200"
+                style={{ backgroundColor: color }}
+                aria-hidden="true"
+              />
+              <span className="font-medium text-slate-700">{color}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-full text-slate-500 hover:text-slate-700"
+                onClick={() => handleRemoveColor(index)}
+                aria-label={`Remove ${color}`}
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No colours added yet.</p>
+      )}
+      {errorMessage ? (
+        <p className="text-sm text-destructive" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+      <p id="colors-helper" className="text-xs text-muted-foreground">
+        Add up to 12 colours. Leave blank if the product has no colour variations.
+      </p>
+    </div>
+  );
+}
+
 type ProductFormValues = {
   name: string;
   category: string;
@@ -49,7 +182,7 @@ type ProductFormValues = {
   featured: boolean;
   inStock: boolean;
   highlights: string;
-  colors: string;
+  colors: string[];
   galleryImages: { url: string }[];
   richDescription: string;
 };
@@ -134,10 +267,16 @@ export function ProductForm({
           .optional()
           .default(""),
         colors: z
-          .string()
-          .max(400, "Colours should be under 400 characters")
+          .array(
+            z
+              .string()
+              .trim()
+              .min(1, "Colour name cannot be empty")
+              .max(80, "Colour names should be under 80 characters")
+          )
+          .max(12, "You can add up to 12 colours")
           .optional()
-          .default(""),
+          .default([]),
       }),
     []
   );
@@ -157,7 +296,7 @@ export function ProductForm({
       featured: product?.featured ?? false,
       inStock: product?.inStock ?? true,
       highlights: product?.highlights?.join("\n") ?? "",
-      colors: product?.colors?.join("\n") ?? "",
+      colors: product?.colors ?? [],
     },
   });
 
@@ -169,6 +308,7 @@ export function ProductForm({
     setValue,
     control,
     formState: { errors, isSubmitting },
+    clearErrors,
   } = form;
 
   const {
@@ -255,22 +395,21 @@ export function ProductForm({
       return;
     }
 
-    const rawColors = values.colors
-      .split(/[,\n]/)
+    const rawColors = Array.isArray(values.colors) ? values.colors : [];
+    const normalizedColors = rawColors
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
 
-    const uniqueColors = rawColors.filter(
+    const uniqueColors = normalizedColors.filter(
       (item, index) =>
-        rawColors.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index
+        normalizedColors.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index
     );
 
-    if (values.colors.trim() && uniqueColors.length === 0) {
-      setServerError("Please enter at least one colour or leave the field empty.");
-      return;
+    if (uniqueColors.length !== normalizedColors.length) {
+      setValue("colors", uniqueColors, { shouldValidate: true });
     }
 
-    if (uniqueColors.length > 12) {
+    if (normalizedColors.length > 12) {
       setServerError("You can add up to 12 colours.");
       return;
     }
@@ -335,7 +474,7 @@ export function ProductForm({
           featured: false,
           inStock: true,
           highlights: "",
-          colors: "",
+          colors: [],
         });
       }
       if (redirectTo) {
@@ -651,20 +790,19 @@ export function ProductForm({
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="colors">Colour options</Label>
-            <Textarea
-              id="colors"
-              placeholder="Enter one colour per line or separate with commas."
-              className="min-h-[80px]"
-              {...register("colors")}
+            <Controller
+              control={control}
+              name="colors"
+              render={({ field, fieldState }) => (
+                <ColorOptionsEditor
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  error={fieldState.error?.message}
+                  onClearErrors={() => clearErrors("colors")}
+                />
+              )}
             />
-            <p className="text-xs text-muted-foreground">
-              Leave blank if the product has no colour variations.
-            </p>
-            {errors.colors ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.colors.message}
-              </p>
-            ) : null}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="highlights">Highlights</Label>
