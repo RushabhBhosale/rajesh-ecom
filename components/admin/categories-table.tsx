@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Folder, FolderSearch } from "lucide-react";
+import Link from "next/link";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
@@ -49,6 +50,19 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
           const formatted = value ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "-";
           return <span className="text-sm text-muted-foreground">{formatted}</span>;
         },
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => (
+          <Link
+            href={`/admin/categories/${row.original.id}/edit`}
+            className="text-sm font-semibold text-primary hover:underline"
+          >
+            Edit
+          </Link>
+        ),
+        enableSorting: false,
       },
     ],
     [],

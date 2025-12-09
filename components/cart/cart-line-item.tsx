@@ -53,6 +53,15 @@ export function CartLineItem({ item }: CartLineItemProps) {
           <h3 className="text-base font-semibold text-slate-900 line-clamp-2">
             {item.name}
           </h3>
+          {item.displayVariant ? (
+            <p className="text-xs font-medium text-slate-500">
+               {item.displayVariant}
+            </p>
+          ) : item.variant ? (
+            <p className="text-xs font-medium text-slate-500">
+               {item.variant}
+            </p>
+          ) : null}
           {item.color ? (
             <p className="text-xs font-medium text-slate-500">Colour: {item.color}</p>
           ) : null}
@@ -72,7 +81,9 @@ export function CartLineItem({ item }: CartLineItemProps) {
             variant="ghost"
             size="icon"
             className="size-7 rounded-full"
-            onClick={() => updateQuantity(item.productId, item.color ?? null, item.quantity - 1)}
+            onClick={() =>
+              updateQuantity(item.productId, item.variant ?? null, item.color ?? null, item.quantity - 1)
+            }
             disabled={item.quantity <= 1}
             aria-label={`Decrease quantity of ${item.name}`}
           >
@@ -83,13 +94,14 @@ export function CartLineItem({ item }: CartLineItemProps) {
             onChange={(e) => {
               const parsed = Number.parseInt(e.target.value, 10);
               if (!Number.isNaN(parsed)) {
-                updateQuantity(item.productId, item.color ?? null, parsed);
+                updateQuantity(item.productId, item.variant ?? null, item.color ?? null, parsed);
               }
             }}
             onBlur={(e) => {
               const parsed = Number.parseInt(e.target.value, 10);
               updateQuantity(
                 item.productId,
+                item.variant ?? null,
                 item.color ?? null,
                 Number.isNaN(parsed) ? 1 : parsed
               );
@@ -103,7 +115,9 @@ export function CartLineItem({ item }: CartLineItemProps) {
             variant="ghost"
             size="icon"
             className="size-7 rounded-full"
-            onClick={() => updateQuantity(item.productId, item.color ?? null, item.quantity + 1)}
+            onClick={() =>
+              updateQuantity(item.productId, item.variant ?? null, item.color ?? null, item.quantity + 1)
+            }
             disabled={item.quantity >= MAX_CART_QUANTITY}
             aria-label={`Increase quantity of ${item.name}`}
           >
@@ -124,7 +138,7 @@ export function CartLineItem({ item }: CartLineItemProps) {
           type="button"
           variant="ghost"
           className="h-8 px-2 text-xs text-slate-500 hover:text-red-600"
-          onClick={() => removeItem(item.productId, item.color ?? null)}
+          onClick={() => removeItem(item.productId, item.variant ?? null, item.color ?? null)}
         >
           <Trash2 className="mr-1.5 h-3.5 w-3.5" />
           Remove

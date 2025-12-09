@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -25,6 +25,11 @@ import {
 } from "@/lib/product-constants";
 import type { ProductSummary } from "@/lib/products";
 import type { CategorySummary } from "@/lib/categories";
+import {
+  masterTypeLabels,
+  type MasterOptionSummary,
+  type MasterOptionType,
+} from "@/lib/master-constants";
 import { RichTextEditor } from "@/components/products/rich-text-editor";
 
 interface ProductFormProps {
@@ -39,6 +44,61 @@ const conditionLabels: Record<(typeof productConditions)[number], string> = {
   refurbished: "Certified refurbished",
   new: "Brand new",
 };
+
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+
+type MasterOptionState = Record<MasterOptionType, MasterOptionSummary[]>;
+type VariantSelection = {
+  processorId?: string;
+  ramId?: string;
+  storageId?: string;
+  note?: string;
+};
+
+function createEmptyMasters(): MasterOptionState {
+  return {
+    company: [],
+    processor: [],
+    ram: [],
+    storage: [],
+    graphics: [],
+    os: [],
+  };
+}
+
+const masterFieldMap: Record<
+  "companyId" | "processorId" | "ramId" | "storageId" | "graphicsId" | "osId",
+  MasterOptionType
+> = {
+  companyId: "company",
+  processorId: "processor",
+  ramId: "ram",
+  storageId: "storage",
+  graphicsId: "graphics",
+  osId: "os",
+};
+
+function createMastersFromProduct(product: ProductSummary | undefined): MasterOptionState {
+  const seeded = createEmptyMasters();
+  if (!product) {
+    return seeded;
+  }
+
+  (["company", "processor", "ram", "storage", "graphics", "os"] as const).forEach((type) => {
+    const option = product[type];
+    if (option?.id) {
+      seeded[type] = [
+        {
+          id: option.id,
+          name: option.name || "Current selection",
+          type,
+        },
+      ];
+    }
+  });
+
+  return seeded;
+}
 
 interface ColorOptionsEditorProps {
   value: string[];
@@ -178,10 +238,17 @@ type ProductFormValues = {
   description: string;
   price: number;
   condition: (typeof productConditions)[number];
+  companyId?: string;
+  processorId?: string;
+  ramId?: string;
+  storageId?: string;
+  graphicsId?: string;
+  osId?: string;
   imageUrl: string;
   featured: boolean;
   inStock: boolean;
   highlights: string;
+  variants: { label: string; price: number }[];
   colors: string[];
   galleryImages: { url: string }[];
   richDescription: string;
@@ -201,6 +268,11 @@ export function ProductForm({
   >([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [masters, setMasters] = useState<MasterOptionState>(() =>
+    createMastersFromProduct(product)
+  );
+  const [isLoadingMasters, setIsLoadingMasters] = useState(true);
+  const [mastersError, setMastersError] = useState<string | null>(null);
   const [isUploadingPrimary, setIsUploadingPrimary] = useState(false);
   const [galleryUploadingIndex, setGalleryUploadingIndex] = useState<number | null>(null);
 
@@ -214,6 +286,48 @@ export function ProductForm({
           .min(10, "Description must be at least 10 characters"),
         price: z.coerce.number().min(0, "Price must be 0 or greater"),
         condition: z.enum(productConditions),
+        companyId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid company"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        processorId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        ramId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid RAM option"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        storageId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        graphicsId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        osId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid operating system"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
         imageUrl: z
           .string()
           .trim()
@@ -266,6 +380,16 @@ export function ProductForm({
           .max(800, "Highlights should be under 800 characters")
           .optional()
           .default(""),
+        variants: z
+          .array(
+            z.object({
+              label: z.string().trim().min(1, "Variant name cannot be empty").max(120),
+              price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+            })
+          )
+          .max(30, "You can add up to 30 variants")
+          .optional()
+          .default([]),
         colors: z
           .array(
             z
@@ -289,6 +413,12 @@ export function ProductForm({
       description: product?.description ?? "",
       price: product?.price ?? 0,
       condition: product?.condition ?? "refurbished",
+      companyId: product?.company?.id ?? "",
+      processorId: product?.processor?.id ?? "",
+      ramId: product?.ram?.id ?? "",
+      storageId: product?.storage?.id ?? "",
+      graphicsId: product?.graphics?.id ?? "",
+      osId: product?.os?.id ?? "",
       imageUrl: product?.imageUrl ?? "",
       galleryImages:
         product?.galleryImages?.map((url) => ({ url }))?.slice(0, 12) ?? [],
@@ -296,6 +426,11 @@ export function ProductForm({
       featured: product?.featured ?? false,
       inStock: product?.inStock ?? true,
       highlights: product?.highlights?.join("\n") ?? "",
+      variants:
+        product?.variants?.map((variant) => ({
+          label: variant.label,
+          price: variant.price,
+        })) ?? [],
       colors: product?.colors ?? [],
     },
   });
@@ -311,6 +446,8 @@ export function ProductForm({
     clearErrors,
   } = form;
 
+  const selectedCategory = useWatch({ control, name: "category" });
+
   const {
     fields: galleryFields,
     append: appendGallery,
@@ -319,6 +456,99 @@ export function ProductForm({
     control,
     name: "galleryImages",
   });
+
+  const {
+    fields: variantFields,
+    append: appendVariant,
+    remove: removeVariant,
+  } = useFieldArray({
+    control,
+    name: "variants",
+  });
+  const [variantSelections, setVariantSelections] = useState<
+    Record<string, VariantSelection>
+  >({});
+  const variantValues = useWatch({ control, name: "variants" }) ?? [];
+
+  const masterNameLookup = useMemo(() => {
+    const lookup: Record<MasterOptionType, Record<string, string>> = {
+      company: {},
+      processor: {},
+      ram: {},
+      storage: {},
+      graphics: {},
+      os: {},
+    };
+    (Object.keys(masters) as MasterOptionType[]).forEach((type) => {
+      masters[type].forEach((option) => {
+        lookup[type][option.id] = option.name;
+      });
+    });
+    return lookup;
+  }, [masters]);
+
+  function composeVariantLabel(selection: VariantSelection) {
+    const parts: string[] = [];
+    if (selection.processorId && masterNameLookup.processor[selection.processorId]) {
+      parts.push(masterNameLookup.processor[selection.processorId]);
+    }
+    if (selection.ramId && masterNameLookup.ram[selection.ramId]) {
+      parts.push(masterNameLookup.ram[selection.ramId]);
+    }
+    if (selection.storageId && masterNameLookup.storage[selection.storageId]) {
+      parts.push(masterNameLookup.storage[selection.storageId]);
+    }
+    const note = selection.note?.trim();
+    if (note) {
+      parts.push(note);
+    }
+    return parts.join(" • ");
+  }
+
+  useEffect(() => {
+    setVariantSelections((prev) => {
+      const next: Record<string, VariantSelection> = {};
+      let changed = false;
+      variantFields.forEach((field, index) => {
+        const existing = prev[field.id];
+        if (existing) {
+          next[field.id] = existing;
+        } else {
+          const currentLabel = variantValues?.[index]?.label ?? "";
+          next[field.id] = { note: currentLabel };
+          changed = true;
+        }
+      });
+      if (Object.keys(prev).length !== Object.keys(next).length) {
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [variantFields, variantValues]);
+
+  function updateVariantSelection(
+    fieldId: string,
+    index: number,
+    patch: Partial<VariantSelection>
+  ) {
+    setVariantSelections((prev) => {
+      const current = prev[fieldId] ?? { note: variantValues?.[index]?.label ?? "" };
+      const nextSelection = { ...current, ...patch };
+      const next = { ...prev, [fieldId]: nextSelection };
+      const label = composeVariantLabel(nextSelection);
+      setValue(`variants.${index}.label`, label, { shouldValidate: true, shouldDirty: true });
+      return next;
+    });
+  }
+
+  function removeVariantRow(index: number, fieldId: string) {
+    removeVariant(index);
+    setVariantSelections((prev) => {
+      const next = { ...prev };
+      delete next[fieldId];
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -334,9 +564,7 @@ export function ProductForm({
         }
 
         const data = await response.json().catch(() => null);
-        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(
-          data?.categories
-        )
+        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(data?.categories)
           ? data.categories.filter(
               (item: unknown): item is Pick<CategorySummary, "id" | "name"> =>
                 typeof item === "object" &&
@@ -356,8 +584,9 @@ export function ProductForm({
         const hasCurrentInFetched = fetched.some(
           (category) => category.name === currentCategory
         );
-        if ((!currentCategory || !hasCurrentInFetched) && fetched.length > 0) {
-          setValue("category", fetched[0].name, { shouldValidate: true });
+        const firstCategory = fetched[0];
+        if ((!currentCategory || !hasCurrentInFetched) && firstCategory) {
+          setValue("category", firstCategory.name, { shouldValidate: true });
         }
       } catch (error) {
         console.error(error);
@@ -382,6 +611,80 @@ export function ProductForm({
     };
   }, [getValues, setValue]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMasters() {
+      setIsLoadingMasters(true);
+      setMastersError(null);
+
+      try {
+        const response = await fetch(
+          "/api/masters?types=company,processor,ram,storage,graphics,os"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load master options");
+        }
+
+        const data = await response.json().catch(() => null);
+        const rawMasters = (data?.masters ?? {}) as Partial<
+          Record<MasterOptionType, unknown>
+        >;
+        const parsed = createEmptyMasters();
+
+        (Object.keys(parsed) as MasterOptionType[]).forEach((type) => {
+          const items = Array.isArray(rawMasters[type])
+            ? (rawMasters[type] as unknown[]).filter(
+                (item): item is MasterOptionSummary =>
+                  typeof (item as MasterOptionSummary)?.id === "string" &&
+                  typeof (item as MasterOptionSummary)?.name === "string"
+              )
+            : [];
+          parsed[type] = items;
+        });
+
+        (Object.keys(masterFieldMap) as Array<keyof typeof masterFieldMap>).forEach(
+          (field) => {
+            const selected = getValues(field as keyof ProductFormValues);
+            if (typeof selected !== "string" || selected.length === 0) {
+              return;
+            }
+            const type = masterFieldMap[field];
+            const exists = parsed[type].some((option) => option.id === selected);
+            if (!exists) {
+              parsed[type] = [
+                ...parsed[type],
+                { id: selected, name: "Current selection", type },
+              ];
+            }
+          }
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        setMasters(parsed);
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setMasters(createEmptyMasters());
+          setMastersError("Unable to load master options. Please refresh.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMasters(false);
+        }
+      }
+    }
+
+    void loadMasters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues]);
+
   const submitHandler = handleSubmit(async (values) => {
     setServerError(null);
 
@@ -393,6 +696,34 @@ export function ProductForm({
     if (highlights.length > MAX_PRODUCT_HIGHLIGHTS) {
       setServerError(`You can add up to ${MAX_PRODUCT_HIGHLIGHTS} highlights.`);
       return;
+    }
+
+    const rawVariants = Array.isArray(values.variants) ? values.variants : [];
+    const normalizedVariants = rawVariants
+      .map((variant) => {
+        const price = Number(variant?.price);
+        return {
+          label: (variant?.label ?? "").trim(),
+          price: Number.isFinite(price) ? price : 0,
+        };
+      })
+      .filter((variant) => variant.label.length > 0 && variant.price >= 0);
+    const uniqueVariants = normalizedVariants.filter((variant, index, arr) => {
+      const key = variant.label.toLowerCase();
+      return (
+        arr.findIndex((candidate) => candidate.label.toLowerCase() === key) === index
+      );
+    });
+
+    if (uniqueVariants.length > 30) {
+      setServerError("You can add up to 30 variants.");
+      return;
+    }
+
+    if (uniqueVariants.length !== rawVariants.length) {
+      setValue("variants", uniqueVariants as ProductFormValues["variants"], {
+        shouldValidate: true,
+      });
     }
 
     const rawColors = Array.isArray(values.colors) ? values.colors : [];
@@ -427,12 +758,19 @@ export function ProductForm({
       description: values.description,
       price: values.price,
       condition: values.condition,
+      companyId: values.companyId || undefined,
+      processorId: values.processorId || undefined,
+      ramId: values.ramId || undefined,
+      storageId: values.storageId || undefined,
+      graphicsId: values.graphicsId || undefined,
+      osId: values.osId || undefined,
       imageUrl: values.imageUrl,
       galleryImages,
       richDescription: values.richDescription.trim(),
       featured: values.featured,
       inStock: values.inStock,
       highlights,
+      variants: uniqueVariants,
       colors,
     };
 
@@ -468,12 +806,19 @@ export function ProductForm({
           description: "",
           price: 0,
           condition: "refurbished",
+          companyId: "",
+          processorId: "",
+          ramId: "",
+          storageId: "",
+          graphicsId: "",
+          osId: "",
           imageUrl: "",
           galleryImages: [],
           richDescription: "",
           featured: false,
           inStock: true,
           highlights: "",
+          variants: [],
           colors: [],
         });
       }
@@ -612,6 +957,7 @@ export function ProductForm({
                   <div className="flex items-center gap-3">
                     <Input
                       placeholder="https://images.example.com/gallery.jpg"
+                      defaultValue={field.url ?? ""}
                       {...register(`galleryImages.${index}.url`)}
                       aria-invalid={Boolean(errors.galleryImages?.[index]?.url)}
                     />
@@ -698,6 +1044,9 @@ export function ProductForm({
                 {errors.price.message}
               </p>
             ) : null}
+            <p className="text-xs text-muted-foreground">
+              Base price used when no configuration override is selected.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="condition">Condition</Label>
@@ -715,6 +1064,309 @@ export function ProductForm({
             {errors.condition ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.condition.message}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-3 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Configuration variants</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add processor / RAM / storage combinations with their specific prices. Leave empty if there is only one price.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendVariant({ label: "", price: product?.price ?? 0 })}
+                disabled={variantFields.length >= 30}
+              >
+                Add option
+              </Button>
+            </div>
+            {variantFields.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No variants added. The base price will be used.
+              </p>
+            ) : null}
+            <div className="space-y-3">
+              {variantFields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="grid gap-3 rounded-lg border border-slate-200 bg-white/60 p-3 sm:grid-cols-[1.4fr_1fr_140px_auto]"
+                >
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-600">
+                        Processor
+                      </Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                        value={variantSelections[field.id]?.processorId ?? ""}
+                        onChange={(event) =>
+                          updateVariantSelection(field.id, index, {
+                            processorId: event.target.value || undefined,
+                          })
+                        }
+                        disabled={isLoadingMasters}
+                      >
+                        <option value="">Select</option>
+                        {masters.processor.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-600">RAM</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                        value={variantSelections[field.id]?.ramId ?? ""}
+                        onChange={(event) =>
+                          updateVariantSelection(field.id, index, {
+                            ramId: event.target.value || undefined,
+                          })
+                        }
+                        disabled={isLoadingMasters}
+                      >
+                        <option value="">Select</option>
+                        {masters.ram.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-600">
+                        Storage (optional)
+                      </Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                        value={variantSelections[field.id]?.storageId ?? ""}
+                        onChange={(event) =>
+                          updateVariantSelection(field.id, index, {
+                            storageId: event.target.value || undefined,
+                          })
+                        }
+                        disabled={isLoadingMasters}
+                      >
+                        <option value="">Select</option>
+                        {masters.storage.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs font-semibold text-slate-600">
+                        Custom note (optional)
+                      </Label>
+                      <Input
+                        placeholder="Add extra details (e.g., FHD display)"
+                        value={variantSelections[field.id]?.note ?? ""}
+                        onChange={(event) =>
+                          updateVariantSelection(field.id, index, {
+                            note: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <input
+                      type="hidden"
+                      defaultValue={field.label ?? ""}
+                      {...register(`variants.${index}.label` as const)}
+                    />
+                    <p className="sm:col-span-2 text-xs text-slate-500">
+                      Label preview:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {variantValues?.[index]?.label || "Select options above"}
+                      </span>
+                    </p>
+                    {errors.variants?.[index]?.label?.message ? (
+                      <p className="sm:col-span-2 text-xs text-destructive" role="alert">
+                        {errors.variants[index]?.label?.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="48999"
+                      defaultValue={field.price ?? product?.price ?? 0}
+                      {...register(`variants.${index}.price` as const, { valueAsNumber: true })}
+                      aria-invalid={Boolean(errors.variants?.[index]?.price)}
+                    />
+                    {errors.variants?.[index]?.price?.message ? (
+                      <p className="text-xs text-destructive" role="alert">
+                        {errors.variants[index]?.price?.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeVariantRow(index, field.id)}
+                      aria-label="Remove variant option"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-3 sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Master attributes</Label>
+                <p className="text-xs text-muted-foreground">
+                  Link the product to shared masters for filtering and sorting.
+                  Leave blank if not applicable.
+                </p>
+              </div>
+              {isLoadingMasters ? (
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              ) : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="companyId">{masterTypeLabels.company}</Label>
+                <select
+                  id="companyId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("companyId")}
+                >
+                  <option value="">Select company</option>
+                  {masters.company.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.companyId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.companyId.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="processorId">{masterTypeLabels.processor}</Label>
+                <select
+                  id="processorId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("processorId")}
+                >
+                  <option value="">Select processor</option>
+                  {masters.processor.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.processorId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.processorId.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ramId">{masterTypeLabels.ram}</Label>
+                <select
+                  id="ramId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("ramId")}
+                >
+                  <option value="">Select RAM</option>
+                  {masters.ram.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.ramId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.ramId.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="storageId">{masterTypeLabels.storage}</Label>
+                <select
+                  id="storageId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("storageId")}
+                >
+                  <option value="">Select storage</option>
+                  {masters.storage.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.storageId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.storageId.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="graphicsId">{masterTypeLabels.graphics}</Label>
+                <select
+                  id="graphicsId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("graphicsId")}
+                >
+                  <option value="">Select graphics</option>
+                  {masters.graphics.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.graphicsId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.graphicsId.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="osId">{masterTypeLabels.os}</Label>
+                <select
+                  id="osId"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingMasters}
+                  {...register("osId")}
+                >
+                  <option value="">Select OS</option>
+                  {masters.os.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.osId ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.osId.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {mastersError ? (
+              <p className="text-xs text-destructive" role="alert">
+                {mastersError}
               </p>
             ) : null}
           </div>

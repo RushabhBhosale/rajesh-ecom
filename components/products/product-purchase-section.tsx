@@ -25,7 +25,35 @@ interface ProductPurchaseSectionProps {
 export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps) {
   const hasHydrated = useCartHydration();
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const colorOptionsKey = product.colors.join("|");
+  const variantOptionsKey = product.variants.map((variant) => `${variant.label}:${variant.price}`).join("|");
+  const baseLabel = useMemo(() => {
+    const parts = [
+      product.processor?.name,
+      product.ram?.name,
+      product.storage?.name,
+      product.graphics?.name,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" • ") : "Base configuration";
+  }, [product.processor?.name, product.ram?.name, product.storage?.name, product.graphics?.name]);
+  const configurationOptions = useMemo(() => {
+    const options = [
+      { label: baseLabel, price: product.price, isBase: true },
+      ...product.variants.map((variant) => ({ ...variant, isBase: false })),
+    ];
+    const seen = new Set<string>();
+    return options.filter((option) => {
+      const key = `${option.isBase ? "__base" : option.label.toLowerCase()}:${option.price}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [product.price, variantOptionsKey, baseLabel]);
+  const requiresVariantSelection =
+    product.variants.length > 0 && !(Number.isFinite(product.price) && product.price > 0);
 
   useEffect(() => {
     if (product.colors.length > 0) {
@@ -35,11 +63,30 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
     }
   }, [product.id, colorOptionsKey]);
 
+  useEffect(() => {
+    if (configurationOptions.length === 0) {
+      setSelectedVariant(null);
+      return;
+    }
+    const cheapest =
+      configurationOptions.reduce((best, current) =>
+        current.price < best.price ? current : best
+      ) ?? configurationOptions[0];
+    setSelectedVariant(cheapest.isBase ? null : cheapest.label);
+  }, [product.id, product.price, variantOptionsKey, configurationOptions]);
+
   const normalizedColor = selectedColor?.trim() ?? "";
   const colorForCart = normalizedColor || null;
+  const variantForCart = (selectedVariant ?? "").trim() || null;
+  const activeVariant = variantForCart
+    ? product.variants.find(
+        (variant) => variant.label.toLowerCase() === variantForCart.toLowerCase()
+      )
+    : undefined;
+  const displayPrice = activeVariant ? activeVariant.price : product.price;
   const quantitySelector = useMemo(
-    () => selectQuantityByVariant(product.id, colorForCart),
-    [product.id, colorForCart]
+    () => selectQuantityByVariant(product.id, variantForCart, colorForCart),
+    [product.id, variantForCart, colorForCart]
   );
   const quantity = useCartStore(quantitySelector);
   const addItem = useCartStore((state) => state.addItem);
@@ -49,10 +96,10 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
 
   const handleDecrease = () => {
     if (quantity <= 1) {
-      removeItem(product.id, colorForCart);
+      removeItem(product.id, variantForCart, colorForCart);
       return;
     }
-    updateQuantity(product.id, colorForCart, quantity - 1);
+    updateQuantity(product.id, variantForCart, colorForCart, quantity - 1);
   };
 
   const handleIncrease = () => {
@@ -63,8 +110,9 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
       {
         productId: product.id,
         color: colorForCart,
+        variant: variantForCart,
         name: product.name,
-        price: product.price,
+        price: displayPrice,
         imageUrl: product.imageUrl,
         category: product.category,
         condition: product.condition,
@@ -78,16 +126,50 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Starting at
+            {product.variants.length > 0 ? "Selected price" : "Price"}
           </p>
           <p className="text-4xl font-bold text-slate-900">
-            {formatCurrency(product.price)}
+            {formatCurrency(displayPrice)}
           </p>
           <p className="text-xs text-slate-500">
             Volume pricing and configuration add-ons available on request.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {product.variants.length > 0 ? (
+            <div className="flex flex-col gap-1 text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Configuration
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {configurationOptions.map((variant) => {
+                  const isBase = (variant as any).isBase;
+                  const isSelected = isBase
+                    ? variantForCart === null
+                    : variant.label.toLowerCase() === (variantForCart ?? "").toLowerCase();
+                  return (
+                    <button
+                      key={variant.label}
+                      type="button"
+                      onClick={() => setSelectedVariant(isBase ? null : variant.label)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
+                        isSelected
+                          ? "border-slate-900 bg-white text-slate-900 shadow-sm"
+                          : "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                      )}
+                      aria-pressed={isSelected}
+                    >
+                      <span>{variant.label}</span>
+                      <span className="text-xs text-slate-500">
+                        {formatCurrency(variant.price)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
           {product.colors.length > 0 ? (
             <div className="flex flex-col gap-1 text-left">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -142,18 +224,18 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                     return;
                   }
                   if (parsed <= 0) {
-                    removeItem(product.id, colorForCart);
+                    removeItem(product.id, variantForCart, colorForCart);
                     return;
                   }
-                  updateQuantity(product.id, colorForCart, parsed);
+                  updateQuantity(product.id, variantForCart, colorForCart, parsed);
                 }}
                 onBlur={(event) => {
                   const parsed = Number.parseInt(event.target.value, 10);
                   if (Number.isNaN(parsed) || parsed <= 0) {
-                    removeItem(product.id, colorForCart);
+                    removeItem(product.id, variantForCart, colorForCart);
                     return;
                   }
-                  updateQuantity(product.id, colorForCart, parsed);
+                  updateQuantity(product.id, variantForCart, colorForCart, parsed);
                 }}
                 inputMode="numeric"
                 className="h-9 w-16 rounded-full border-0 bg-transparent text-center text-sm font-semibold"
@@ -176,7 +258,7 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
               product={{
                 id: product.id,
                 name: product.name,
-                price: product.price,
+                price: displayPrice,
                 imageUrl: product.imageUrl,
                 category: product.category,
                 condition: product.condition,
@@ -184,6 +266,9 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
               }}
               selectedColor={colorForCart}
               requireColor={product.colors.length > 0}
+              selectedVariant={variantForCart}
+              requireVariant={requiresVariantSelection}
+              displayVariant={variantForCart || baseLabel}
               size="lg"
             />
           )}

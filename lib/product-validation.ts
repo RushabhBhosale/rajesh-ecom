@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { MAX_PRODUCT_HIGHLIGHTS, productConditions } from "@/lib/product-constants";
 
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+
 function isRelativeUpload(path: string) {
   return path.startsWith("/uploads/");
 }
@@ -28,6 +30,30 @@ export const productPayloadSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().min(0, "Price must be 0 or greater"),
   condition: z.enum(productConditions),
+  companyId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid company"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  processorId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid processor"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  ramId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  storageId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid storage option"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  graphicsId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid graphics option"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  osId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid operating system"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
   imageUrl: z
     .string()
     .trim()
@@ -57,6 +83,16 @@ export const productPayloadSchema = z.object({
       MAX_PRODUCT_HIGHLIGHTS,
       `You can add up to ${MAX_PRODUCT_HIGHLIGHTS} highlights`
     )
+    .optional()
+    .default([]),
+  variants: z
+    .array(
+      z.object({
+        label: z.string().trim().min(1, "Variant label cannot be empty").max(120),
+        price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+      })
+    )
+    .max(30, "Too many variants")
     .optional()
     .default([]),
   colors: z

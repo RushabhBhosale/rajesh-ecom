@@ -57,3 +57,8 @@ npm test
 ```
 
 Additional end-to-end payment tests will require mocking the Razorpay API; the current suite focuses on unit coverage.
+
+## Documentation
+
+- Tech stack and features: `docs/tech-stack-and-features.md`
+- Code structure and data flow: `docs/code-structure.md`

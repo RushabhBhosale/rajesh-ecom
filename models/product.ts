@@ -29,6 +29,72 @@ const ProductSchema = new Schema(
       enum: productConditions,
       default: "refurbished",
     },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    companyName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    processorId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    processorName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    ramId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    ramName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    storageId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    storageName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    graphicsId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    graphicsName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    osId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    osName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     imageUrl: {
       type: String,
       default: "",
@@ -50,6 +116,15 @@ const ProductSchema = new Schema(
     featured: {
       type: Boolean,
       default: false,
+    },
+    variants: {
+      type: [
+        {
+          label: { type: String, required: true, trim: true },
+          price: { type: Number, required: true, min: 0 },
+        },
+      ],
+      default: [],
     },
     colors: {
       type: [String],

@@ -24,6 +24,7 @@ const orderItemSchema = new Schema(
     category: { type: String, default: "", trim: true },
     condition: { type: String, default: "", trim: true },
     color: { type: String, default: "", trim: true },
+    variant: { type: String, default: "", trim: true },
   },
   { _id: false }
 );

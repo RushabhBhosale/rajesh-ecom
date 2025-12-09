@@ -24,6 +24,12 @@ export default async function ProductsPage({
     minPrice?: string;
     maxPrice?: string;
     q?: string;
+    company?: string;
+    processor?: string;
+    ram?: string;
+    storage?: string;
+    graphics?: string;
+    os?: string;
   };
 }) {
   const facets = await getProductFacets();
@@ -34,6 +40,10 @@ export default async function ProductsPage({
     "price-asc",
     "price-desc",
     "category-asc",
+    "company-asc",
+    "processor-asc",
+    "ram-asc",
+    "storage-asc",
     "created-desc",
   ]);
 
@@ -73,6 +83,49 @@ export default async function ProductsPage({
     ? Number.parseInt(searchParams.maxPrice as string, 10)
     : undefined;
 
+  const rawCompany =
+    typeof searchParams.company === "string"
+      ? searchParams.company
+      : undefined;
+  const companyId = facets.companies.some((item) => item.id === rawCompany)
+    ? rawCompany
+    : undefined;
+
+  const rawProcessor =
+    typeof searchParams.processor === "string"
+      ? searchParams.processor
+      : undefined;
+  const processorId = facets.processors.some((item) => item.id === rawProcessor)
+    ? rawProcessor
+    : undefined;
+
+  const rawRam =
+    typeof searchParams.ram === "string" ? searchParams.ram : undefined;
+  const ramId = facets.rams.some((item) => item.id === rawRam)
+    ? rawRam
+    : undefined;
+
+  const rawStorage =
+    typeof searchParams.storage === "string"
+      ? searchParams.storage
+      : undefined;
+  const storageId = facets.storages.some((item) => item.id === rawStorage)
+    ? rawStorage
+    : undefined;
+
+  const rawGraphics =
+    typeof searchParams.graphics === "string"
+      ? searchParams.graphics
+      : undefined;
+  const graphicsId = facets.graphics.some((item) => item.id === rawGraphics)
+    ? rawGraphics
+    : undefined;
+
+  const rawOs = typeof searchParams.os === "string" ? searchParams.os : undefined;
+  const osId = facets.operatingSystems.some((item) => item.id === rawOs)
+    ? rawOs
+    : undefined;
+
   const sort =
     typeof searchParams.sort === "string" &&
     allowedSortOptions.has(searchParams.sort)
@@ -85,6 +138,12 @@ export default async function ProductsPage({
     condition,
     minPrice,
     maxPrice,
+    companyId,
+    processorId,
+    ramId,
+    storageId,
+    graphicsId,
+    osId,
     sort,
   });
 
@@ -94,6 +153,12 @@ export default async function ProductsPage({
     condition: condition ?? undefined,
     minPrice: typeof minPrice === "number" ? String(minPrice) : undefined,
     maxPrice: typeof maxPrice === "number" ? String(maxPrice) : undefined,
+    company: companyId ?? undefined,
+    processor: processorId ?? undefined,
+    ram: ramId ?? undefined,
+    storage: storageId ?? undefined,
+    graphics: graphicsId ?? undefined,
+    os: osId ?? undefined,
     sort: sort ?? undefined,
   };
 
@@ -138,6 +203,14 @@ export default async function ProductsPage({
         categories={facets.categories}
         conditions={facets.conditions}
         priceRange={facets.priceRange}
+        masterOptions={{
+          companies: facets.companies,
+          processors: facets.processors,
+          rams: facets.rams,
+          storages: facets.storages,
+          graphics: facets.graphics,
+          operatingSystems: facets.operatingSystems,
+        }}
         filters={filterSnapshot}
         resultCount={products.length}
       />

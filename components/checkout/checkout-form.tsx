@@ -228,6 +228,7 @@ export function CheckoutForm() {
             productId: item.productId,
             quantity: item.quantity,
             color: item.color ?? null,
+            variant: item.variant ?? null,
           })),
         }),
       });
@@ -459,11 +460,14 @@ export function CheckoutForm() {
           <div className="space-y-3">
             {items.map((item) => (
               <div
-                key={`${item.productId}-${item.color ?? "default"}`}
+                key={`${item.productId}-${item.variant ?? "base"}-${item.color ?? "default"}`}
                 className="flex items-start justify-between gap-3"
               >
                 <div>
                   <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                  {item.variant ? (
+                    <p className="text-xs text-slate-500"> {item.variant}</p>
+                  ) : null}
                   {item.color ? (
                     <p className="text-xs text-slate-500">Colour: {item.color}</p>
                   ) : null}

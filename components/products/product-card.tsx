@@ -17,6 +17,17 @@ export function ProductCard({ product, href }: ProductCardProps) {
     product.condition === "refurbished"
       ? "Enterprise Certified"
       : "Factory Sealed";
+  const taxonomy = [product.company?.name, product.category]
+    .filter(Boolean)
+    .join(" • ");
+  const quickSpecs = [product.processor?.name, product.ram?.name, product.storage?.name]
+    .filter(Boolean)
+    .join(" • ");
+  const variantPrices = product.variants?.map((variant) => variant.price).filter((price) => Number.isFinite(price)) ?? [];
+  const primaryPrice =
+    variantPrices.length > 0
+      ? Math.min(product.price, ...variantPrices)
+      : product.price;
 
   return (
     <Link href={detailsHref} className="block">
@@ -44,16 +55,19 @@ export function ProductCard({ product, href }: ProductCardProps) {
         {/* Content */}
         <div className="space-y-2 p-3">
           <div className="text-[11px] uppercase tracking-wide text-slate-500">
-            {product.category}
+            {taxonomy || product.category}
           </div>
           <h3 className="line-clamp-2 text-sm font-semibold text-slate-900 truncate">
             {product.name}
           </h3>
+          {quickSpecs ? (
+            <p className="text-[12px] text-slate-600 line-clamp-1">{quickSpecs}</p>
+          ) : null}
 
           <div className="flex items-center justify-between pt-1">
             <div>
               <div className="text-lg font-bold text-slate-900">
-                {formatCurrency(product.price)}
+                {formatCurrency(primaryPrice)}
               </div>
               <div className="text-[11px] text-slate-500">{condition}</div>
             </div>

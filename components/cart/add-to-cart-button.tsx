@@ -22,6 +22,10 @@ interface AddToCartButtonProps {
   selectedColor?: string | null;
   requireColor?: boolean;
   onMissingColor?: () => void;
+  selectedVariant?: string | null;
+  requireVariant?: boolean;
+  onMissingVariant?: () => void;
+  displayVariant?: string | null;
 }
 
 export function AddToCartButton({
@@ -31,6 +35,10 @@ export function AddToCartButton({
   selectedColor,
   requireColor = false,
   onMissingColor,
+  selectedVariant,
+  requireVariant = false,
+  onMissingVariant,
+  displayVariant,
 }: AddToCartButtonProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [isPending, startTransition] = useTransition();
@@ -55,11 +63,21 @@ export function AddToCartButton({
           return;
         }
 
+        const normalizedVariant = selectedVariant?.trim() ?? "";
+        if (requireVariant && !normalizedVariant) {
+          toast.error("Please select a configuration before adding to cart.");
+          onMissingVariant?.();
+          return;
+        }
+        const normalizedDisplayVariant = displayVariant?.trim() ?? normalizedVariant;
+
         startTransition(() => {
           addItem(
             {
               productId: product.id,
               color: normalizedColor || null,
+              variant: normalizedVariant || null,
+              displayVariant: normalizedDisplayVariant || null,
               name: product.name,
               price: product.price,
               imageUrl: product.imageUrl,
@@ -70,7 +88,9 @@ export function AddToCartButton({
           );
           toast.success("Added to cart", {
             description: `${product.name}${
-              normalizedColor ? ` (${normalizedColor})` : ""
+              normalizedDisplayVariant || normalizedColor
+                ? ` (${[normalizedDisplayVariant, normalizedColor].filter(Boolean).join(" · ")})`
+                : ""
             } was added to your cart`,
           });
         });

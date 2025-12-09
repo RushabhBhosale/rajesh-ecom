@@ -24,8 +24,8 @@ const navLinks = [
 ];
 
 const authLinks = [
-  { href: "/login", label: "Sign in" },
-  { href: "/register", label: "Create account", primary: true },
+  { href: "/login", label: "Sign in" , primary: true}
+  // { href: "/register", label: "Create account", primary: true },
 ];
 
 const HIDDEN_ON_PATHS = [/^\/dashboard/, /^\/admin/, /^\/superadmin/];

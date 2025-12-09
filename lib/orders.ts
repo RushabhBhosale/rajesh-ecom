@@ -11,6 +11,7 @@ export interface OrderItemSummary {
   category: string | null;
   condition: string | null;
   color: string | null;
+  variant: string | null;
 }
 
 export interface OrderSummary {
@@ -55,6 +56,7 @@ function mapOrder(order: OrderDocument): OrderSummary {
         category: item.category || null,
         condition: item.condition || null,
         color: item.color || null,
+        variant: item.variant || null,
       }))
     : [];
 

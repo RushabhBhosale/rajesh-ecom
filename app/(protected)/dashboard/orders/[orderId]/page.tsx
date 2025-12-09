@@ -73,11 +73,16 @@ export default async function OrderDetailPage({
               <ul className="space-y-3">
                 {order.items.map((item) => (
                   <li
-                    key={`${item.productId}-${item.color ?? "default"}`}
+                    key={`${item.productId}-${item.variant ?? "base"}-${item.color ?? "default"}`}
                     className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
                   >
                     <div>
                       <p className="font-medium text-foreground">{item.name}</p>
+                      {item.variant ? (
+                        <p className="text-xs text-muted-foreground">
+                           {item.variant}
+                        </p>
+                      ) : null}
                       {item.color ? (
                         <p className="text-xs text-muted-foreground">Colour: {item.color}</p>
                       ) : null}

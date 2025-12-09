@@ -9,6 +9,12 @@ export const checkoutItemSchema = z.object({
     .max(120, "Colour name is too long")
     .optional()
     .nullable(),
+  variant: z
+    .string()
+    .trim()
+    .max(160, "Variant name is too long")
+    .optional()
+    .nullable(),
 });
 
 export const checkoutPayloadSchema = z.object({

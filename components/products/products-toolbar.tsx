@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/currency";
+import type { MasterOptionSummary } from "@/lib/master-constants";
 
 interface PriceRange {
   minPrice: number;
@@ -33,13 +33,29 @@ export interface ProductFilters {
   condition?: string;
   minPrice?: string;
   maxPrice?: string;
+  company?: string;
+  processor?: string;
+  ram?: string;
+  storage?: string;
+  graphics?: string;
+  os?: string;
   sort?: string;
+}
+
+interface MasterOptionsByType {
+  companies: MasterOptionSummary[];
+  processors: MasterOptionSummary[];
+  rams: MasterOptionSummary[];
+  storages: MasterOptionSummary[];
+  graphics: MasterOptionSummary[];
+  operatingSystems: MasterOptionSummary[];
 }
 
 interface ProductsToolbarProps {
   categories: string[];
   conditions: string[];
   priceRange: PriceRange;
+  masterOptions: MasterOptionsByType;
   filters: ProductFilters;
   resultCount: number;
 }
@@ -48,6 +64,7 @@ export function ProductsToolbar({
   categories,
   conditions,
   priceRange,
+  masterOptions,
   filters,
   resultCount,
 }: ProductsToolbarProps) {
@@ -126,6 +143,10 @@ export function ProductsToolbar({
 
   const activeFilters = useMemo(() => {
     const items: any = [];
+
+    const findName = (list: MasterOptionSummary[], id?: string | null) =>
+      list.find((item) => item.id === id)?.name ?? null;
+
     if (filters.search) {
       items.push({ key: "search", label: `Search: "${filters.search}"` });
     }
@@ -143,6 +164,30 @@ export function ProductsToolbar({
       const max = filters.maxPrice ?? "∞";
       items.push({ key: "price", label: `Price: ₹${min} - ₹${max}` });
     }
+    if (filters.company) {
+      const label = findName(masterOptions.companies, filters.company);
+      items.push({ key: "company", label: `Company: ${label ?? filters.company}` });
+    }
+    if (filters.processor) {
+      const label = findName(masterOptions.processors, filters.processor);
+      items.push({ key: "processor", label: `Processor: ${label ?? filters.processor}` });
+    }
+    if (filters.ram) {
+      const label = findName(masterOptions.rams, filters.ram);
+      items.push({ key: "ram", label: `RAM: ${label ?? filters.ram}` });
+    }
+    if (filters.storage) {
+      const label = findName(masterOptions.storages, filters.storage);
+      items.push({ key: "storage", label: `Storage: ${label ?? filters.storage}` });
+    }
+    if (filters.graphics) {
+      const label = findName(masterOptions.graphics, filters.graphics);
+      items.push({ key: "graphics", label: `Graphics: ${label ?? filters.graphics}` });
+    }
+    if (filters.os) {
+      const label = findName(masterOptions.operatingSystems, filters.os);
+      items.push({ key: "os", label: `OS: ${label ?? filters.os}` });
+    }
     if (filters.sort && filters.sort !== "created-desc") {
       items.push({ key: "sort", label: `Sort: ${filters.sort}` });
     }
@@ -152,8 +197,20 @@ export function ProductsToolbar({
     filters.condition,
     filters.maxPrice,
     filters.minPrice,
+    filters.company,
+    filters.processor,
+    filters.ram,
+    filters.storage,
+    filters.graphics,
+    filters.os,
     filters.search,
     filters.sort,
+    masterOptions.companies,
+    masterOptions.processors,
+    masterOptions.rams,
+    masterOptions.storages,
+    masterOptions.graphics,
+    masterOptions.operatingSystems,
   ]);
 
   return (
@@ -218,7 +275,127 @@ export function ProductsToolbar({
                   <SelectItem value="all">All Conditions</SelectItem>
                   {conditions.map((condition) => (
                     <SelectItem key={condition} value={condition}>
-                      {condition === "refurbished" ? "Refurbished" : "New"}
+                  {condition === "refurbished" ? "Refurbished" : "New"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+              <Select
+                value={filters.company ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ company: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.companies.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="Company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  {masterOptions.companies.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.processor ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ processor: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.processors.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="Processor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Processors</SelectItem>
+                  {masterOptions.processors.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.ram ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ ram: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.rams.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="RAM" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All RAM</SelectItem>
+                  {masterOptions.rams.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.storage ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ storage: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.storages.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="Storage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Storage</SelectItem>
+                  {masterOptions.storages.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.graphics ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ graphics: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.graphics.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="Graphics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Graphics</SelectItem>
+                  {masterOptions.graphics.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.os ?? "all"}
+                onValueChange={(value) =>
+                  updateParams({ os: value === "all" ? null : value })
+                }
+                disabled={isPending || masterOptions.operatingSystems.length === 0}
+              >
+                <SelectTrigger className="h-11 min-w-[9.5rem] rounded-full border-slate-300">
+                  <SelectValue placeholder="Operating system" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Operating systems</SelectItem>
+                  {masterOptions.operatingSystems.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -297,6 +474,10 @@ export function ProductsToolbar({
                   <SelectItem value="price-asc">Price: Low → High</SelectItem>
                   <SelectItem value="price-desc">Price: High → Low</SelectItem>
                   <SelectItem value="category-asc">Category A–Z</SelectItem>
+                  <SelectItem value="company-asc">Company A–Z</SelectItem>
+                  <SelectItem value="processor-asc">Processor A–Z</SelectItem>
+                  <SelectItem value="ram-asc">RAM A–Z</SelectItem>
+                  <SelectItem value="storage-asc">Storage A–Z</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -316,6 +497,12 @@ export function ProductsToolbar({
                 condition: null,
                 minPrice: null,
                 maxPrice: null,
+                company: null,
+                processor: null,
+                ram: null,
+                storage: null,
+                graphics: null,
+                os: null,
                 sort: null,
               });
             }}

@@ -41,6 +41,21 @@ export function ProductsTable({ data, onEdit, onDelete, onDuplicate }: ProductsT
         cell: ({ getValue }) => <span className="text-sm text-muted-foreground">{getValue<string>()}</span>,
       },
       {
+        id: "specs",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Specs" />,
+        cell: ({ row }) => {
+          const specs = [
+            row.original.company?.name,
+            row.original.processor?.name,
+            row.original.ram?.name,
+          ]
+            .filter(Boolean)
+            .join(" • ");
+          return <span className="text-sm text-muted-foreground line-clamp-2">{specs || "—"}</span>;
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "condition",
         header: ({ column }) => <DataTableColumnHeader column={column} title="Condition" />,
         cell: ({ getValue }) => (

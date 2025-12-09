@@ -67,3 +67,24 @@ export async function listCategories(): Promise<CategorySummary[]> {
     };
   });
 }
+
+export async function getCategoryById(id: string): Promise<CategorySummary | null> {
+  await connectDB();
+  const category = await CategoryModel.findById(id).lean<CategoryDocument | null>();
+  if (!category) {
+    return null;
+  }
+
+  const createdAt = category.createdAt ? category.createdAt.toISOString() : new Date().toISOString();
+  const updatedAt = category.updatedAt ? category.updatedAt.toISOString() : createdAt;
+
+  return {
+    id: category._id.toString(),
+    name: category.name,
+    description: category.description ?? "",
+    productCount: 0,
+    lastUpdated: updatedAt,
+    createdAt,
+    updatedAt,
+  };
+}

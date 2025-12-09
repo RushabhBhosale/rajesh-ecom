@@ -12,6 +12,33 @@ import { TransactionModel } from "@/models/transaction";
 
 const TAX_RATE = 0.18;
 
+function normalizeProductVariants(
+  variants: { label?: unknown; price?: unknown }[] | unknown
+) {
+  if (!Array.isArray(variants)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return variants
+    .map((variant) => ({
+      label: typeof variant.label === "string" ? variant.label.trim() : "",
+      price: Number.isFinite(Number((variant as any)?.price))
+        ? Number((variant as any)?.price)
+        : Number.NaN,
+    }))
+    .filter((variant) => {
+      if (!variant.label || Number.isNaN(variant.price) || variant.price < 0) {
+        return false;
+      }
+      const key = variant.label.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+}
+
 export async function POST(request: Request) {
   try {
     const payload = checkoutPayloadSchema.parse(await request.json());
@@ -35,15 +62,33 @@ export async function POST(request: Request) {
       const color = typeof item.color === "string" && item.color.trim().length > 0
         ? item.color.trim()
         : null;
+      const variantLabel = typeof item.variant === "string" && item.variant.trim().length > 0
+        ? item.variant.trim()
+        : null;
+      const normalizedVariants = normalizeProductVariants(product.variants as any);
+      const matchedVariant = variantLabel
+        ? normalizedVariants.find(
+            (variant) => variant.label.toLowerCase() === variantLabel.toLowerCase()
+          )
+        : undefined;
+      if (variantLabel && !matchedVariant) {
+        throw new Error("INVALID_VARIANT_SELECTION");
+      }
+      const unitPrice = matchedVariant
+        ? matchedVariant.price
+        : Number.isFinite(product.price)
+          ? Number(product.price)
+          : 0;
       return {
         productId: product._id,
         name: product.name,
-        price: product.price,
+        price: unitPrice,
         quantity: item.quantity,
         imageUrl: product.imageUrl ?? "",
         category: product.category ?? "",
         condition: product.condition ?? "",
         color,
+        variant: matchedVariant?.label ?? "",
       };
     });
 
@@ -110,6 +155,7 @@ export async function POST(request: Request) {
         price: item.price,
         total: item.price * item.quantity,
         color: item.color,
+        variant: item.variant,
       })),
       shippingAddress: {
         line1: shippingAddress.line1,
@@ -187,6 +233,9 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Checkout error", error);
+    if (error instanceof Error && error.message === "INVALID_VARIANT_SELECTION") {
+      return NextResponse.json({ error: "Selected configuration is unavailable" }, { status: 400 });
+    }
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.flatten().fieldErrors }, { status: 400 });
     }

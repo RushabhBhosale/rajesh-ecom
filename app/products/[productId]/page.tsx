@@ -6,6 +6,7 @@ import { ArrowLeft, Award, CheckCircle, PackageCheck, ShieldCheck } from "lucide
 import { ProductCard } from "@/components/products/product-card";
 import { ProductMediaGallery } from "@/components/products/product-media-gallery";
 import { ProductPurchaseSection } from "@/components/products/product-purchase-section";
+import { formatCurrency } from "@/lib/currency";
 import { sanitizeRichText } from "@/lib/sanitize-html";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ export async function generateMetadata({
   params,
 }: ProductDetailPageProps): Promise<Metadata> {
   const product = await getProductById(params.productId);
+
+  console.log("dcds", product)
 
   if (!product) {
     return {
@@ -86,9 +89,30 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     },
   ];
 
+  const specSheet = [
+    { label: "Company", value: product.company?.name },
+    { label: "Processor", value: product.processor?.name },
+    { label: "Memory", value: product.ram?.name },
+    { label: "Storage", value: product.storage?.name },
+    { label: "Graphics", value: product.graphics?.name },
+    { label: "Operating system", value: product.os?.name },
+  ].filter((item) => Boolean(item.value));
+
   const richContent = product.richDescription
     ? sanitizeRichText(product.richDescription)
     : "";
+  const hasVariants = product.variants.length > 0;
+  const baseLabel = [
+    product.processor?.name,
+    product.ram?.name,
+    product.storage?.name,
+    product.graphics?.name,
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  const configurationOptions = hasVariants
+    ? [{ label: baseLabel || "Base configuration", price: product.price }, ...product.variants]
+    : [];
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-16">
@@ -126,6 +150,42 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   {product.name}
                 </h1>
                 <p className="text-base leading-7 text-slate-600">{product.description}</p>
+                {!hasVariants && specSheet.length ? (
+                  <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Key configuration
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {specSheet.map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex items-start justify-between gap-3 text-sm text-slate-600"
+                        >
+                          <span className="font-semibold text-slate-700">{item.label}</span>
+                          <span className="text-right">{item.value ?? ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {hasVariants ? (
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Available configurations
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {configurationOptions.map((variant) => (
+                        <span
+                          key={variant.label}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm"
+                        >
+                          <span>{variant.label}</span>
+                          <span className="text-xs text-slate-500">{formatCurrency(variant.price)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <ProductPurchaseSection product={product} />

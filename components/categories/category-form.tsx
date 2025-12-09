@@ -25,19 +25,29 @@ type CategoryFormValues = {
 };
 
 interface CategoryFormProps {
+  mode?: "create" | "edit";
+  categoryId?: string;
   onSuccess?: () => void;
   redirectTo?: string;
+  initialValues?: Partial<CategoryFormValues>;
 }
 
-export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
+export function CategoryForm({
+  mode = "create",
+  categoryId,
+  onSuccess,
+  redirectTo,
+  initialValues,
+}: CategoryFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const isEditMode = mode === "edit" && Boolean(categoryId);
 
   const form = useForm({
     resolver: zodResolver(categoryPayloadSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      name: initialValues?.name ?? "",
+      description: initialValues?.description ?? "",
     },
   });
 
@@ -52,8 +62,11 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
     setServerError(null);
 
     try {
-      const response = await fetch("/api/categories", {
-        method: "POST",
+      const endpoint = isEditMode ? `/api/categories/${categoryId}` : "/api/categories";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: values.name,
@@ -74,8 +87,10 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
         return;
       }
 
-      toast.success("Category created");
-      reset({ name: "", description: "" });
+      toast.success(isEditMode ? "Category updated" : "Category created");
+      if (!isEditMode) {
+        reset({ name: "", description: "" });
+      }
       if (redirectTo) {
         router.push(redirectTo);
       } else {
@@ -94,11 +109,10 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-foreground">
-          Add a new category
+          {mode === "edit" ? "Edit category" : "Add a new category"}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Organise your catalogue by creating categories before assigning them
-          to products.
+          Organise your catalogue by creating categories before assigning them to products.
         </p>
       </CardHeader>
       <form onSubmit={onSubmit} className="space-y-6">
@@ -138,7 +152,7 @@ export function CategoryForm({ onSuccess, redirectTo }: CategoryFormProps) {
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Create category"}
+            {isSubmitting ? "Saving..." : isEditMode ? "Save changes" : "Create category"}
           </Button>
         </CardFooter>
       </form>
