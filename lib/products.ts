@@ -2,9 +2,11 @@ import type { FilterQuery, SortOrder } from "mongoose";
 
 import { connectDB } from "@/lib/db";
 import type { MasterOptionSummary } from "@/lib/master-constants";
+import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { listMasterOptions } from "@/lib/master-options";
 import type { ProductCondition } from "@/lib/product-constants";
 import { ProductModel, type ProductDocument } from "@/models/product";
+import { VariantModel, type VariantDocument } from "@/models/variant";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
@@ -13,8 +15,15 @@ function isValidObjectId(value: string | undefined): value is string {
 }
 
 export interface ProductVariant {
+  id: string;
   label: string;
   price: number;
+  color: string | null;
+  isDefault: boolean;
+  processor: MasterOptionSummary | null;
+  ram: MasterOptionSummary | null;
+  storage: MasterOptionSummary | null;
+  graphics: MasterOptionSummary | null;
 }
 
 export interface ProductSummary {
@@ -35,11 +44,17 @@ export interface ProductSummary {
   createdAt: string;
   updatedAt: string;
   company: MasterOptionSummary | null;
+  companySubmaster: SubMasterOptionSummary | null;
   processor: MasterOptionSummary | null;
+  processorSubmaster: SubMasterOptionSummary | null;
   ram: MasterOptionSummary | null;
+  ramSubmaster: SubMasterOptionSummary | null;
   storage: MasterOptionSummary | null;
+  storageSubmaster: SubMasterOptionSummary | null;
   graphics: MasterOptionSummary | null;
+  graphicsSubmaster: SubMasterOptionSummary | null;
   os: MasterOptionSummary | null;
+  osSubmaster: SubMasterOptionSummary | null;
 }
 
 export interface ListProductsOptions {
@@ -74,13 +89,92 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function mapProduct(product: ProductDocument): ProductSummary {
+function mapVariantDocument(variant: VariantDocument): ProductVariant {
+  const price = Number.isFinite(Number((variant as any)?.price))
+    ? Number((variant as any)?.price)
+    : 0;
+  const color =
+    typeof variant.color === "string" && variant.color.trim().length > 0
+      ? variant.color.trim()
+      : null;
+
+  return {
+    id: variant._id.toString(),
+    label: typeof variant.label === "string" ? variant.label.trim() : "",
+    price,
+    color,
+    isDefault: Boolean(variant.isDefault),
+    processor: variant.processorId
+      ? { id: variant.processorId.toString(), name: variant.processorName ?? "", type: "processor" }
+      : null,
+    ram: variant.ramId ? { id: variant.ramId.toString(), name: variant.ramName ?? "", type: "ram" } : null,
+    storage: variant.storageId
+      ? { id: variant.storageId.toString(), name: variant.storageName ?? "", type: "storage" }
+      : null,
+    graphics: variant.graphicsId
+      ? { id: variant.graphicsId.toString(), name: variant.graphicsName ?? "", type: "graphics" }
+      : null,
+  };
+}
+
+function buildFallbackVariant(product: ProductDocument): ProductVariant {
+  const labelParts = [
+    product.processorName,
+    product.ramName,
+    product.storageName,
+    product.graphicsName,
+  ]
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+
+  const color =
+    Array.isArray(product.colors) && product.colors.length === 1
+      ? product.colors[0]?.trim() || null
+      : null;
+
+  return {
+    id: `${product._id.toString()}-base`,
+    label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
+    price: Number.isFinite(Number(product.price)) ? Number(product.price) : 0,
+    color,
+    isDefault: true,
+    processor: product.processorId
+      ? { id: product.processorId.toString(), name: product.processorName ?? "", type: "processor" }
+      : null,
+    ram: product.ramId ? { id: product.ramId.toString(), name: product.ramName ?? "", type: "ram" } : null,
+    storage: product.storageId
+      ? { id: product.storageId.toString(), name: product.storageName ?? "", type: "storage" }
+      : null,
+    graphics: product.graphicsId
+      ? { id: product.graphicsId.toString(), name: product.graphicsName ?? "", type: "graphics" }
+      : null,
+  };
+}
+
+function mapVariantsForProduct(
+  product: ProductDocument,
+  variantDocs: VariantDocument[] | undefined
+): ProductVariant[] {
+  const variants = Array.isArray(variantDocs) && variantDocs.length > 0
+    ? variantDocs.map(mapVariantDocument)
+    : [buildFallbackVariant(product)];
+
+  const hasDefault = variants.some((variant) => variant.isDefault);
+  if (!hasDefault && variants.length > 0) {
+    variants[0].isDefault = true;
+  }
+
+  return variants;
+}
+
+function mapProduct(product: ProductDocument, variants: ProductVariant[]): ProductSummary {
+  const defaultVariant = variants.find((variant) => variant.isDefault) ?? variants[0];
   return {
     id: product._id.toString(),
     name: product.name,
     category: product.category,
     description: product.description,
-    price: product.price,
+    price: defaultVariant?.price ?? product.price,
     condition: product.condition,
     imageUrl: product.imageUrl || null,
     galleryImages: Array.isArray(product.galleryImages)
@@ -91,18 +185,7 @@ function mapProduct(product: ProductDocument): ProductSummary {
       ? product.highlights.filter((item): item is string => Boolean(item && item.trim()))
       : [],
     featured: Boolean(product.featured),
-    variants: Array.isArray(product.variants)
-      ? product.variants
-          .map((variant) => {
-            const parsedPrice = Number((variant as any)?.price);
-            return {
-              label: typeof (variant as any)?.label === "string" ? (variant as any).label.trim() : "",
-              price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
-            };
-          })
-          .filter((variant, index, arr) => variant.label.length > 0 && variant.price >= 0 &&
-            arr.findIndex((candidate) => candidate.label.toLowerCase() === variant.label.toLowerCase()) === index)
-      : [],
+    variants,
     colors: Array.isArray(product.colors)
       ? product.colors
           .map((item) => item.trim())
@@ -114,17 +197,81 @@ function mapProduct(product: ProductDocument): ProductSummary {
     company: product.companyId
       ? { id: product.companyId.toString(), name: product.companyName ?? "", type: "company" }
       : null,
-    processor: product.processorId
+    companySubmaster: product.companySubmasterId
+      ? {
+          id: product.companySubmasterId.toString(),
+          masterId: product.companyId?.toString() ?? "",
+          masterName: product.companyName ?? "",
+          masterType: "company",
+          name: product.companySubmasterName ?? "",
+        }
+      : null,
+    processor: defaultVariant?.processor
+      ? defaultVariant.processor
+      : product.processorId
       ? { id: product.processorId.toString(), name: product.processorName ?? "", type: "processor" }
       : null,
-    ram: product.ramId ? { id: product.ramId.toString(), name: product.ramName ?? "", type: "ram" } : null,
-    storage: product.storageId
+    processorSubmaster: product.processorSubmasterId
+      ? {
+          id: product.processorSubmasterId.toString(),
+          masterId: product.processorId?.toString() ?? "",
+          masterName: product.processorName ?? "",
+          masterType: "processor",
+          name: product.processorSubmasterName ?? "",
+        }
+      : null,
+    ram: defaultVariant?.ram
+      ? defaultVariant.ram
+      : product.ramId
+      ? { id: product.ramId.toString(), name: product.ramName ?? "", type: "ram" }
+      : null,
+    ramSubmaster: product.ramSubmasterId
+      ? {
+          id: product.ramSubmasterId.toString(),
+          masterId: product.ramId?.toString() ?? "",
+          masterName: product.ramName ?? "",
+          masterType: "ram",
+          name: product.ramSubmasterName ?? "",
+        }
+      : null,
+    storage: defaultVariant?.storage
+      ? defaultVariant.storage
+      : product.storageId
       ? { id: product.storageId.toString(), name: product.storageName ?? "", type: "storage" }
       : null,
-    graphics: product.graphicsId
+    storageSubmaster: product.storageSubmasterId
+      ? {
+          id: product.storageSubmasterId.toString(),
+          masterId: product.storageId?.toString() ?? "",
+          masterName: product.storageName ?? "",
+          masterType: "storage",
+          name: product.storageSubmasterName ?? "",
+        }
+      : null,
+    graphics: defaultVariant?.graphics
+      ? defaultVariant.graphics
+      : product.graphicsId
       ? { id: product.graphicsId.toString(), name: product.graphicsName ?? "", type: "graphics" }
       : null,
+    graphicsSubmaster: product.graphicsSubmasterId
+      ? {
+          id: product.graphicsSubmasterId.toString(),
+          masterId: product.graphicsId?.toString() ?? "",
+          masterName: product.graphicsName ?? "",
+          masterType: "graphics",
+          name: product.graphicsSubmasterName ?? "",
+        }
+      : null,
     os: product.osId ? { id: product.osId.toString(), name: product.osName ?? "", type: "os" } : null,
+    osSubmaster: product.osSubmasterId
+      ? {
+          id: product.osSubmasterId.toString(),
+          masterId: product.osId?.toString() ?? "",
+          masterName: product.osName ?? "",
+          masterType: "os",
+          name: product.osSubmasterName ?? "",
+        }
+      : null,
   };
 }
 
@@ -151,25 +298,19 @@ export async function listProducts(options: ListProductsOptions = {}): Promise<P
     filters.companyId = options.companyId;
   }
 
-  if (isValidObjectId(options.processorId)) {
-    filters.processorId = options.processorId;
-  }
-
-  if (isValidObjectId(options.ramId)) {
-    filters.ramId = options.ramId;
-  }
-
-  if (isValidObjectId(options.storageId)) {
-    filters.storageId = options.storageId;
-  }
-
-  if (isValidObjectId(options.graphicsId)) {
-    filters.graphicsId = options.graphicsId;
-  }
-
   if (isValidObjectId(options.osId)) {
     filters.osId = options.osId;
   }
+
+  const processorFilterId = isValidObjectId(options.processorId) ? options.processorId : undefined;
+  const ramFilterId = isValidObjectId(options.ramId) ? options.ramId : undefined;
+  const storageFilterId = isValidObjectId(options.storageId) ? options.storageId : undefined;
+  const graphicsFilterId = isValidObjectId(options.graphicsId) ? options.graphicsId : undefined;
+  const needsVariantFiltering =
+    Boolean(processorFilterId) ||
+    Boolean(ramFilterId) ||
+    Boolean(storageFilterId) ||
+    Boolean(graphicsFilterId);
 
   const priceFilters: FilterQuery<ProductDocument>["price"] = {};
   if (typeof options.minPrice === "number" && !Number.isNaN(options.minPrice)) {
@@ -219,7 +360,80 @@ export async function listProducts(options: ListProductsOptions = {}): Promise<P
   }
 
   const products = (await query.lean()) as unknown as ProductDocument[];
-  return products.map(mapProduct);
+  const productIds = products.map((product) => product._id);
+  const variantDocs = productIds.length
+    ? await VariantModel.find({ productId: { $in: productIds } })
+        .sort({ isDefault: -1, price: 1 })
+        .lean<VariantDocument[]>()
+    : [];
+
+  const variantMap = new Map<string, VariantDocument[]>();
+  variantDocs.forEach((variant) => {
+    const key = typeof variant.productId === "string" ? variant.productId : variant.productId?.toString();
+    if (!key) {
+      return;
+    }
+    if (!variantMap.has(key)) {
+      variantMap.set(key, []);
+    }
+    variantMap.get(key)?.push(variant);
+  });
+
+  const masterOptionsForFilter = needsVariantFiltering
+    ? await listMasterOptions(
+        [
+          processorFilterId ? "processor" : null,
+          ramFilterId ? "ram" : null,
+          storageFilterId ? "storage" : null,
+          graphicsFilterId ? "graphics" : null,
+        ].filter((item): item is Exclude<typeof item, null> => Boolean(item))
+      )
+    : [];
+
+  const filterOptionNameById = new Map(masterOptionsForFilter.map((item) => [item.id, item.name ?? ""]));
+
+  const matchesField = (
+    selectedId: string | undefined,
+    variantId: unknown,
+    variantName: string | null | undefined
+  ) => {
+    if (!selectedId) {
+      return true;
+    }
+    const variantIdString = typeof variantId === "string" ? variantId : (variantId as any)?.toString?.();
+    if (variantIdString === selectedId) {
+      return true;
+    }
+    const targetName = filterOptionNameById.get(selectedId)?.trim().toLowerCase();
+    if (!targetName) {
+      return false;
+    }
+    const normalizedVariantName = variantName?.trim().toLowerCase() ?? "";
+    return normalizedVariantName === targetName;
+  };
+
+  const matchesVariantFilters = (product: ProductDocument, variantsForProduct: VariantDocument[]) => {
+    if (!needsVariantFiltering) {
+      return true;
+    }
+    const candidates = variantsForProduct.length > 0 ? variantsForProduct : [product];
+    return candidates.some((variant) =>
+      matchesField(processorFilterId, (variant as any).processorId, (variant as any).processorName) &&
+      matchesField(ramFilterId, (variant as any).ramId, (variant as any).ramName) &&
+      matchesField(storageFilterId, (variant as any).storageId, (variant as any).storageName) &&
+      matchesField(graphicsFilterId, (variant as any).graphicsId, (variant as any).graphicsName)
+    );
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const variantsForProduct = variantMap.get(product._id.toString()) ?? [];
+    return matchesVariantFilters(product, variantsForProduct);
+  });
+
+  return filteredProducts.map((product) => {
+    const variants = mapVariantsForProduct(product, variantMap.get(product._id.toString()));
+    return mapProduct(product, variants);
+  });
 }
 
 export async function getProductById(id: string): Promise<ProductSummary | null> {
@@ -228,7 +442,13 @@ export async function getProductById(id: string): Promise<ProductSummary | null>
   if (!product) {
     return null;
   }
-  return mapProduct(product);
+
+  const variantDocs = await VariantModel.find({ productId: product._id })
+    .sort({ isDefault: -1, price: 1 })
+    .lean<VariantDocument[]>();
+  const variants = mapVariantsForProduct(product, variantDocs);
+
+  return mapProduct(product, variants);
 }
 
 export interface ProductFacets {

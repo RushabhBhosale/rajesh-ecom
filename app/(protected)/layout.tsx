@@ -59,6 +59,18 @@ const navLinks: Array<{
     roles: ["admin", "superadmin"],
     group: "Masters",
   },
+  {
+    href: "/admin/submasters",
+    label: "Submaster listing",
+    roles: ["admin", "superadmin"],
+    group: "Masters",
+  },
+  {
+    href: "/admin/submasters/new",
+    label: "Add submaster",
+    roles: ["admin", "superadmin"],
+    group: "Masters",
+  },
   { href: "/superadmin", label: "Super Admin", roles: ["superadmin"] },
 ];
 

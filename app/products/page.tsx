@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ProductCard } from "@/components/products/product-card";
 import { ProductsToolbar } from "@/components/products/products-toolbar";
+import { ProductsSortControl } from "@/components/products/products-sort-control";
 import { Button } from "@/components/ui/button";
 import { getProductFacets, listProducts } from "@/lib/products";
 import type { ProductCondition } from "@/lib/product-constants";
@@ -126,7 +127,7 @@ export default async function ProductsPage({
     ? rawOs
     : undefined;
 
-  const sort =
+  const sort:any =
     typeof searchParams.sort === "string" &&
     allowedSortOptions.has(searchParams.sort)
       ? searchParams.sort
@@ -199,67 +200,73 @@ export default async function ProductsPage({
         </div>
       </section> */}
 
-      <ProductsToolbar
-        categories={facets.categories}
-        conditions={facets.conditions}
-        priceRange={facets.priceRange}
-        masterOptions={{
-          companies: facets.companies,
-          processors: facets.processors,
-          rams: facets.rams,
-          storages: facets.storages,
-          graphics: facets.graphics,
-          operatingSystems: facets.operatingSystems,
-        }}
-        filters={filterSnapshot}
-        resultCount={products.length}
-      />
-
       <section className="flex-1 py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {emptyState ? (
-            <div className="mx-auto max-w-3xl rounded-3xl border border-dashed border-slate-300 bg-white/70 p-12 text-center shadow-sm">
-              <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-slate-100">
-                <Package className="h-10 w-10 text-slate-400" />
-              </div>
-              <h3 className="mt-6 text-2xl font-semibold text-slate-900">
-                No products match your filters yet
-              </h3>
-              <p className="mt-3 text-base text-slate-600">
-                Adjust your search, broaden the price band, or reset filters to
-                explore the full catalog.
-              </p>
-              <div className="mt-6 flex justify-center">
-                <Button
-                  variant="outline"
-                  asChild
-                  className="rounded-full border-slate-300"
-                >
-                  <Link href="/products">Clear filters</Link>
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-10">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                  Showing {products.length} curated devices
-                </p>
+        <div className="mx-auto px-4 sm:px-6">
+          <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
+            <ProductsToolbar
+              categories={facets.categories}
+              conditions={facets.conditions}
+              masterOptions={{
+                companies: facets.companies,
+                processors: facets.processors,
+                rams: facets.rams,
+                storages: facets.storages,
+                graphics: facets.graphics,
+                operatingSystems: facets.operatingSystems,
+              }}
+              filters={filterSnapshot}
+              resultCount={products.length}
+            />
+
+            <div className="space-y-8">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Showing {products.length} curated devices
+                  </p>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    Enterprise hardware ready to deploy
+                  </h2>
+                </div>
+                <ProductsSortControl sort={filterSnapshot.sort} />
               </div>
 
-              <div className="grid gap-6 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    id={product.id}
-                    className="scroll-mt-28"
-                  >
-                    <ProductCard product={product} />
+              {emptyState ? (
+                <div className="mx-auto max-w-3xl rounded-3xl border border-dashed border-slate-300 bg-white/70 p-12 text-center shadow-sm">
+                  <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-slate-100">
+                    <Package className="h-10 w-10 text-slate-400" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="mt-6 text-2xl font-semibold text-slate-900">
+                    No products match your filters yet
+                  </h3>
+                  <p className="mt-3 text-base text-slate-600">
+                    Adjust your filters or reset them to explore the full catalog.
+                  </p>
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="outline"
+                      asChild
+                      className="rounded-full border-slate-300"
+                    >
+                      <Link href="/products">Clear filters</Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-6 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {products.map((product) => (
+                    <div
+                      key={product.id}
+                      id={product.id}
+                      className="scroll-mt-28"
+                    >
+                      <ProductCard product={product} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
     </main>

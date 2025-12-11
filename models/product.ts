@@ -40,6 +40,17 @@ const ProductSchema = new Schema(
       trim: true,
       default: "",
     },
+    companySubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    companySubmasterName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     processorId: {
       type: Schema.Types.ObjectId,
       ref: "MasterOption",
@@ -47,6 +58,17 @@ const ProductSchema = new Schema(
       index: true,
     },
     processorName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    processorSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    processorSubmasterName: {
       type: String,
       trim: true,
       default: "",
@@ -62,6 +84,17 @@ const ProductSchema = new Schema(
       trim: true,
       default: "",
     },
+    ramSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    ramSubmasterName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     storageId: {
       type: Schema.Types.ObjectId,
       ref: "MasterOption",
@@ -69,6 +102,17 @@ const ProductSchema = new Schema(
       index: true,
     },
     storageName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    storageSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    storageSubmasterName: {
       type: String,
       trim: true,
       default: "",
@@ -84,6 +128,17 @@ const ProductSchema = new Schema(
       trim: true,
       default: "",
     },
+    graphicsSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    graphicsSubmasterName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     osId: {
       type: Schema.Types.ObjectId,
       ref: "MasterOption",
@@ -91,6 +146,17 @@ const ProductSchema = new Schema(
       index: true,
     },
     osName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    osSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    osSubmasterName: {
       type: String,
       trim: true,
       default: "",

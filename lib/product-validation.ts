@@ -34,24 +34,57 @@ export const productPayloadSchema = z.object({
     .union([z.string().trim().regex(objectIdRegex, "Select a valid company"), z.literal("")])
     .optional()
     .transform((val) => (val ? val : undefined)),
+  companySubMasterId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid company submaster"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
   processorId: z
     .union([z.string().trim().regex(objectIdRegex, "Select a valid processor"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  processorSubMasterId: z
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid processor submaster"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   ramId: z
     .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM"), z.literal("")])
     .optional()
     .transform((val) => (val ? val : undefined)),
+  ramSubMasterId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM submaster"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
   storageId: z
     .union([z.string().trim().regex(objectIdRegex, "Select a valid storage option"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  storageSubMasterId: z
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid storage submaster"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   graphicsId: z
     .union([z.string().trim().regex(objectIdRegex, "Select a valid graphics option"), z.literal("")])
     .optional()
     .transform((val) => (val ? val : undefined)),
+  graphicsSubMasterId: z
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid graphics submaster"),
+      z.literal(""),
+    ])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
   osId: z
     .union([z.string().trim().regex(objectIdRegex, "Select a valid operating system"), z.literal("")])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
+  osSubMasterId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid OS submaster"), z.literal("")])
     .optional()
     .transform((val) => (val ? val : undefined)),
   imageUrl: z
@@ -90,6 +123,37 @@ export const productPayloadSchema = z.object({
       z.object({
         label: z.string().trim().min(1, "Variant label cannot be empty").max(120),
         price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+        processorId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+            z.literal(""),
+          ])
+          .optional()
+          .transform((val) => (val ? val : undefined)),
+        ramId: z
+          .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM option"), z.literal("")])
+          .optional()
+          .transform((val) => (val ? val : undefined)),
+        storageId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+            z.literal(""),
+          ])
+          .optional()
+          .transform((val) => (val ? val : undefined)),
+        graphicsId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+            z.literal(""),
+          ])
+          .optional()
+          .transform((val) => (val ? val : undefined)),
+        color: z
+          .string()
+          .trim()
+          .max(80, "Colour name should be under 80 characters")
+          .optional()
+          .transform((val) => (val ? val : undefined)),
       })
     )
     .max(30, "Too many variants")

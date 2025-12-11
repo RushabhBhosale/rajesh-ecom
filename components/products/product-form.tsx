@@ -30,6 +30,7 @@ import {
   type MasterOptionSummary,
   type MasterOptionType,
 } from "@/lib/master-constants";
+import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { RichTextEditor } from "@/components/products/rich-text-editor";
 
 interface ProductFormProps {
@@ -48,10 +49,13 @@ const conditionLabels: Record<(typeof productConditions)[number], string> = {
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
 type MasterOptionState = Record<MasterOptionType, MasterOptionSummary[]>;
+type SubMasterLookup = Record<MasterOptionType, Record<string, SubMasterOptionSummary[]>>;
 type VariantSelection = {
   processorId?: string;
   ramId?: string;
   storageId?: string;
+  graphicsId?: string;
+  color?: string;
   note?: string;
 };
 
@@ -66,6 +70,17 @@ function createEmptyMasters(): MasterOptionState {
   };
 }
 
+function createEmptySubMasters(): SubMasterLookup {
+  return {
+    company: {},
+    processor: {},
+    ram: {},
+    storage: {},
+    graphics: {},
+    os: {},
+  };
+}
+
 const masterFieldMap: Record<
   "companyId" | "processorId" | "ramId" | "storageId" | "graphicsId" | "osId",
   MasterOptionType
@@ -76,6 +91,35 @@ const masterFieldMap: Record<
   storageId: "storage",
   graphicsId: "graphics",
   osId: "os",
+};
+
+const subMasterFieldMap: Record<
+  | "companySubMasterId"
+  | "processorSubMasterId"
+  | "ramSubMasterId"
+  | "storageSubMasterId"
+  | "graphicsSubMasterId"
+  | "osSubMasterId",
+  MasterOptionType
+> = {
+  companySubMasterId: "company",
+  processorSubMasterId: "processor",
+  ramSubMasterId: "ram",
+  storageSubMasterId: "storage",
+  graphicsSubMasterId: "graphics",
+  osSubMasterId: "os",
+};
+
+const subMasterParentFieldMap: Record<
+  keyof typeof subMasterFieldMap,
+  keyof ProductFormValues
+> = {
+  companySubMasterId: "companyId",
+  processorSubMasterId: "processorId",
+  ramSubMasterId: "ramId",
+  storageSubMasterId: "storageId",
+  graphicsSubMasterId: "graphicsId",
+  osSubMasterId: "osId",
 };
 
 function createMastersFromProduct(product: ProductSummary | undefined): MasterOptionState {
@@ -232,6 +276,57 @@ function ColorOptionsEditor({
   );
 }
 
+interface StoragePillSelectorProps {
+  options: MasterOptionSummary[];
+  value?: string;
+  onChange: (value?: string) => void;
+  disabled?: boolean;
+}
+
+function StoragePillSelector({
+  options,
+  value,
+  onChange,
+  disabled,
+}: StoragePillSelectorProps) {
+  if (!options.length) {
+    return (
+      <p className="text-sm text-muted-foreground">No storage options found yet.</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Storage options">
+      {options.map((option) => {
+        const isActive = value === option.id;
+        return (
+          <Button
+            key={option.id}
+            type="button"
+            variant={isActive ? "default" : "outline"}
+            className="rounded-full px-3 py-2 text-xs font-semibold sm:text-sm"
+            onClick={() => onChange(isActive ? undefined : option.id)}
+            disabled={disabled}
+            aria-pressed={isActive}
+          >
+            {option.name}
+          </Button>
+        );
+      })}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="rounded-full"
+        onClick={() => onChange(undefined)}
+        disabled={disabled}
+      >
+        Clear
+      </Button>
+    </div>
+  );
+}
+
 type ProductFormValues = {
   name: string;
   category: string;
@@ -239,16 +334,30 @@ type ProductFormValues = {
   price: number;
   condition: (typeof productConditions)[number];
   companyId?: string;
+  companySubMasterId?: string;
   processorId?: string;
+  processorSubMasterId?: string;
   ramId?: string;
+  ramSubMasterId?: string;
   storageId?: string;
+  storageSubMasterId?: string;
   graphicsId?: string;
+  graphicsSubMasterId?: string;
   osId?: string;
+  osSubMasterId?: string;
   imageUrl: string;
   featured: boolean;
   inStock: boolean;
   highlights: string;
-  variants: { label: string; price: number }[];
+  variants: {
+    label: string;
+    price: number;
+    processorId?: string;
+    ramId?: string;
+    storageId?: string;
+    graphicsId?: string;
+    color?: string;
+  }[];
   colors: string[];
   galleryImages: { url: string }[];
   richDescription: string;
@@ -273,6 +382,11 @@ export function ProductForm({
   );
   const [isLoadingMasters, setIsLoadingMasters] = useState(true);
   const [mastersError, setMastersError] = useState<string | null>(null);
+  const [subMasters, setSubMasters] = useState<SubMasterLookup>(() =>
+    createEmptySubMasters()
+  );
+  const [isLoadingSubMasters, setIsLoadingSubMasters] = useState(true);
+  const [subMastersError, setSubMastersError] = useState<string | null>(null);
   const [isUploadingPrimary, setIsUploadingPrimary] = useState(false);
   const [galleryUploadingIndex, setGalleryUploadingIndex] = useState<number | null>(null);
 
@@ -293,9 +407,23 @@ export function ProductForm({
           ])
           .optional()
           .default(""),
+        companySubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid company submaster"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
         processorId: z
           .union([
             z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        processorSubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid processor submaster"),
             z.literal(""),
           ])
           .optional()
@@ -307,9 +435,23 @@ export function ProductForm({
           ])
           .optional()
           .default(""),
+        ramSubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid RAM submaster"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
         storageId: z
           .union([
             z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        storageSubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid storage submaster"),
             z.literal(""),
           ])
           .optional()
@@ -321,9 +463,23 @@ export function ProductForm({
           ])
           .optional()
           .default(""),
+        graphicsSubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid graphics submaster"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
         osId: z
           .union([
             z.string().trim().regex(objectIdRegex, "Select a valid operating system"),
+            z.literal(""),
+          ])
+          .optional()
+          .default(""),
+        osSubMasterId: z
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid OS submaster"),
             z.literal(""),
           ])
           .optional()
@@ -385,6 +541,40 @@ export function ProductForm({
             z.object({
               label: z.string().trim().min(1, "Variant name cannot be empty").max(120),
               price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+              processorId: z
+                .union([
+                  z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+                  z.literal(""),
+                ])
+                .optional()
+                .default(""),
+              ramId: z
+                .union([
+                  z.string().trim().regex(objectIdRegex, "Select a valid RAM option"),
+                  z.literal(""),
+                ])
+                .optional()
+                .default(""),
+              storageId: z
+                .union([
+                  z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+                  z.literal(""),
+                ])
+                .optional()
+                .default(""),
+              graphicsId: z
+                .union([
+                  z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+                  z.literal(""),
+                ])
+                .optional()
+                .default(""),
+              color: z
+                .string()
+                .trim()
+                .max(80, "Colour names should be under 80 characters")
+                .optional()
+                .default(""),
             })
           )
           .max(30, "You can add up to 30 variants")
@@ -414,11 +604,17 @@ export function ProductForm({
       price: product?.price ?? 0,
       condition: product?.condition ?? "refurbished",
       companyId: product?.company?.id ?? "",
+      companySubMasterId: product?.companySubmaster?.id ?? "",
       processorId: product?.processor?.id ?? "",
+      processorSubMasterId: product?.processorSubmaster?.id ?? "",
       ramId: product?.ram?.id ?? "",
+      ramSubMasterId: product?.ramSubmaster?.id ?? "",
       storageId: product?.storage?.id ?? "",
+      storageSubMasterId: product?.storageSubmaster?.id ?? "",
       graphicsId: product?.graphics?.id ?? "",
+      graphicsSubMasterId: product?.graphicsSubmaster?.id ?? "",
       osId: product?.os?.id ?? "",
+      osSubMasterId: product?.osSubmaster?.id ?? "",
       imageUrl: product?.imageUrl ?? "",
       galleryImages:
         product?.galleryImages?.map((url) => ({ url }))?.slice(0, 12) ?? [],
@@ -427,10 +623,17 @@ export function ProductForm({
       inStock: product?.inStock ?? true,
       highlights: product?.highlights?.join("\n") ?? "",
       variants:
-        product?.variants?.map((variant) => ({
-          label: variant.label,
-          price: variant.price,
-        })) ?? [],
+        product?.variants
+          ?.filter((variant) => !variant.isDefault)
+          ?.map((variant) => ({
+            label: variant.label,
+            price: variant.price,
+            processorId: variant.processor?.id ?? "",
+            ramId: variant.ram?.id ?? "",
+            storageId: variant.storage?.id ?? "",
+            graphicsId: variant.graphics?.id ?? "",
+            color: variant.color ?? "",
+          })) ?? [],
       colors: product?.colors ?? [],
     },
   });
@@ -447,6 +650,37 @@ export function ProductForm({
   } = form;
 
   const selectedCategory = useWatch({ control, name: "category" });
+  const selectedCompanyId = useWatch({ control, name: "companyId" });
+  const selectedProcessorId = useWatch({ control, name: "processorId" });
+  const selectedRamId = useWatch({ control, name: "ramId" });
+  const selectedStorageId = useWatch({ control, name: "storageId" });
+  const selectedGraphicsId = useWatch({ control, name: "graphicsId" });
+  const selectedOsId = useWatch({ control, name: "osId" });
+  const availableColors = useWatch({ control, name: "colors" }) ?? [];
+
+  useEffect(() => {
+    setVariantSelections((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, selection]) => {
+        if (!selection) {
+          return;
+        }
+        const hasColor = typeof selection.color === "string" && selection.color.trim().length > 0;
+        if (!hasColor) {
+          return;
+        }
+        const isAllowed = availableColors.some(
+          (color) => color.toLowerCase() === selection.color!.toLowerCase()
+        );
+        if (!isAllowed) {
+          next[key] = { ...selection, color: undefined };
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [availableColors]);
 
   const {
     fields: galleryFields,
@@ -487,6 +721,14 @@ export function ProductForm({
     return lookup;
   }, [masters]);
 
+  function syncVariantFields(index: number, selection: VariantSelection) {
+    setValue(`variants.${index}.processorId`, (selection.processorId ?? "") as ProductFormValues["variants"][number]["processorId"], { shouldDirty: true });
+    setValue(`variants.${index}.ramId`, (selection.ramId ?? "") as ProductFormValues["variants"][number]["ramId"], { shouldDirty: true });
+    setValue(`variants.${index}.storageId`, (selection.storageId ?? "") as ProductFormValues["variants"][number]["storageId"], { shouldDirty: true });
+    setValue(`variants.${index}.graphicsId`, (selection.graphicsId ?? "") as ProductFormValues["variants"][number]["graphicsId"], { shouldDirty: true });
+    setValue(`variants.${index}.color`, (selection.color ?? "") as ProductFormValues["variants"][number]["color"], { shouldDirty: true });
+  }
+
   function composeVariantLabel(selection: VariantSelection) {
     const parts: string[] = [];
     if (selection.processorId && masterNameLookup.processor[selection.processorId]) {
@@ -498,11 +740,77 @@ export function ProductForm({
     if (selection.storageId && masterNameLookup.storage[selection.storageId]) {
       parts.push(masterNameLookup.storage[selection.storageId]);
     }
+    if (selection.graphicsId && masterNameLookup.graphics[selection.graphicsId]) {
+      parts.push(masterNameLookup.graphics[selection.graphicsId]);
+    }
+    if (selection.color) {
+      parts.push(selection.color);
+    }
     const note = selection.note?.trim();
     if (note) {
       parts.push(note);
     }
     return parts.join(" • ");
+  }
+
+  function deriveVariantSelectionFromLabel(label: string): VariantSelection {
+    const parts = label
+      .split("•")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const selection: VariantSelection = {};
+    const remaining: string[] = [];
+
+    parts.forEach((part) => {
+      const matchProcessor =
+        !selection.processorId &&
+        masters.processor.find((option) => option.name.toLowerCase() === part.toLowerCase());
+      if (matchProcessor) {
+        selection.processorId = matchProcessor.id;
+        return;
+      }
+
+      const matchRam =
+        !selection.ramId &&
+        masters.ram.find((option) => option.name.toLowerCase() === part.toLowerCase());
+      if (matchRam) {
+        selection.ramId = matchRam.id;
+        return;
+      }
+
+      const matchStorage =
+        !selection.storageId &&
+        masters.storage.find((option) => option.name.toLowerCase() === part.toLowerCase());
+      if (matchStorage) {
+        selection.storageId = matchStorage.id;
+        return;
+      }
+
+      const matchGraphics =
+        !selection.graphicsId &&
+        masters.graphics.find((option) => option.name.toLowerCase() === part.toLowerCase());
+      if (matchGraphics) {
+        selection.graphicsId = matchGraphics.id;
+        return;
+      }
+
+      const matchColor =
+        !selection.color &&
+        availableColors.some((color) => color.toLowerCase() === part.toLowerCase());
+      if (matchColor) {
+        selection.color = part;
+        return;
+      }
+
+      remaining.push(part);
+    });
+
+    if (remaining.length > 0) {
+      selection.note = remaining.join(" • ");
+    }
+
+    return selection;
   }
 
   useEffect(() => {
@@ -513,18 +821,36 @@ export function ProductForm({
         const existing = prev[field.id];
         if (existing) {
           next[field.id] = existing;
-        } else {
-          const currentLabel = variantValues?.[index]?.label ?? "";
-          next[field.id] = { note: currentLabel };
-          changed = true;
+          return;
         }
+        const formVariant:any = variantValues?.[index];
+        const currentLabel = formVariant?.label ?? field.label ?? "";
+        const selectionFromValues: VariantSelection = {
+          processorId: formVariant?.processorId || undefined,
+          ramId: formVariant?.ramId || undefined,
+          storageId: formVariant?.storageId || undefined,
+          graphicsId: formVariant?.graphicsId || undefined,
+          color: formVariant?.color || undefined,
+          note: formVariant?.note ?? currentLabel,
+        };
+        const hasExplicitSelection =
+          selectionFromValues.processorId ||
+          selectionFromValues.ramId ||
+          selectionFromValues.storageId ||
+          selectionFromValues.graphicsId ||
+          selectionFromValues.color;
+        const derived = hasExplicitSelection
+          ? selectionFromValues
+          : deriveVariantSelectionFromLabel(currentLabel);
+        next[field.id] = derived;
+        changed = true;
       });
       if (Object.keys(prev).length !== Object.keys(next).length) {
         changed = true;
       }
       return changed ? next : prev;
     });
-  }, [variantFields, variantValues]);
+  }, [masters, variantFields, variantValues]);
 
   function updateVariantSelection(
     fieldId: string,
@@ -537,6 +863,7 @@ export function ProductForm({
       const next = { ...prev, [fieldId]: nextSelection };
       const label = composeVariantLabel(nextSelection);
       setValue(`variants.${index}.label`, label, { shouldValidate: true, shouldDirty: true });
+      syncVariantFields(index, nextSelection);
       return next;
     });
   }
@@ -614,6 +941,125 @@ export function ProductForm({
   useEffect(() => {
     let cancelled = false;
 
+    async function loadSubMasters() {
+      setIsLoadingSubMasters(true);
+      setSubMastersError(null);
+
+      try {
+        const response = await fetch(
+          "/api/submasters"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load submaster options");
+        }
+
+        const data = await response.json().catch(() => null);
+        const rawSubMasters = (data?.submasters ?? {}) as Partial<
+          Record<MasterOptionType, unknown>
+        >;
+        const parsed = createEmptySubMasters();
+
+        (Object.keys(parsed) as MasterOptionType[]).forEach((type) => {
+          const items = Array.isArray(rawSubMasters[type])
+            ? (rawSubMasters[type] as unknown[]).filter(
+                (item): item is SubMasterOptionSummary =>
+                  typeof (item as SubMasterOptionSummary)?.id === "string" &&
+                  typeof (item as SubMasterOptionSummary)?.name === "string" &&
+                  typeof (item as SubMasterOptionSummary)?.masterId === "string"
+              )
+            : [];
+          items.forEach((item) => {
+            if (!parsed[type][item.masterId]) {
+              parsed[type][item.masterId] = [];
+            }
+            parsed[type][item.masterId].push(item);
+          });
+
+          Object.values(parsed[type]).forEach((list) =>
+            list.sort((a, b) => {
+              const orderA = typeof a.sortOrder === "number" ? a.sortOrder : 0;
+              const orderB = typeof b.sortOrder === "number" ? b.sortOrder : 0;
+              if (orderA !== orderB) {
+                return orderA - orderB;
+              }
+              return a.name.localeCompare(b.name);
+            })
+          );
+        });
+
+        const productSubMasterNames: Partial<Record<keyof typeof subMasterFieldMap, string | undefined>> = {
+          companySubMasterId: product?.companySubmaster?.name,
+          processorSubMasterId: product?.processorSubmaster?.name,
+          ramSubMasterId: product?.ramSubmaster?.name,
+          storageSubMasterId: product?.storageSubmaster?.name,
+          graphicsSubMasterId: product?.graphicsSubmaster?.name,
+          osSubMasterId: product?.osSubmaster?.name,
+        };
+
+        const productMasterNames: Partial<Record<MasterOptionType, string | undefined>> = {
+          company: product?.company?.name,
+          processor: product?.processor?.name,
+          ram: product?.ram?.name,
+          storage: product?.storage?.name,
+          graphics: product?.graphics?.name,
+          os: product?.os?.name,
+        };
+
+        (Object.keys(subMasterFieldMap) as Array<keyof typeof subMasterFieldMap>).forEach(
+          (field) => {
+            const selected = getValues(field as keyof ProductFormValues);
+            const parentField = subMasterParentFieldMap[field];
+            const parentId:any = getValues(parentField as keyof ProductFormValues);
+            if (typeof selected !== "string" || selected.length === 0) {
+              return;
+            }
+            const type = subMasterFieldMap[field];
+            if (!parentId) {
+              return;
+            }
+            const exists =
+              parsed[type][parentId]?.some((option) => option.id === selected) ?? false;
+            if (!exists) {
+              parsed[type][parentId] = parsed[type][parentId] ?? [];
+              parsed[type][parentId].push({
+                id: selected,
+                masterId: parentId,
+                masterName: productMasterNames[type] ?? "Current master",
+                masterType: type,
+                name: productSubMasterNames[field] ?? "Current submaster",
+              });
+            }
+          }
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        setSubMasters(parsed);
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setSubMasters(createEmptySubMasters());
+          setSubMastersError("Unable to load submaster options. Please refresh.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSubMasters(false);
+        }
+      }
+    }
+
+    void loadSubMasters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, product]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadMasters() {
       setIsLoadingMasters(true);
       setMastersError(null);
@@ -685,6 +1131,59 @@ export function ProductForm({
     };
   }, [getValues]);
 
+  useEffect(() => {
+    const pairs: Array<{
+      type: MasterOptionType;
+      masterId?: string;
+      field: keyof Pick<
+        ProductFormValues,
+        | "companySubMasterId"
+        | "processorSubMasterId"
+        | "ramSubMasterId"
+        | "storageSubMasterId"
+        | "graphicsSubMasterId"
+        | "osSubMasterId"
+      >;
+    }> = [
+      { type: "company", masterId: selectedCompanyId, field: "companySubMasterId" },
+      { type: "processor", masterId: selectedProcessorId, field: "processorSubMasterId" },
+      { type: "ram", masterId: selectedRamId, field: "ramSubMasterId" },
+      { type: "storage", masterId: selectedStorageId, field: "storageSubMasterId" },
+      { type: "graphics", masterId: selectedGraphicsId, field: "graphicsSubMasterId" },
+      { type: "os", masterId: selectedOsId, field: "osSubMasterId" },
+    ];
+
+    if (isLoadingSubMasters) {
+      return;
+    }
+
+    pairs.forEach(({ type, masterId, field }) => {
+      const current = getValues(field) as string | undefined;
+      const options = masterId ? subMasters[type][masterId] ?? [] : [];
+      if (!masterId || options.length === 0) {
+        if (current) {
+          setValue(field, "" as ProductFormValues[typeof field], { shouldValidate: true });
+        }
+        return;
+      }
+      const exists = options.some((option) => option.id === current);
+      if (current && !exists) {
+        setValue(field, "" as ProductFormValues[typeof field], { shouldValidate: true });
+      }
+    });
+  }, [
+    getValues,
+    selectedCompanyId,
+    selectedProcessorId,
+    selectedRamId,
+    selectedStorageId,
+    selectedGraphicsId,
+    selectedOsId,
+    setValue,
+    subMasters,
+    isLoadingSubMasters,
+  ]);
+
   const submitHandler = handleSubmit(async (values) => {
     setServerError(null);
 
@@ -699,20 +1198,38 @@ export function ProductForm({
     }
 
     const rawVariants = Array.isArray(values.variants) ? values.variants : [];
-    const normalizedVariants = rawVariants
-      .map((variant) => {
-        const price = Number(variant?.price);
-        return {
-          label: (variant?.label ?? "").trim(),
-          price: Number.isFinite(price) ? price : 0,
-        };
-      })
-      .filter((variant) => variant.label.length > 0 && variant.price >= 0);
-    const uniqueVariants = normalizedVariants.filter((variant, index, arr) => {
+    const variantPayloads = variantFields.map((field, index) => {
+      const variant = rawVariants[index] ?? {};
+      const selection = variantSelections[field.id] ?? {};
+      const price = Number(variant?.price);
+      const color =
+        typeof selection.color === "string" && selection.color.trim().length > 0
+          ? selection.color.trim()
+          : typeof variant?.color === "string" && variant.color.trim().length > 0
+          ? variant.color.trim()
+          : undefined;
+      return {
+        label: (variant?.label ?? "").trim(),
+        price: Number.isFinite(price) ? price : 0,
+        processorId: selection.processorId || variant?.processorId || undefined,
+        ramId: selection.ramId || variant?.ramId || undefined,
+        storageId: selection.storageId || variant?.storageId || undefined,
+        graphicsId: selection.graphicsId || variant?.graphicsId || undefined,
+        color,
+      };
+    });
+
+    const normalizedVariants = variantPayloads.filter(
+      (variant) => variant.label.length > 0 && variant.price >= 0
+    );
+    const seenVariantLabels = new Set<string>();
+    const uniqueVariants = normalizedVariants.filter((variant) => {
       const key = variant.label.toLowerCase();
-      return (
-        arr.findIndex((candidate) => candidate.label.toLowerCase() === key) === index
-      );
+      if (seenVariantLabels.has(key)) {
+        return false;
+      }
+      seenVariantLabels.add(key);
+      return true;
     });
 
     if (uniqueVariants.length > 30) {
@@ -759,11 +1276,17 @@ export function ProductForm({
       price: values.price,
       condition: values.condition,
       companyId: values.companyId || undefined,
+      companySubMasterId: values.companySubMasterId || undefined,
       processorId: values.processorId || undefined,
+      processorSubMasterId: values.processorSubMasterId || undefined,
       ramId: values.ramId || undefined,
+      ramSubMasterId: values.ramSubMasterId || undefined,
       storageId: values.storageId || undefined,
+      storageSubMasterId: values.storageSubMasterId || undefined,
       graphicsId: values.graphicsId || undefined,
+      graphicsSubMasterId: values.graphicsSubMasterId || undefined,
       osId: values.osId || undefined,
+      osSubMasterId: values.osSubMasterId || undefined,
       imageUrl: values.imageUrl,
       galleryImages,
       richDescription: values.richDescription.trim(),
@@ -807,11 +1330,17 @@ export function ProductForm({
           price: 0,
           condition: "refurbished",
           companyId: "",
+          companySubMasterId: "",
           processorId: "",
+          processorSubMasterId: "",
           ramId: "",
+          ramSubMasterId: "",
           storageId: "",
+          storageSubMasterId: "",
           graphicsId: "",
+          graphicsSubMasterId: "",
           osId: "",
+          osSubMasterId: "",
           imageUrl: "",
           galleryImages: [],
           richDescription: "",
@@ -840,6 +1369,31 @@ export function ProductForm({
     mode === "create"
       ? "Add a new product"
       : `Update ${product?.name ?? "product"}`;
+
+  const companySubOptions =
+    selectedCompanyId && subMasters.company[selectedCompanyId]
+      ? subMasters.company[selectedCompanyId]
+      : [];
+  const processorSubOptions =
+    selectedProcessorId && subMasters.processor[selectedProcessorId]
+      ? subMasters.processor[selectedProcessorId]
+      : [];
+  const ramSubOptions =
+    selectedRamId && subMasters.ram[selectedRamId]
+      ? subMasters.ram[selectedRamId]
+      : [];
+  const storageSubOptions =
+    selectedStorageId && subMasters.storage[selectedStorageId]
+      ? subMasters.storage[selectedStorageId]
+      : [];
+  const graphicsSubOptions =
+    selectedGraphicsId && subMasters.graphics[selectedGraphicsId]
+      ? subMasters.graphics[selectedGraphicsId]
+      : [];
+  const osSubOptions =
+    selectedOsId && subMasters.os[selectedOsId]
+      ? subMasters.os[selectedOsId]
+      : [];
 
   async function uploadImageFile(file: File): Promise<string> {
     const formData = new FormData();
@@ -912,327 +1466,514 @@ export function ProductForm({
         </p>
       </CardHeader>
       <form onSubmit={submitHandler} className="space-y-6">
-        <CardContent className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="name">Product name</Label>
-            <Input
-              id="name"
-              placeholder="ThinkPad X1 Carbon"
-              {...register("name")}
-            />
-            {errors.name ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.name.message}
+        <CardContent className="space-y-10">
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Basics & media
               </p>
-            ) : null}
-          </div>
-          <div className="space-y-3 sm:col-span-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Gallery images</Label>
-                <p className="text-xs text-muted-foreground">
-                  Add alternate angles, lifestyle shots, or packaging imagery.
-                  Provide secure (https) links; the first three appear below the
-                  main photo on the product page.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendGallery({ url: "" })}
-                disabled={galleryFields.length >= 12}
-              >
-                Add image
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Keep the shared identity (name and visuals) up top before tweaking variants.
+              </p>
             </div>
-            <div className="space-y-3">
-              {galleryFields.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No gallery media yet.
-                </p>
-              ) : null}
-              {galleryFields.map((field, index) => (
-                <div key={field.id} className="space-y-1">
+            <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Product name</Label>
+                  <Input
+                    id="name"
+                    placeholder="ThinkPad X1 Carbon"
+                    {...register("name")}
+                  />
+                  {errors.name ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {errors.name.message}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-white/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="imageUrl">Primary image</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Shown on listing cards and as the default hero image. Use a crisp 1200×900px photo.
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {isUploadingPrimary ? "Uploading image…" : "Paste a URL or upload"}
+                    </span>
+                  </div>
+                  <Input
+                    id="imageUrl"
+                    placeholder="https://images.example.com/device.jpg"
+                    {...register("imageUrl")}
+                  />
+                  {errors.imageUrl ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {errors.imageUrl.message}
+                    </p>
+                  ) : null}
                   <div className="flex items-center gap-3">
-                    <Input
-                      placeholder="https://images.example.com/gallery.jpg"
-                      defaultValue={field.url ?? ""}
-                      {...register(`galleryImages.${index}.url`)}
-                      aria-invalid={Boolean(errors.galleryImages?.[index]?.url)}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeGallery(index)}
-                      aria-label="Remove gallery image"
-                    >
-                      ×
-                    </Button>
                     <label className="inline-flex cursor-pointer items-center">
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(event) => handleGalleryFileChange(event, index)}
-                        disabled={galleryUploadingIndex === index}
+                        onChange={handlePrimaryFileChange}
+                        disabled={isUploadingPrimary}
                       />
-                      <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                        {galleryUploadingIndex === index ? "Uploading…" : "Choose"}
+                      <span className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                        {isUploadingPrimary ? "Uploading…" : "Choose file"}
                       </span>
                     </label>
+                    <span className="text-xs text-muted-foreground">
+                      {isUploadingPrimary ? "Uploading image…" : "Upload directly from your computer."}
+                    </span>
                   </div>
-                  {errors.galleryImages?.[index]?.url?.message ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {errors.galleryImages[index]?.url?.message}
-                    </p>
-                  ) : null}
                 </div>
-              ))}
+              </div>
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-secondary/50 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <Label>Gallery images</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Add alternate angles or lifestyle shots. The first three sit under the hero image.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => appendGallery({ url: "" })}
+                    disabled={galleryFields.length >= 12}
+                  >
+                    Add image
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {galleryFields.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No gallery media yet.</p>
+                  ) : null}
+                  {galleryFields.map((field, index) => (
+                    <div key={field.id} className="space-y-1">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                        <Input
+                          placeholder="https://images.example.com/gallery.jpg"
+                          defaultValue={field.url ?? ""}
+                          {...register(`galleryImages.${index}.url`)}
+                          aria-invalid={Boolean(errors.galleryImages?.[index]?.url)}
+                        />
+                        <div className="flex items-center gap-2">
+                          <label className="inline-flex cursor-pointer items-center">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => handleGalleryFileChange(event, index)}
+                              disabled={galleryUploadingIndex === index}
+                            />
+                            <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                              {galleryUploadingIndex === index ? "Uploading…" : "Upload"}
+                            </span>
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeGallery(index)}
+                            aria-label="Remove gallery image"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                      {errors.galleryImages?.[index]?.url?.message ? (
+                        <p className="text-sm text-destructive" role="alert">
+                          {errors.galleryImages[index]?.url?.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <select
-              id="category"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-              disabled={isLoadingCategories || categories.length === 0}
-              {...register("category")}
-            >
-              {isLoadingCategories ? (
-                <option value="">Loading categories...</option>
-              ) : categories.length > 0 ? (
-                categories.map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">No categories available</option>
-              )}
-            </select>
-            {errors.category ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.category.message}
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Selling defaults
               </p>
-            ) : null}
-            {categoriesError ? (
-              <p className="text-xs text-destructive" role="alert">
-                {categoriesError}
+              <p className="text-sm text-muted-foreground">
+                Set the base values that stay consistent while you adjust variants.
               </p>
-            ) : null}
-            {!isLoadingCategories &&
-            categories.length === 0 &&
-            !categoriesError ? (
-              <p className="text-xs text-muted-foreground">
-                Create categories first so products can be assigned correctly.
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="price">Price (₹)</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              min="0"
-              {...register("price", { valueAsNumber: true })}
-            />
-            {errors.price ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.price.message}
-              </p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              Base price used when no configuration override is selected.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="condition">Condition</Label>
-            <select
-              id="condition"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-              {...register("condition")}
-            >
-              {productConditions.map((condition) => (
-                <option key={condition} value={condition}>
-                  {conditionLabels[condition]}
-                </option>
-              ))}
-            </select>
-            {errors.condition ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.condition.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-3 sm:col-span-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Configuration variants</Label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  disabled={isLoadingCategories || categories.length === 0}
+                  {...register("category")}
+                >
+                  {isLoadingCategories ? (
+                    <option value="">Loading categories...</option>
+                  ) : categories.length > 0 ? (
+                    categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No categories available</option>
+                  )}
+                </select>
+                {errors.category ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.category.message}
+                  </p>
+                ) : null}
+                {categoriesError ? (
+                  <p className="text-xs text-destructive" role="alert">
+                    {categoriesError}
+                  </p>
+                ) : null}
+                {!isLoadingCategories && categories.length === 0 && !categoriesError ? (
+                  <p className="text-xs text-muted-foreground">
+                    Create categories first so products can be assigned correctly.
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("price", { valueAsNumber: true })}
+                />
+                {errors.price ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.price.message}
+                  </p>
+                ) : null}
                 <p className="text-xs text-muted-foreground">
-                  Add processor / RAM / storage combinations with their specific prices. Leave empty if there is only one price.
+                  Base price used when no configuration override is selected.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendVariant({ label: "", price: product?.price ?? 0 })}
-                disabled={variantFields.length >= 30}
-              >
-                Add option
-              </Button>
-            </div>
-            {variantFields.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No variants added. The base price will be used.
-              </p>
-            ) : null}
-            <div className="space-y-3">
-              {variantFields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="grid gap-3 rounded-lg border border-slate-200 bg-white/60 p-3 sm:grid-cols-[1.4fr_1fr_140px_auto]"
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condition</Label>
+                <select
+                  id="condition"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  {...register("condition")}
                 >
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-slate-600">
-                        Processor
-                      </Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                        value={variantSelections[field.id]?.processorId ?? ""}
-                        onChange={(event) =>
-                          updateVariantSelection(field.id, index, {
-                            processorId: event.target.value || undefined,
-                          })
-                        }
-                        disabled={isLoadingMasters}
+                  {productConditions.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {conditionLabels[condition]}
+                    </option>
+                  ))}
+                </select>
+                {errors.condition ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.condition.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="flex flex-1 items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  {...register("featured")}
+                />
+                Highlight on landing page
+              </label>
+              <label className="flex flex-1 items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  {...register("inStock")}
+                />
+                Available in stock
+              </label>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Options & variants
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Capture colour choices and the configurations that change most between units.
+              </p>
+            </div>
+            <div className="space-y-2 sm:max-w-3xl">
+              <Label htmlFor="colors">Colour options</Label>
+              <Controller
+                control={control}
+                name="colors"
+                render={({ field, fieldState }) => (
+                  <ColorOptionsEditor
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    error={fieldState.error?.message}
+                    onClearErrors={() => clearErrors("colors")}
+                  />
+                )}
+              />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Configuration variants</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Build processor / RAM / storage combinations with their own prices.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendVariant({ label: "", price: product?.price ?? 0 })}
+                  disabled={variantFields.length >= 30}
+                >
+                  Add option
+                </Button>
+              </div>
+              {variantFields.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No variants added. The base price will be used.
+                </p>
+              ) : null}
+              <div className="space-y-4">
+                {variantFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="space-y-4 rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="min-w-[200px] flex-1 space-y-1">
+                        <p className="text-sm font-semibold text-slate-800">
+                          Option {index + 1}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Compose the label by selecting specs below.
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Label preview:{" "}
+                          <span className="font-semibold text-slate-700">
+                            {variantValues?.[index]?.label || "Select options below"}
+                          </span>
+                        </p>
+                        {errors.variants?.[index]?.label?.message ? (
+                          <p className="text-xs text-destructive" role="alert">
+                            {errors.variants[index]?.label?.message}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="w-full min-w-[180px] space-y-1 sm:w-auto">
+                        <Label className="text-xs font-semibold text-slate-600">
+                          Price
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="48999"
+                          defaultValue={field.price ?? product?.price ?? 0}
+                          {...register(`variants.${index}.price` as const, { valueAsNumber: true })}
+                          aria-invalid={Boolean(errors.variants?.[index]?.price)}
+                        />
+                        {errors.variants?.[index]?.price?.message ? (
+                          <p className="text-xs text-destructive" role="alert">
+                            {errors.variants[index]?.price?.message}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeVariantRow(index, field.id)}
+                        aria-label="Remove variant option"
                       >
-                        <option value="">Select</option>
-                        {masters.processor.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
+                        ×
+                      </Button>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-slate-600">RAM</Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                        value={variantSelections[field.id]?.ramId ?? ""}
-                        onChange={(event) =>
-                          updateVariantSelection(field.id, index, {
-                            ramId: event.target.value || undefined,
-                          })
-                        }
-                        disabled={isLoadingMasters}
-                      >
-                        <option value="">Select</option>
-                        {masters.ram.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-600">
-                        Storage (optional)
-                      </Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                        value={variantSelections[field.id]?.storageId ?? ""}
-                        onChange={(event) =>
-                          updateVariantSelection(field.id, index, {
-                            storageId: event.target.value || undefined,
-                          })
-                        }
-                        disabled={isLoadingMasters}
-                      >
-                        <option value="">Select</option>
-                        {masters.storage.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs font-semibold text-slate-600">
-                        Custom note (optional)
-                      </Label>
-                      <Input
-                        placeholder="Add extra details (e.g., FHD display)"
-                        value={variantSelections[field.id]?.note ?? ""}
-                        onChange={(event) =>
-                          updateVariantSelection(field.id, index, {
-                            note: event.target.value,
-                          })
-                        }
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">
+                          Processor
+                        </Label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          value={variantSelections[field.id]?.processorId ?? ""}
+                          onChange={(event) =>
+                            updateVariantSelection(field.id, index, {
+                              processorId: event.target.value || undefined,
+                            })
+                          }
+                          disabled={isLoadingMasters}
+                        >
+                          <option value="">Select</option>
+                          {masters.processor.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">RAM</Label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          value={variantSelections[field.id]?.ramId ?? ""}
+                          onChange={(event) =>
+                            updateVariantSelection(field.id, index, {
+                              ramId: event.target.value || undefined,
+                            })
+                          }
+                          disabled={isLoadingMasters}
+                        >
+                          <option value="">Select</option>
+                          {masters.ram.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs font-semibold text-slate-600">
+                          Storage
+                        </Label>
+                        <StoragePillSelector
+                          options={masters.storage}
+                          value={variantSelections[field.id]?.storageId}
+                          onChange={(selection) =>
+                            updateVariantSelection(field.id, index, {
+                              storageId: selection,
+                            })
+                          }
+                          disabled={isLoadingMasters}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Tap a pill to toggle storage; use Clear if this option has no storage override.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">
+                          Graphics (optional)
+                        </Label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          value={variantSelections[field.id]?.graphicsId ?? ""}
+                          onChange={(event) =>
+                            updateVariantSelection(field.id, index, {
+                              graphicsId: event.target.value || undefined,
+                            })
+                          }
+                          disabled={isLoadingMasters}
+                        >
+                          <option value="">Select</option>
+                          {masters.graphics.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {availableColors.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Colour (optional)
+                          </Label>
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                            value={variantSelections[field.id]?.color ?? ""}
+                            onChange={(event) =>
+                              updateVariantSelection(field.id, index, {
+                                color: event.target.value || undefined,
+                              })
+                            }
+                          >
+                            <option value="">Select</option>
+                            {availableColors.map((color) => (
+                              <option key={color} value={color}>
+                                {color}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label className="text-xs font-semibold text-slate-600">
+                          Custom note (optional)
+                        </Label>
+                        <Input
+                          placeholder="Add extra details (e.g., FHD display)"
+                          value={variantSelections[field.id]?.note ?? ""}
+                          onChange={(event) =>
+                            updateVariantSelection(field.id, index, {
+                              note: event.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <input
+                        type="hidden"
+                        defaultValue={field.label ?? ""}
+                        {...register(`variants.${index}.label` as const)}
+                      />
+                      <input
+                        type="hidden"
+                        defaultValue={field.processorId ?? ""}
+                        {...register(`variants.${index}.processorId` as const)}
+                      />
+                      <input
+                        type="hidden"
+                        defaultValue={field.ramId ?? ""}
+                        {...register(`variants.${index}.ramId` as const)}
+                      />
+                      <input
+                        type="hidden"
+                        defaultValue={field.storageId ?? ""}
+                        {...register(`variants.${index}.storageId` as const)}
+                      />
+                      <input
+                        type="hidden"
+                        defaultValue={field.graphicsId ?? ""}
+                        {...register(`variants.${index}.graphicsId` as const)}
+                      />
+                      <input
+                        type="hidden"
+                        defaultValue={field.color ?? ""}
+                        {...register(`variants.${index}.color` as const)}
                       />
                     </div>
-                    <input
-                      type="hidden"
-                      defaultValue={field.label ?? ""}
-                      {...register(`variants.${index}.label` as const)}
-                    />
-                    <p className="sm:col-span-2 text-xs text-slate-500">
-                      Label preview:{" "}
-                      <span className="font-semibold text-slate-700">
-                        {variantValues?.[index]?.label || "Select options above"}
-                      </span>
-                    </p>
-                    {errors.variants?.[index]?.label?.message ? (
-                      <p className="sm:col-span-2 text-xs text-destructive" role="alert">
-                        {errors.variants[index]?.label?.message}
-                      </p>
-                    ) : null}
                   </div>
-                  <div className="space-y-1">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="48999"
-                      defaultValue={field.price ?? product?.price ?? 0}
-                      {...register(`variants.${index}.price` as const, { valueAsNumber: true })}
-                      aria-invalid={Boolean(errors.variants?.[index]?.price)}
-                    />
-                    {errors.variants?.[index]?.price?.message ? (
-                      <p className="text-xs text-destructive" role="alert">
-                        {errors.variants[index]?.price?.message}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeVariantRow(index, field.id)}
-                      aria-label="Remove variant option"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="space-y-3 sm:col-span-2">
+          </section>
+
+          <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <Label>Master attributes</Label>
-                <p className="text-xs text-muted-foreground">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Shared attributes
+                </p>
+                <p className="text-sm text-muted-foreground">
                   Link the product to shared masters for filtering and sorting.
-                  Leave blank if not applicable.
                 </p>
               </div>
-              {isLoadingMasters ? (
+              {isLoadingMasters || isLoadingSubMasters ? (
                 <span className="text-xs text-muted-foreground">Loading...</span>
               ) : null}
             </div>
@@ -1257,6 +1998,29 @@ export function ProductForm({
                     {errors.companyId.message}
                   </p>
                 ) : null}
+                {companySubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="companySubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="companySubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("companySubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {companySubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.companySubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.companySubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="processorId">{masterTypeLabels.processor}</Label>
@@ -1277,6 +2041,29 @@ export function ProductForm({
                   <p className="text-sm text-destructive" role="alert">
                     {errors.processorId.message}
                   </p>
+                ) : null}
+                {processorSubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="processorSubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="processorSubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("processorSubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {processorSubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.processorSubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.processorSubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
               <div className="space-y-1.5">
@@ -1299,6 +2086,29 @@ export function ProductForm({
                     {errors.ramId.message}
                   </p>
                 ) : null}
+                {ramSubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ramSubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="ramSubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("ramSubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {ramSubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.ramSubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.ramSubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="storageId">{masterTypeLabels.storage}</Label>
@@ -1319,6 +2129,29 @@ export function ProductForm({
                   <p className="text-sm text-destructive" role="alert">
                     {errors.storageId.message}
                   </p>
+                ) : null}
+                {storageSubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="storageSubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="storageSubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("storageSubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {storageSubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.storageSubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.storageSubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
               <div className="space-y-1.5">
@@ -1341,6 +2174,29 @@ export function ProductForm({
                     {errors.graphicsId.message}
                   </p>
                 ) : null}
+                {graphicsSubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="graphicsSubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="graphicsSubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("graphicsSubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {graphicsSubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.graphicsSubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.graphicsSubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="osId">{masterTypeLabels.os}</Label>
@@ -1362,6 +2218,29 @@ export function ProductForm({
                     {errors.osId.message}
                   </p>
                 ) : null}
+                {osSubOptions.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="osSubMasterId">Submaster (optional)</Label>
+                    <select
+                      id="osSubMasterId"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingSubMasters}
+                      {...register("osSubMasterId")}
+                    >
+                      <option value="">Select submaster</option>
+                      {osSubOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.osSubMasterId ? (
+                      <p className="text-sm text-destructive" role="alert">
+                        {errors.osSubMasterId.message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
             {mastersError ? (
@@ -1369,131 +2248,79 @@ export function ProductForm({
                 {mastersError}
               </p>
             ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">Primary image URL</Label>
-            <Input
-              id="imageUrl"
-              placeholder="https://images.example.com/device.jpg"
-              {...register("imageUrl")}
-            />
-            {errors.imageUrl ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.imageUrl.message}
+            {subMastersError ? (
+              <p className="text-xs text-destructive" role="alert">
+                {subMastersError}
               </p>
             ) : null}
-            <p className="text-xs text-muted-foreground">
-              Shown on listing cards and as the default hero image. Use a
-              1200×900px (or similar) high-quality photo.
-            </p>
-            <div className="flex items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePrimaryFileChange}
-                  disabled={isUploadingPrimary}
-                />
-                <span className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                  {isUploadingPrimary ? "Uploading…" : "Choose file"}
-                </span>
-              </label>
-              <span className="text-xs text-muted-foreground">
-                {isUploadingPrimary ? "Uploading image…" : "Upload directly from your computer."}
-              </span>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Story & highlights
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Long-form details sit at the bottom so the quick inputs stay fast.
+              </p>
             </div>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Share the device story, refurbishment process, and warranty coverage."
-              className="min-h-[140px]"
-              {...register("description")}
-            />
-            {errors.description ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.description.message}
-              </p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              Appears near the top of the detail page and in product teasers.
-            </p>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="richDescription">Rich product story</Label>
-            <Controller
-              control={control}
-              name="richDescription"
-              render={({ field: { value, onChange } }) => (
-                <RichTextEditor
-                  value={value!}
-                  onChange={onChange}
-                  placeholder="Start writing... add images, videos, and formatted text."
-                />
-              )}
-            />
-            {errors.richDescription ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.richDescription.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="colors">Colour options</Label>
-            <Controller
-              control={control}
-              name="colors"
-              render={({ field, fieldState }) => (
-                <ColorOptionsEditor
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  error={fieldState.error?.message}
-                  onClearErrors={() => clearErrors("colors")}
-                />
-              )}
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="highlights">Highlights</Label>
-            <Textarea
-              id="highlights"
-              placeholder={`Add up to ${MAX_PRODUCT_HIGHLIGHTS} bullet points. Enter one per line.`}
-              className="min-h-[120px]"
-              {...register("highlights")}
-            />
-            <p className="text-xs text-muted-foreground">
-              Showcase key selling points, warranty terms, or bundled
-              accessories.
-            </p>
-            {errors.highlights ? (
-              <p className="text-sm text-destructive" role="alert">
-                {errors.highlights.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-6 sm:col-span-2 sm:flex-row">
-            <label className="flex items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
-              <input
-                type="checkbox"
-                className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                {...register("featured")}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Share the device story, refurbishment process, and warranty coverage."
+                className="min-h-[140px]"
+                {...register("description")}
               />
-              Highlight on landing page
-            </label>
-            <label className="flex items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
-              <input
-                type="checkbox"
-                className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                {...register("inStock")}
+              {errors.description ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.description.message}
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Appears near the top of the detail page and in product teasers.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="richDescription">Rich product story</Label>
+              <Controller
+                control={control}
+                name="richDescription"
+                render={({ field: { value, onChange } }) => (
+                  <RichTextEditor
+                    value={value!}
+                    onChange={onChange}
+                    placeholder="Start writing... add images, videos, and formatted text."
+                  />
+                )}
               />
-              Available in stock
-            </label>
-          </div>
+              {errors.richDescription ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.richDescription.message}
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="highlights">Highlights</Label>
+              <Textarea
+                id="highlights"
+                placeholder={`Add up to ${MAX_PRODUCT_HIGHLIGHTS} bullet points. Enter one per line.`}
+                className="min-h-[120px]"
+                {...register("highlights")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Showcase key selling points, warranty terms, or bundled
+                accessories.
+              </p>
+              {errors.highlights ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.highlights.message}
+                </p>
+              ) : null}
+            </div>
+          </section>
           {serverError ? (
-            <div className="sm:col-span-2">
+            <div>
               <p className="text-sm text-destructive" role="alert">
                 {serverError}
               </p>

@@ -4,7 +4,15 @@ const connectDB = vi.fn();
 const getCurrentUser = vi.fn();
 const updateOne = vi.fn(() => Promise.resolve({ acknowledged: true }));
 const bulkWrite = vi.fn();
+const find = vi.fn(() =>
+  ({
+    select: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue([]),
+  }) as any,
+);
 const createDummyProductBatch = vi.fn();
+const replaceProductVariants = vi.fn();
+const variantDistinct = vi.fn(() => Promise.resolve([]));
 
 vi.mock("@/lib/auth", () => ({
   getCurrentUser,
@@ -19,6 +27,10 @@ vi.mock("@/lib/dummy-products", () => ({
   dummySeedCategories: ["Laptops", "Desktops"],
 }));
 
+vi.mock("@/lib/product-variants", () => ({
+  replaceProductVariants,
+}));
+
 vi.mock("@/models/category", () => ({
   CategoryModel: {
     updateOne,
@@ -28,6 +40,13 @@ vi.mock("@/models/category", () => ({
 vi.mock("@/models/product", () => ({
   ProductModel: {
     bulkWrite,
+    find,
+  },
+}));
+
+vi.mock("@/models/variant", () => ({
+  VariantModel: {
+    distinct: variantDistinct,
   },
 }));
 
@@ -44,6 +63,8 @@ describe("POST /api/products/seed", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    replaceProductVariants.mockResolvedValue([]);
+    variantDistinct.mockResolvedValue([]);
   });
 
   afterEach(() => {

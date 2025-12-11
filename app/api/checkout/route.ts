@@ -8,13 +8,18 @@ import { sendOrderConfirmationEmail } from "@/lib/mailer";
 import { getRazorpayClient, getRazorpayKeyId } from "@/lib/razorpay";
 import { OrderModel } from "@/models/order";
 import { ProductModel, type ProductDocument } from "@/models/product";
+import { VariantModel, type VariantDocument } from "@/models/variant";
 import { TransactionModel } from "@/models/transaction";
 
 const TAX_RATE = 0.18;
 
-function normalizeProductVariants(
-  variants: { label?: unknown; price?: unknown }[] | unknown
-) {
+type CheckoutVariant = {
+  label: string;
+  price: number;
+  isDefault: boolean;
+};
+
+function normalizeVariantDocuments(variants: VariantDocument[] | undefined): CheckoutVariant[] {
   if (!Array.isArray(variants)) {
     return [];
   }
@@ -25,6 +30,7 @@ function normalizeProductVariants(
       price: Number.isFinite(Number((variant as any)?.price))
         ? Number((variant as any)?.price)
         : Number.NaN,
+      isDefault: Boolean(variant.isDefault),
     }))
     .filter((variant) => {
       if (!variant.label || Number.isNaN(variant.price) || variant.price < 0) {
@@ -39,6 +45,23 @@ function normalizeProductVariants(
     });
 }
 
+function buildFallbackVariant(product: ProductDocument): CheckoutVariant {
+  const labelParts = [
+    product.processorName,
+    product.ramName,
+    product.storageName,
+    product.graphicsName,
+  ]
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+
+  return {
+    label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
+    price: Number.isFinite(Number(product.price)) ? Number(product.price) : 0,
+    isDefault: true,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const payload = checkoutPayloadSchema.parse(await request.json());
@@ -47,6 +70,24 @@ export async function POST(request: Request) {
     const productIds = payload.items.map((item) => item.productId);
     const uniqueIds = [...new Set(productIds)];
     const products = await ProductModel.find({ _id: { $in: uniqueIds } }).lean<ProductDocument[]>();
+
+    const variantDocs = await VariantModel.find({ productId: { $in: uniqueIds } }).lean<VariantDocument[]>();
+    const rawVariantMap = new Map<string, VariantDocument[]>();
+    variantDocs.forEach((variant) => {
+      const key = typeof variant.productId === "string" ? variant.productId : variant.productId?.toString();
+      if (!key) {
+        return;
+      }
+      if (!rawVariantMap.has(key)) {
+        rawVariantMap.set(key, []);
+      }
+      rawVariantMap.get(key)?.push(variant);
+    });
+
+    const variantMap = new Map<string, CheckoutVariant[]>();
+    rawVariantMap.forEach((variants, key) => {
+      variantMap.set(key, normalizeVariantDocuments(variants));
+    });
 
     if (products.length !== uniqueIds.length) {
       return NextResponse.json({ error: "One or more items are unavailable" }, { status: 400 });
@@ -65,12 +106,16 @@ export async function POST(request: Request) {
       const variantLabel = typeof item.variant === "string" && item.variant.trim().length > 0
         ? item.variant.trim()
         : null;
-      const normalizedVariants = normalizeProductVariants(product.variants as any);
+      const normalizedVariantsFromMap = variantMap.get(product._id.toString()) ?? [];
+      const normalizedVariants =
+        normalizedVariantsFromMap.length > 0
+          ? normalizedVariantsFromMap
+          : [buildFallbackVariant(product)];
       const matchedVariant = variantLabel
         ? normalizedVariants.find(
             (variant) => variant.label.toLowerCase() === variantLabel.toLowerCase()
           )
-        : undefined;
+        : normalizedVariants.find((variant) => variant.isDefault) ?? normalizedVariants[0];
       if (variantLabel && !matchedVariant) {
         throw new Error("INVALID_VARIANT_SELECTION");
       }

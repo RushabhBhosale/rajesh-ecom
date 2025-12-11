@@ -4,9 +4,18 @@ import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { resolveProductMasters } from "@/lib/master-options";
+import {
+  resolveProductMasters,
+  type ProductMasterSelection,
+} from "@/lib/master-options";
 import { productPayloadSchema } from "@/lib/product-validation";
 import { sanitizeRichText } from "@/lib/sanitize-html";
+import { resolveProductSubMasters } from "@/lib/submaster-options";
+import {
+  replaceProductVariants,
+  type VariantInput,
+  VariantValidationError,
+} from "@/lib/product-variants";
 import { ProductModel } from "@/models/product";
 
 function sanitizeHighlights(highlights: string[] | undefined) {
@@ -53,31 +62,41 @@ function sanitizeColors(colors: string[] | undefined) {
     });
 }
 
-function sanitizeVariants(
-  variants: { label: string; price: number }[] | undefined
-) {
-  if (!Array.isArray(variants)) {
-    return [];
-  }
-  const seen = new Set<string>();
-  return variants
-    .map((variant) => ({
-      label: typeof variant.label === "string" ? variant.label.trim() : "",
-      price: Number.isFinite(Number((variant as any)?.price))
-        ? Number((variant as any)?.price)
-        : Number.NaN,
-    }))
-    .filter((variant) => {
-      if (!variant.label || Number.isNaN(variant.price) || variant.price < 0) {
-        return false;
-      }
-      const key = variant.label.toLowerCase();
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
+function buildVariantInputs(
+  payload: ReturnType<typeof productPayloadSchema.parse>,
+  colors: string[],
+  masterSelection: ProductMasterSelection
+): VariantInput[] {
+  const labelParts = [
+    masterSelection.processor?.name,
+    masterSelection.ram?.name,
+    masterSelection.storage?.name,
+    masterSelection.graphics?.name,
+  ].filter(Boolean);
+
+  const baseVariant: VariantInput = {
+    label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
+    price: payload.price,
+    processorId: payload.processorId,
+    ramId: payload.ramId,
+    storageId: payload.storageId,
+    graphicsId: payload.graphicsId,
+    color: colors.length === 1 ? colors[0] : undefined,
+    isDefault: true,
+  };
+
+  const additionalVariants: VariantInput[] = (payload.variants ?? []).map((variant) => ({
+    label: variant.label,
+    price: variant.price,
+    processorId: variant.processorId,
+    ramId: variant.ramId,
+    storageId: variant.storageId,
+    graphicsId: variant.graphicsId,
+    color: variant.color,
+    isDefault: false,
+  }));
+
+  return [baseVariant, ...additionalVariants];
 }
 
 function isValidId(id: string) {
@@ -112,7 +131,6 @@ export async function PUT(request: Request, context: { params: { id: string } })
     const galleryImages = sanitizeGallery(payload.galleryImages);
     const richDescription = sanitizeRichText(payload.richDescription?.trim() ?? "");
     const colors = sanitizeColors(payload.colors);
-    const variants = sanitizeVariants(payload.variants);
 
     const masterResult = await resolveProductMasters({
       companyId: payload.companyId,
@@ -127,7 +145,39 @@ export async function PUT(request: Request, context: { params: { id: string } })
       return NextResponse.json({ error: masterResult.message }, { status: 400 });
     }
 
+    const subMasterResult = await resolveProductSubMasters(
+      {
+        companySubMasterId: payload.companySubMasterId,
+        processorSubMasterId: payload.processorSubMasterId,
+        ramSubMasterId: payload.ramSubMasterId,
+        storageSubMasterId: payload.storageSubMasterId,
+        graphicsSubMasterId: payload.graphicsSubMasterId,
+        osSubMasterId: payload.osSubMasterId,
+      },
+      masterResult.selection
+    );
+
+    if (!subMasterResult.ok) {
+      return NextResponse.json({ error: subMasterResult.message }, { status: 400 });
+    }
+
+    const variantInputs = buildVariantInputs(payload, colors, masterResult.selection);
+
     await connectDB();
+    const exists = await ProductModel.exists({ _id: params.id });
+    if (!exists) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    try {
+      await replaceProductVariants(params.id, variantInputs);
+    } catch (error) {
+      if (error instanceof VariantValidationError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      throw error;
+    }
+
     const updated = await ProductModel.findByIdAndUpdate(
       params.id,
       {
@@ -149,13 +199,25 @@ export async function PUT(request: Request, context: { params: { id: string } })
           graphicsName: masterResult.selection.graphics?.name ?? "",
           osId: masterResult.selection.os?.id ?? null,
           osName: masterResult.selection.os?.name ?? "",
+          companySubmasterId: subMasterResult.selection.companySubMaster?.id ?? null,
+          companySubmasterName: subMasterResult.selection.companySubMaster?.name ?? "",
+          processorSubmasterId: subMasterResult.selection.processorSubMaster?.id ?? null,
+          processorSubmasterName: subMasterResult.selection.processorSubMaster?.name ?? "",
+          ramSubmasterId: subMasterResult.selection.ramSubMaster?.id ?? null,
+          ramSubmasterName: subMasterResult.selection.ramSubMaster?.name ?? "",
+          storageSubmasterId: subMasterResult.selection.storageSubMaster?.id ?? null,
+          storageSubmasterName: subMasterResult.selection.storageSubMaster?.name ?? "",
+          graphicsSubmasterId: subMasterResult.selection.graphicsSubMaster?.id ?? null,
+          graphicsSubmasterName: subMasterResult.selection.graphicsSubMaster?.name ?? "",
+          osSubmasterId: subMasterResult.selection.osSubMaster?.id ?? null,
+          osSubmasterName: subMasterResult.selection.osSubMaster?.name ?? "",
           imageUrl: payload.imageUrl ?? "",
           galleryImages,
           richDescription,
           featured: payload.featured ?? false,
           inStock: payload.inStock ?? true,
           highlights,
-          variants,
+          variants: [],
           colors,
         },
       },

@@ -89,6 +89,17 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     },
   ];
 
+  const defaultVariant =
+    product.variants.find((variant) => variant.isDefault) ?? product.variants[0] ?? null;
+  const hasVariants = product.variants.length > 1;
+  const configurationOptions = hasVariants
+    ? [...product.variants].sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return a.price - b.price;
+      })
+    : [];
+
   const specSheet = [
     { label: "Company", value: product.company?.name },
     { label: "Processor", value: product.processor?.name },
@@ -101,18 +112,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const richContent = product.richDescription
     ? sanitizeRichText(product.richDescription)
     : "";
-  const hasVariants = product.variants.length > 0;
-  const baseLabel = [
-    product.processor?.name,
-    product.ram?.name,
-    product.storage?.name,
-    product.graphics?.name,
-  ]
-    .filter(Boolean)
-    .join(" • ");
-  const configurationOptions = hasVariants
-    ? [{ label: baseLabel || "Base configuration", price: product.price }, ...product.variants]
-    : [];
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-16">
@@ -124,7 +123,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </Link>
           </Button>
 
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <Badge className="bg-primary/10 text-primary">{product.category}</Badge>
@@ -168,7 +167,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     </div>
                   </div>
                 ) : null}
-                {hasVariants ? (
+                {/* {hasVariants ? (
                   <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Available configurations
@@ -185,12 +184,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                       ))}
                     </div>
                   </div>
-                ) : null}
+                ) : null} */}
               </div>
 
               <ProductPurchaseSection product={product} />
 
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Highlights
                 </h2>
@@ -202,7 +201,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     </li>
                   ))}
                 </ul>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

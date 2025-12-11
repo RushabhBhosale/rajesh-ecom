@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { createDummyProductBatch, dummySeedCategories } from "@/lib/dummy-products";
+import { replaceProductVariants, type VariantInput } from "@/lib/product-variants";
 import { CategoryModel } from "@/models/category";
 import { MasterOptionModel } from "@/models/master-option";
 import { ProductModel } from "@/models/product";
+import { VariantModel } from "@/models/variant";
 
 const masterSeeds = {
   company: ["Dell", "HP", "Lenovo", "Apple", "ASUS", "Acer", "Microsoft", "Logitech"],
@@ -166,6 +168,56 @@ async function seedCuratedProducts() {
   }
 }
 
+async function backfillBaseVariantsForProducts() {
+  const productIdsWithVariants = await VariantModel.distinct("productId");
+  const productsNeedingVariants = await ProductModel.find({
+    _id: { $nin: productIdsWithVariants },
+  })
+    .select({
+      _id: 1,
+      price: 1,
+      processorId: 1,
+      processorName: 1,
+      ramId: 1,
+      ramName: 1,
+      storageId: 1,
+      storageName: 1,
+      graphicsId: 1,
+      graphicsName: 1,
+      colors: 1,
+    })
+    .lean();
+
+  const tasks = productsNeedingVariants.map((product) => {
+    const labelParts = [
+      product.processorName,
+      product.ramName,
+      product.storageName,
+      product.graphicsName,
+    ]
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0);
+
+    const baseVariant: VariantInput = {
+      label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
+      price: Number.isFinite(Number(product.price)) ? Number(product.price) : 0,
+      processorId: product.processorId?.toString(),
+      ramId: product.ramId?.toString(),
+      storageId: product.storageId?.toString(),
+      graphicsId: product.graphicsId?.toString(),
+      color:
+        Array.isArray((product as any).colors) && (product as any).colors.length === 1
+          ? (product as any).colors[0]
+          : undefined,
+      isDefault: true,
+    };
+
+    return replaceProductVariants(product._id.toString(), [baseVariant]);
+  });
+
+  await Promise.all(tasks);
+}
+
 export async function POST() {
   try {
     const actor = await getCurrentUser();
@@ -208,6 +260,7 @@ export async function POST() {
     }));
 
     const result = await ProductModel.bulkWrite(bulkOps, { ordered: false });
+    await backfillBaseVariantsForProducts();
     const inserted = result.upsertedCount ?? 0;
     const matched = result.matchedCount ?? 0;
 

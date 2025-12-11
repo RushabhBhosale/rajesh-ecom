@@ -128,7 +128,7 @@ export function ProtectedAppShell({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-b from-background via-muted/40 to-muted/60">
+    <div className="flex min-h-screen bg-gradient-to-b from-background via-muted/40 to-muted/60 md:h-screen md:overflow-hidden">
       {sidebarOpen ? (
         <button
           aria-label="Close sidebar overlay"
@@ -140,7 +140,7 @@ export function ProtectedAppShell({
       <aside
         aria-label="Sidebar"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/60 bg-gradient-to-b from-background via-background/95 to-muted/60 shadow-xl transition-transform duration-200 ease-in-out md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/60 bg-gradient-to-b from-background via-background/95 to-muted/60 shadow-xl transition-transform duration-200 ease-in-out",
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
@@ -294,7 +294,7 @@ export function ProtectedAppShell({
 
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col md:ml-72 md:h-screen md:overflow-hidden">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-gradient-to-r from-background via-background/95 to-muted/60 px-6 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/70">
           <div className="flex items-center gap-3">
             <button
