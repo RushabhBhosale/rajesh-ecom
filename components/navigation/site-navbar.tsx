@@ -9,6 +9,8 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SessionUser } from "@/lib/auth";
+import { formatCurrency } from "@/lib/currency";
+import type { ProductSummary } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import {
   useCartStore,
@@ -34,7 +36,15 @@ export function SiteNavbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [isFetchingUser, setIsFetchingUser] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState<ProductSummary[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const desktopSearchRef = useRef<HTMLFormElement | null>(null);
+  const mobileSearchRef = useRef<HTMLFormElement | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasHydratedCart = useCartHydration();
   const itemCount = useCartStore(selectItemCount);
   const cartCount = hasHydratedCart ? Math.min(itemCount, 99) : 0;
@@ -120,8 +130,114 @@ export function SiteNavbar() {
   }, []);
 
   useEffect(() => {
+    const query = searchTerm.trim();
+
+    if (!query) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+        searchAbortRef.current = null;
+      }
+      setSuggestions([]);
+      setIsSearching(false);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setShowSuggestions(true);
+
+    let isActive = true;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          `/api/products?search=${encodeURIComponent(query)}&limit=6`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) {
+          throw new Error("Unable to search products");
+        }
+        const data = await response.json();
+        if (!isActive) {
+          return;
+        }
+        setSuggestions(Array.isArray(data?.products) ? data.products : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        if (isActive) {
+          setSuggestions([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsSearching(false);
+        }
+        searchAbortRef.current = null;
+      }
+    }, 1000);
+
+    return () => {
+      isActive = false;
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+        searchAbortRef.current = null;
+      }
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const targets = [desktopSearchRef.current, mobileSearchRef.current];
+      const clickedInside = targets.some(
+        (target) => target && target.contains(event.target as Node)
+      );
+      if (!clickedInside) {
+        setShowSuggestions(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowSuggestions(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useEffect(() => {
     setMenuOpen(false);
     setUserMenuOpen(false);
+    setShowSuggestions(false);
+    setSearchTerm("");
+    setSuggestions([]);
+    setIsSearching(false);
   }, [pathname]);
 
   const accountLink = useMemo(() => {
@@ -152,6 +268,54 @@ export function SiteNavbar() {
     const source = currentUser.name || currentUser.email || "";
     return source.charAt(0).toUpperCase();
   }, [currentUser]);
+
+  const hasQuery = searchTerm.trim().length > 0;
+
+  const renderSuggestions = (variant: "desktop" | "mobile") => {
+    if (!showSuggestions || !hasQuery) {
+      return null;
+    }
+
+    return (
+      <div
+        className={cn(
+          "absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border/60 bg-background/98 shadow-xl backdrop-blur-sm",
+          variant === "mobile" ? "max-h-72" : "max-h-96"
+        )}
+      >
+        <div className="divide-y divide-border/60">
+          {isSearching ? (
+            <p className="px-4 py-3 text-sm text-muted-foreground">Searching products...</p>
+          ) : suggestions.length ? (
+            suggestions.map((product) => {
+              const taxonomy = [product.company?.name, product.category].filter(Boolean).join(" • ");
+              return (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}`}
+                  className="flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-muted/60"
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <div className="flex-1 space-y-1">
+                    <p className="line-clamp-2 font-semibold text-foreground">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">{taxonomy || "View product"}</p>
+                  </div>
+                  <span className="whitespace-nowrap text-xs font-semibold text-foreground">
+                    {formatCurrency(product.price)}
+                  </span>
+                </Link>
+              );
+            })
+          ) : (
+            <p className="px-4 py-3 text-sm text-muted-foreground">No matching products yet</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (shouldHide) {
     return null;
@@ -198,6 +362,7 @@ export function SiteNavbar() {
             </nav>
           </div>
           <form
+            ref={desktopSearchRef}
             className="relative hidden flex-1 max-w-md lg:max-w-2xl md:block"
             action="/products"
             role="search"
@@ -208,6 +373,16 @@ export function SiteNavbar() {
             />
             <Input
               name="q"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (hasQuery) {
+                  setShowSuggestions(true);
+                }
+              }}
               placeholder="Search for laptops, tablets, accessories..."
               className="h-11 rounded-full border-border/70 bg-muted/70 pl-10 pr-14 text-sm"
               aria-label="Search products"
@@ -220,6 +395,7 @@ export function SiteNavbar() {
               <Search className="h-4 w-4" aria-hidden />
               <span className="sr-only">Search</span>
             </Button>
+            {renderSuggestions("desktop")}
           </form>
           <div className="hidden items-center gap-2 md:flex">
             {currentUser ? (
@@ -337,9 +513,24 @@ export function SiteNavbar() {
         </div>
         {menuOpen ? (
           <div className="border-t border-border/60 bg-background/95 px-4 py-4 md:hidden">
-            <form className="relative mb-4" action="/products" role="search">
+            <form
+              ref={mobileSearchRef}
+              className="relative mb-4"
+              action="/products"
+              role="search"
+            >
               <Input
                 name="q"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (hasQuery) {
+                    setShowSuggestions(true);
+                  }
+                }}
                 placeholder="Search for products"
                 className="h-11 rounded-full border-border/70 bg-muted/70 pl-4 pr-12 text-sm"
                 aria-label="Search products"
@@ -352,6 +543,7 @@ export function SiteNavbar() {
                 <Search className="h-4 w-4" aria-hidden />
                 <span className="sr-only">Search</span>
               </Button>
+              {renderSuggestions("mobile")}
             </form>
             <nav className="flex flex-col gap-3 text-sm font-medium">
               {navLinks.map((link) => (

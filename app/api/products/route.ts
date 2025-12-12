@@ -227,12 +227,15 @@ export async function GET(request: Request) {
     const limitParam = url.searchParams.get("limit");
     const featuredOnly = url.searchParams.get("featured") === "true";
     const inStockOnly = url.searchParams.get("inStock") === "true";
+    const searchParam = url.searchParams.get("search") ?? url.searchParams.get("q");
+    const search = searchParam?.trim() || undefined;
 
     const limit = limitParam ? Number.parseInt(limitParam, 10) : undefined;
     const products = await listProducts({
       limit: Number.isNaN(limit) ? undefined : limit,
       featuredOnly,
       inStockOnly,
+      search,
     });
 
     return NextResponse.json({ products });
