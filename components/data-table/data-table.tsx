@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { ColumnDef, ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, ColumnFiltersState, Row, SortingState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -24,6 +24,18 @@ interface DataTableProps<TData, TValue> {
   className?: string;
   renderMobileRow?: (item: TData) => React.ReactNode;
   mobileEmptyState?: React.ReactNode;
+  getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string;
+}
+
+function defaultGetRowId<TData>(originalRow: TData, index: number) {
+  const maybeId =
+    (originalRow as { id?: string | number; _id?: string | number }).id ??
+    (originalRow as { id?: string | number; _id?: string | number })._id;
+
+  if (typeof maybeId === "string" || typeof maybeId === "number") {
+    return String(maybeId);
+  }
+  return String(index);
 }
 
 export function DataTable<TData, TValue>({
@@ -35,6 +47,7 @@ export function DataTable<TData, TValue>({
   className,
   renderMobileRow,
   mobileEmptyState,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -48,6 +61,7 @@ export function DataTable<TData, TValue>({
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    getRowId: getRowId ?? defaultGetRowId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
