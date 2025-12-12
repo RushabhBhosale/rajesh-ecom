@@ -1,5 +1,7 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
+import { productConditions } from "@/lib/product-constants";
+
 const VariantSchema = new Schema(
   {
     productId: {
@@ -18,16 +20,37 @@ const VariantSchema = new Schema(
       required: true,
       min: 0,
     },
+    sku: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    stock: {
+      type: Number,
+      default: 1,
+      min: 0,
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    condition: {
+      type: String,
+      enum: productConditions,
+      default: "refurbished",
+    },
     processorId: {
       type: Schema.Types.ObjectId,
       ref: "MasterOption",
       default: null,
       index: true,
     },
-    processorName: {
-      type: String,
-      trim: true,
-      default: "",
+    processorSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
     },
     ramId: {
       type: Schema.Types.ObjectId,
@@ -35,10 +58,11 @@ const VariantSchema = new Schema(
       default: null,
       index: true,
     },
-    ramName: {
-      type: String,
-      trim: true,
-      default: "",
+    ramSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
     },
     storageId: {
       type: Schema.Types.ObjectId,
@@ -46,10 +70,11 @@ const VariantSchema = new Schema(
       default: null,
       index: true,
     },
-    storageName: {
-      type: String,
-      trim: true,
-      default: "",
+    storageSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
     },
     graphicsId: {
       type: Schema.Types.ObjectId,
@@ -57,15 +82,58 @@ const VariantSchema = new Schema(
       default: null,
       index: true,
     },
-    graphicsName: {
+    graphicsSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    osId: {
+      type: Schema.Types.ObjectId,
+      ref: "MasterOption",
+      default: null,
+      index: true,
+    },
+    osSubmasterId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
+    imageUrl: {
       type: String,
-      trim: true,
       default: "",
+      trim: true,
+    },
+    galleryImages: {
+      type: [String],
+      default: [],
+    },
+    richDescription: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    highlights: {
+      type: [String],
+      default: [],
+    },
+    colors: {
+      type: [String],
+      default: [],
+    },
+    featured: {
+      type: Boolean,
+      default: false,
     },
     color: {
       type: String,
       trim: true,
       default: "",
+    },
+    inStock: {
+      type: Boolean,
+      default: true,
     },
     isDefault: {
       type: Boolean,
@@ -83,5 +151,8 @@ export type VariantDocument = InferSchemaType<typeof VariantSchema> & {
   _id: mongoose.Types.ObjectId;
 };
 
-export const VariantModel =
-  mongoose.models.Variant || mongoose.model<VariantDocument>("Variant", VariantSchema);
+if (mongoose.models.Variant) {
+  delete mongoose.models.Variant;
+}
+
+export const VariantModel = mongoose.model<VariantDocument>("Variant", VariantSchema);

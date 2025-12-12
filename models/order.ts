@@ -17,6 +17,7 @@ const addressSchema = new Schema(
 const orderItemSchema = new Schema(
   {
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    variantId: { type: Schema.Types.ObjectId, ref: "Variant", default: null },
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 1 },
@@ -46,6 +47,7 @@ const OrderSchema = new Schema(
     items: { type: [orderItemSchema], required: true, default: [] },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0 },
+    shipping: { type: Number, required: true, min: 0, default: 0 },
     total: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "INR" },
     paymentMethod: { type: String, enum: paymentMethods, required: true },

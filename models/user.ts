@@ -22,6 +22,11 @@ const UserSchema = new Schema(
       required: true,
       select: false,
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     role: {
       type: String,
       enum: roles,

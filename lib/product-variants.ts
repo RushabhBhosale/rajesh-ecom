@@ -1,16 +1,34 @@
 import mongoose from "mongoose";
 
 import { masterTypeLabels, type MasterOptionType } from "@/lib/master-constants";
+import { productConditions, type ProductCondition } from "@/lib/product-constants";
 import { MasterOptionModel, type MasterOptionDocument } from "@/models/master-option";
 import { VariantModel, type VariantDocument } from "@/models/variant";
 
 export interface VariantInput {
   label: string;
   price: number;
+  description: string;
+  condition: ProductCondition;
+  sku?: string;
+  stock?: number;
   processorId?: string;
+  processorSubmasterId?: string;
   ramId?: string;
+  ramSubmasterId?: string;
   storageId?: string;
+  storageSubmasterId?: string;
   graphicsId?: string;
+  graphicsSubmasterId?: string;
+  osId?: string;
+  osSubmasterId?: string;
+  imageUrl?: string;
+  galleryImages?: string[];
+  richDescription?: string;
+  highlights?: string[];
+  colors?: string[];
+  featured?: boolean;
+  inStock?: boolean;
   color?: string;
   isDefault?: boolean;
 }
@@ -19,13 +37,15 @@ type VariantMasterField =
   | "processorId"
   | "ramId"
   | "storageId"
-  | "graphicsId";
+  | "graphicsId"
+  | "osId";
 
 const variantMasterToType: Record<VariantMasterField, MasterOptionType> = {
   processorId: "processor",
   ramId: "ram",
   storageId: "storage",
   graphicsId: "graphics",
+  osId: "os",
 };
 
 export class VariantValidationError extends Error {
@@ -36,13 +56,43 @@ export class VariantValidationError extends Error {
 }
 
 function normalizeVariantInput(variant: VariantInput): VariantInput {
+  const price = Number.isFinite(variant.price) ? variant.price : 0;
+  const stockValue = Number.isFinite(Number(variant.stock)) ? Math.max(0, Number(variant.stock)) : 1;
+  const normalizedCondition = productConditions.includes(variant.condition)
+    ? variant.condition
+    : "refurbished";
   return {
     label: variant.label.trim(),
-    price: Number.isFinite(variant.price) ? variant.price : 0,
+    price,
+    description: variant.description?.trim() ?? "",
+    condition: normalizedCondition,
+    sku: variant.sku?.trim() || "",
+    stock: stockValue,
     processorId: variant.processorId || undefined,
+    processorSubmasterId: variant.processorSubmasterId || undefined,
     ramId: variant.ramId || undefined,
+    ramSubmasterId: variant.ramSubmasterId || undefined,
     storageId: variant.storageId || undefined,
+    storageSubmasterId: variant.storageSubmasterId || undefined,
     graphicsId: variant.graphicsId || undefined,
+    graphicsSubmasterId: variant.graphicsSubmasterId || undefined,
+    osId: variant.osId || undefined,
+    osSubmasterId: variant.osSubmasterId || undefined,
+    imageUrl: variant.imageUrl?.trim() || "",
+    galleryImages: Array.isArray(variant.galleryImages)
+      ? variant.galleryImages.map((item) => item.trim()).filter((item) => item.length > 0)
+      : [],
+    richDescription: variant.richDescription?.trim?.() ?? "",
+    highlights: Array.isArray(variant.highlights)
+      ? variant.highlights.map((item) => item.trim()).filter((item) => item.length > 0)
+      : [],
+    colors: Array.isArray(variant.colors)
+      ? variant.colors
+          .map((item) => item.trim())
+          .filter((item, index, arr) => item.length > 0 && arr.indexOf(item) === index)
+      : [],
+    featured: Boolean(variant.featured),
+    inStock: typeof variant.inStock === "boolean" ? variant.inStock : stockValue > 0,
     color: variant.color?.trim() || undefined,
     isDefault: Boolean(variant.isDefault),
   };
@@ -103,10 +153,16 @@ async function resolveVariantMasters(
 function mapVariantDocument(doc: VariantDocument): VariantDocument {
   return {
     ...doc,
-    processorName: doc.processorName ?? "",
-    ramName: doc.ramName ?? "",
-    storageName: doc.storageName ?? "",
-    graphicsName: doc.graphicsName ?? "",
+    sku: doc.sku ?? "",
+    imageUrl: doc.imageUrl ?? "",
+    galleryImages: Array.isArray(doc.galleryImages) ? doc.galleryImages : [],
+    richDescription: doc.richDescription ?? "",
+    highlights: Array.isArray(doc.highlights) ? doc.highlights : [],
+    colors: Array.isArray((doc as any).colors)
+      ? (doc as any).colors
+          .map((item: unknown) => (typeof item === "string" ? item.trim() : ""))
+          .filter((item: string, index: number, arr: string[]) => item.length > 0 && arr.indexOf(item) === index)
+      : [],
     color: doc.color ?? "",
   };
 }
@@ -150,15 +206,34 @@ export async function replaceProductVariants(
       productId: productObjectId,
       label: variant.label,
       price: variant.price,
+      description: variant.description,
+      condition: variant.condition,
+      sku: variant.sku ?? "",
+      stock: typeof variant.stock === "number" ? variant.stock : 1,
       processorId: null,
-      processorName: "",
+      processorSubmasterId: variant.processorSubmasterId
+        ? new mongoose.Types.ObjectId(variant.processorSubmasterId)
+        : null,
       ramId: null,
-      ramName: "",
+      ramSubmasterId: variant.ramSubmasterId ? new mongoose.Types.ObjectId(variant.ramSubmasterId) : null,
       storageId: null,
-      storageName: "",
+      storageSubmasterId: variant.storageSubmasterId
+        ? new mongoose.Types.ObjectId(variant.storageSubmasterId)
+        : null,
       graphicsId: null,
-      graphicsName: "",
+      graphicsSubmasterId: variant.graphicsSubmasterId
+        ? new mongoose.Types.ObjectId(variant.graphicsSubmasterId)
+        : null,
+      osId: null,
+      osSubmasterId: variant.osSubmasterId ? new mongoose.Types.ObjectId(variant.osSubmasterId) : null,
+      imageUrl: variant.imageUrl ?? "",
+      galleryImages: variant.galleryImages ?? [],
+      richDescription: variant.richDescription ?? "",
+      highlights: variant.highlights ?? [],
+      featured: Boolean(variant.featured),
+      colors: variant.colors ?? [],
       color: variant.color ?? "",
+      inStock: Boolean(variant.inStock),
       isDefault: Boolean(variant.isDefault),
     };
 
@@ -172,9 +247,7 @@ export async function replaceProductVariants(
         return;
       }
       const idKey = field as keyof VariantDocument;
-      const nameKey = (field.replace("Id", "Name") ?? "") as keyof VariantDocument;
       (doc as any)[idKey] = option._id;
-      (doc as any)[nameKey] = option.name;
     });
 
     return doc as VariantDocument;

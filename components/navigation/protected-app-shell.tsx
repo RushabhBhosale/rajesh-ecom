@@ -171,6 +171,49 @@ export function ProtectedAppShell({
             Navigation
           </p>
           <nav className="flex flex-col gap-1.5">
+                   {grouped.solo.map((link) => {
+              const isActive = activeHref === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setSidebarOpen(false)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "group relative flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    isActive
+                      ? "bg-primary/10 text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span
+                      className={cn(
+                        "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all",
+                        isActive
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-60"
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "mr-0.5 inline-block h-1.5 w-1.5 rounded-full",
+                        isActive ? "bg-primary" : "bg-muted-foreground/50"
+                      )}
+                    />
+                    <span>{link.label}</span>
+                  </span>
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      isActive
+                        ? "translate-x-0 text-primary"
+                        : "translate-x-0 group-hover:translate-x-0.5"
+                    )}
+                  />
+                </Link>
+              );
+            })}
             {grouped.order.map((group) => {
               const items = grouped.groups.get(group) ?? [];
               const isOpen = expandedGroups[group];
@@ -245,50 +288,6 @@ export function ProtectedAppShell({
                 </div>
               );
             })}
-
-            {grouped.solo.map((link) => {
-              const isActive = activeHref === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setSidebarOpen(false)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "group relative flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive
-                      ? "bg-primary/10 text-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span
-                      className={cn(
-                        "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all",
-                        isActive
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-60"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "mr-0.5 inline-block h-1.5 w-1.5 rounded-full",
-                        isActive ? "bg-primary" : "bg-muted-foreground/50"
-                      )}
-                    />
-                    <span>{link.label}</span>
-                  </span>
-                  <ChevronRight
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      isActive
-                        ? "translate-x-0 text-primary"
-                        : "translate-x-0 group-hover:translate-x-0.5"
-                    )}
-                  />
-                </Link>
-              );
-            })}
           </nav>
         </div>
 
@@ -357,8 +356,8 @@ export function ProtectedAppShell({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        <main className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="mx-auto flex flex-col gap-4">
             <div className="rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm sm:p-6">
               {children}
             </div>

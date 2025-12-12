@@ -48,8 +48,8 @@ export function ProductMediaGallery({
             src={activeImage}
             alt={name}
             width={1200}
-            height={900}
-            className="h-full w-full object-cover"
+            height={400}
+            className="h-[350px] w-full object-cover"
             priority
           />
         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +32,7 @@ import {
 } from "@/lib/master-constants";
 import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { RichTextEditor } from "@/components/products/rich-text-editor";
+import { validateUrlOrUpload } from "@/lib/product-validation";
 
 interface ProductFormProps {
   mode: "create" | "update";
@@ -49,7 +50,10 @@ const conditionLabels: Record<(typeof productConditions)[number], string> = {
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
 type MasterOptionState = Record<MasterOptionType, MasterOptionSummary[]>;
-type SubMasterLookup = Record<MasterOptionType, Record<string, SubMasterOptionSummary[]>>;
+type SubMasterLookup = Record<
+  MasterOptionType,
+  Record<string, SubMasterOptionSummary[]>
+>;
 type VariantSelection = {
   processorId?: string;
   ramId?: string;
@@ -122,13 +126,17 @@ const subMasterParentFieldMap: Record<
   osSubMasterId: "osId",
 };
 
-function createMastersFromProduct(product: ProductSummary | undefined): MasterOptionState {
+function createMastersFromProduct(
+  product: ProductSummary | undefined
+): MasterOptionState {
   const seeded = createEmptyMasters();
   if (!product) {
     return seeded;
   }
 
-  (["company", "processor", "ram", "storage", "graphics", "os"] as const).forEach((type) => {
+  (
+    ["company", "processor", "ram", "storage", "graphics", "os"] as const
+  ).forEach((type) => {
     const option = product[type];
     if (option?.id) {
       seeded[type] = [
@@ -162,8 +170,8 @@ function ColorOptionsEditor({
   const [colorInput, setColorInput] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const normalizedValue = Array.isArray(value) ? value : [];
-  const reachedLimit = normalizedValue.length >= 12;
+  const normalizedValue = Array.isArray(value) ? value.slice(0, 1) : [];
+  const reachedLimit = normalizedValue.length >= 1;
   const trimmedInput = colorInput.trim();
   const canAddColor = trimmedInput.length > 0;
   const errorMessage = localError ?? error ?? null;
@@ -181,8 +189,8 @@ function ColorOptionsEditor({
       setLocalError("That colour has already been added.");
       return;
     }
-    if (normalizedValue.length >= 12) {
-      setLocalError("You can add up to 12 colours.");
+    if (normalizedValue.length >= 1) {
+      setLocalError("Only one colour is allowed. Add more via variants.");
       return;
     }
 
@@ -269,9 +277,6 @@ function ColorOptionsEditor({
           {errorMessage}
         </p>
       ) : null}
-      <p id="colors-helper" className="text-xs text-muted-foreground">
-        Add up to 12 colours. Leave blank if the product has no colour variations.
-      </p>
     </div>
   );
 }
@@ -291,12 +296,18 @@ function StoragePillSelector({
 }: StoragePillSelectorProps) {
   if (!options.length) {
     return (
-      <p className="text-sm text-muted-foreground">No storage options found yet.</p>
+      <p className="text-sm text-muted-foreground">
+        No storage options found yet.
+      </p>
     );
   }
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Storage options">
+    <div
+      className="flex flex-wrap gap-2"
+      role="group"
+      aria-label="Storage options"
+    >
       {options.map((option) => {
         const isActive = value === option.id;
         return (
@@ -352,11 +363,15 @@ type ProductFormValues = {
   variants: {
     label: string;
     price: number;
+    description?: string;
+    imageUrl?: string;
+    galleryImages?: string[];
     processorId?: string;
     ramId?: string;
     storageId?: string;
     graphicsId?: string;
     color?: string;
+    condition?: (typeof productConditions)[number];
   }[];
   colors: string[];
   galleryImages: { url: string }[];
@@ -388,12 +403,22 @@ export function ProductForm({
   const [isLoadingSubMasters, setIsLoadingSubMasters] = useState(true);
   const [subMastersError, setSubMastersError] = useState<string | null>(null);
   const [isUploadingPrimary, setIsUploadingPrimary] = useState(false);
-  const [galleryUploadingIndex, setGalleryUploadingIndex] = useState<number | null>(null);
+  const [galleryUploadingIndex, setGalleryUploadingIndex] = useState<
+    number | null
+  >(null);
 
   const schema = useMemo(
     () =>
       z.object({
-        name: z.string().min(3, "Name must be at least 3 characters"),
+        name: z
+          .string()
+          .trim()
+          .max(200, "Name must be under 200 characters")
+          .optional()
+          .refine((val) => !val || val.length >= 3, {
+            message: "Name must be at least 3 characters",
+          })
+          .default(""),
         category: z.string().min(2, "Category must be at least 2 characters"),
         description: z
           .string()
@@ -409,7 +434,10 @@ export function ProductForm({
           .default(""),
         companySubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid company submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid company submaster"),
             z.literal(""),
           ])
           .optional()
@@ -423,7 +451,10 @@ export function ProductForm({
           .default(""),
         processorSubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid processor submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid processor submaster"),
             z.literal(""),
           ])
           .optional()
@@ -437,49 +468,70 @@ export function ProductForm({
           .default(""),
         ramSubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid RAM submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid RAM submaster"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         storageId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid storage option"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         storageSubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid storage submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid storage submaster"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         graphicsId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid graphics option"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         graphicsSubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid graphics submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid graphics submaster"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         osId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid operating system"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid operating system"),
             z.literal(""),
           ])
           .optional()
           .default(""),
         osSubMasterId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid OS submaster"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid OS submaster"),
             z.literal(""),
           ])
           .optional()
@@ -498,7 +550,10 @@ export function ProductForm({
               // eslint-disable-next-line no-new
               new URL(val);
             } catch {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid URL or upload an image" });
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Enter a valid URL or upload an image",
+              });
             }
           })
           .default(""),
@@ -518,7 +573,10 @@ export function ProductForm({
                   try {
                     new URL(val);
                   } catch {
-                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid URL or upload an image" });
+                    ctx.addIssue({
+                      code: z.ZodIssueCode.custom,
+                      message: "Enter a valid URL or upload an image",
+                    });
                   }
                 })
                 .default(""),
@@ -539,32 +597,73 @@ export function ProductForm({
         variants: z
           .array(
             z.object({
-              label: z.string().trim().min(1, "Variant name cannot be empty").max(120),
-              price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+              label: z
+                .string()
+                .trim()
+                .min(1, "Variant name cannot be empty")
+                .max(120),
+              price: z.coerce
+                .number()
+                .min(0, "Variant price must be 0 or greater"),
+              description: z
+                .string()
+                .trim()
+                .max(5000, "Variant description is too long")
+                .optional()
+                .default(""),
+              imageUrl: z
+                .string()
+                .trim()
+                .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
+                .optional()
+                .default(""),
+              galleryImages: z
+                .array(
+                  z
+                    .string()
+                    .trim()
+                    .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
+                )
+                .max(12, "You can add up to 12 gallery images per variant")
+                .optional()
+                .default([]),
+              condition: z.enum(productConditions).optional(),
               processorId: z
                 .union([
-                  z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+                  z
+                    .string()
+                    .trim()
+                    .regex(objectIdRegex, "Select a valid processor"),
                   z.literal(""),
                 ])
                 .optional()
                 .default(""),
               ramId: z
                 .union([
-                  z.string().trim().regex(objectIdRegex, "Select a valid RAM option"),
+                  z
+                    .string()
+                    .trim()
+                    .regex(objectIdRegex, "Select a valid RAM option"),
                   z.literal(""),
                 ])
                 .optional()
                 .default(""),
               storageId: z
                 .union([
-                  z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+                  z
+                    .string()
+                    .trim()
+                    .regex(objectIdRegex, "Select a valid storage option"),
                   z.literal(""),
                 ])
                 .optional()
                 .default(""),
               graphicsId: z
                 .union([
-                  z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+                  z
+                    .string()
+                    .trim()
+                    .regex(objectIdRegex, "Select a valid graphics option"),
                   z.literal(""),
                 ])
                 .optional()
@@ -628,11 +727,15 @@ export function ProductForm({
           ?.map((variant) => ({
             label: variant.label,
             price: variant.price,
+            description: variant.description ?? "",
+            imageUrl: variant.imageUrl ?? "",
+            galleryImages: variant.galleryImages ?? [],
             processorId: variant.processor?.id ?? "",
             ramId: variant.ram?.id ?? "",
             storageId: variant.storage?.id ?? "",
             graphicsId: variant.graphics?.id ?? "",
             color: variant.color ?? "",
+            condition: variant.condition ?? product?.condition ?? "refurbished",
           })) ?? [],
       colors: product?.colors ?? [],
     },
@@ -656,31 +759,9 @@ export function ProductForm({
   const selectedStorageId = useWatch({ control, name: "storageId" });
   const selectedGraphicsId = useWatch({ control, name: "graphicsId" });
   const selectedOsId = useWatch({ control, name: "osId" });
+  const nameValue = useWatch({ control, name: "name" });
   const availableColors = useWatch({ control, name: "colors" }) ?? [];
-
-  useEffect(() => {
-    setVariantSelections((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, selection]) => {
-        if (!selection) {
-          return;
-        }
-        const hasColor = typeof selection.color === "string" && selection.color.trim().length > 0;
-        if (!hasColor) {
-          return;
-        }
-        const isAllowed = availableColors.some(
-          (color) => color.toLowerCase() === selection.color!.toLowerCase()
-        );
-        if (!isAllowed) {
-          next[key] = { ...selection, color: undefined };
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [availableColors]);
+  const selectedCondition = useWatch({ control, name: "condition" });
 
   const {
     fields: galleryFields,
@@ -721,17 +802,121 @@ export function ProductForm({
     return lookup;
   }, [masters]);
 
+  function buildVariantDefaults(): ProductFormValues["variants"][number] {
+    const basePrice = Number(getValues("price"));
+    const selection: VariantSelection = {
+      processorId: selectedProcessorId || undefined,
+      ramId: selectedRamId || undefined,
+      storageId: selectedStorageId || undefined,
+      graphicsId: selectedGraphicsId || undefined,
+    };
+    const label = composeVariantLabel(selection);
+    return {
+      label,
+      price: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
+      description: "",
+      imageUrl: "",
+      galleryImages: [],
+      processorId: selection.processorId ?? "",
+      ramId: selection.ramId ?? "",
+      storageId: selection.storageId ?? "",
+      graphicsId: selection.graphicsId ?? "",
+      color: selection.color ?? "",
+      condition: selectedCondition ?? product?.condition ?? "refurbished",
+    };
+  }
+
+  const suggestedName = useMemo(() => {
+    const companyName =
+      masterNameLookup.company[selectedCompanyId ?? ""]?.trim();
+    const processorName =
+      masterNameLookup.processor[selectedProcessorId ?? ""]?.trim();
+    const ramName = masterNameLookup.ram[selectedRamId ?? ""]?.trim();
+    const storageName =
+      masterNameLookup.storage[selectedStorageId ?? ""]?.trim();
+    const graphicsName =
+      masterNameLookup.graphics[selectedGraphicsId ?? ""]?.trim();
+
+    const specParts = [
+      processorName,
+      ramName,
+      storageName,
+      graphicsName,
+    ].filter((part): part is string => Boolean(part));
+
+    const base = companyName || selectedCategory?.trim() || "Product";
+
+    let name = base;
+    if (specParts.length > 0) {
+      name = `${name} ${specParts.join(" • ")}`;
+    }
+
+    return name.trim();
+  }, [
+    masterNameLookup,
+    selectedCategory,
+    selectedCompanyId,
+    selectedGraphicsId,
+    selectedProcessorId,
+    selectedRamId,
+    selectedStorageId,
+  ]);
+
+  const lastSuggestedRef = useRef(suggestedName);
+
+  useEffect(() => {
+    const trimmedName = typeof nameValue === "string" ? nameValue.trim() : "";
+    const prevSuggested = lastSuggestedRef.current ?? "";
+    const isUsingSuggested = trimmedName.length === 0 || trimmedName === prevSuggested;
+
+    if (isUsingSuggested && suggestedName) {
+      setValue("name", suggestedName as ProductFormValues["name"], {
+        shouldDirty: false,
+      });
+      clearErrors("name");
+      lastSuggestedRef.current = suggestedName;
+      return;
+    }
+    lastSuggestedRef.current = suggestedName;
+  }, [nameValue, suggestedName, setValue, clearErrors]);
+
   function syncVariantFields(index: number, selection: VariantSelection) {
-    setValue(`variants.${index}.processorId`, (selection.processorId ?? "") as ProductFormValues["variants"][number]["processorId"], { shouldDirty: true });
-    setValue(`variants.${index}.ramId`, (selection.ramId ?? "") as ProductFormValues["variants"][number]["ramId"], { shouldDirty: true });
-    setValue(`variants.${index}.storageId`, (selection.storageId ?? "") as ProductFormValues["variants"][number]["storageId"], { shouldDirty: true });
-    setValue(`variants.${index}.graphicsId`, (selection.graphicsId ?? "") as ProductFormValues["variants"][number]["graphicsId"], { shouldDirty: true });
-    setValue(`variants.${index}.color`, (selection.color ?? "") as ProductFormValues["variants"][number]["color"], { shouldDirty: true });
+    setValue(
+      `variants.${index}.processorId`,
+      (selection.processorId ??
+        "") as ProductFormValues["variants"][number]["processorId"],
+      { shouldDirty: true }
+    );
+    setValue(
+      `variants.${index}.ramId`,
+      (selection.ramId ?? "") as ProductFormValues["variants"][number]["ramId"],
+      { shouldDirty: true }
+    );
+    setValue(
+      `variants.${index}.storageId`,
+      (selection.storageId ??
+        "") as ProductFormValues["variants"][number]["storageId"],
+      { shouldDirty: true }
+    );
+    setValue(
+      `variants.${index}.graphicsId`,
+      (selection.graphicsId ??
+        "") as ProductFormValues["variants"][number]["graphicsId"],
+      { shouldDirty: true }
+    );
+    setValue(
+      `variants.${index}.color`,
+      (selection.color ?? "") as ProductFormValues["variants"][number]["color"],
+      { shouldDirty: true }
+    );
   }
 
   function composeVariantLabel(selection: VariantSelection) {
     const parts: string[] = [];
-    if (selection.processorId && masterNameLookup.processor[selection.processorId]) {
+    if (
+      selection.processorId &&
+      masterNameLookup.processor[selection.processorId]
+    ) {
       parts.push(masterNameLookup.processor[selection.processorId]);
     }
     if (selection.ramId && masterNameLookup.ram[selection.ramId]) {
@@ -740,7 +925,10 @@ export function ProductForm({
     if (selection.storageId && masterNameLookup.storage[selection.storageId]) {
       parts.push(masterNameLookup.storage[selection.storageId]);
     }
-    if (selection.graphicsId && masterNameLookup.graphics[selection.graphicsId]) {
+    if (
+      selection.graphicsId &&
+      masterNameLookup.graphics[selection.graphicsId]
+    ) {
       parts.push(masterNameLookup.graphics[selection.graphicsId]);
     }
     if (selection.color) {
@@ -765,7 +953,9 @@ export function ProductForm({
     parts.forEach((part) => {
       const matchProcessor =
         !selection.processorId &&
-        masters.processor.find((option) => option.name.toLowerCase() === part.toLowerCase());
+        masters.processor.find(
+          (option) => option.name.toLowerCase() === part.toLowerCase()
+        );
       if (matchProcessor) {
         selection.processorId = matchProcessor.id;
         return;
@@ -773,7 +963,9 @@ export function ProductForm({
 
       const matchRam =
         !selection.ramId &&
-        masters.ram.find((option) => option.name.toLowerCase() === part.toLowerCase());
+        masters.ram.find(
+          (option) => option.name.toLowerCase() === part.toLowerCase()
+        );
       if (matchRam) {
         selection.ramId = matchRam.id;
         return;
@@ -781,7 +973,9 @@ export function ProductForm({
 
       const matchStorage =
         !selection.storageId &&
-        masters.storage.find((option) => option.name.toLowerCase() === part.toLowerCase());
+        masters.storage.find(
+          (option) => option.name.toLowerCase() === part.toLowerCase()
+        );
       if (matchStorage) {
         selection.storageId = matchStorage.id;
         return;
@@ -789,7 +983,9 @@ export function ProductForm({
 
       const matchGraphics =
         !selection.graphicsId &&
-        masters.graphics.find((option) => option.name.toLowerCase() === part.toLowerCase());
+        masters.graphics.find(
+          (option) => option.name.toLowerCase() === part.toLowerCase()
+        );
       if (matchGraphics) {
         selection.graphicsId = matchGraphics.id;
         return;
@@ -797,7 +993,9 @@ export function ProductForm({
 
       const matchColor =
         !selection.color &&
-        availableColors.some((color) => color.toLowerCase() === part.toLowerCase());
+        availableColors.some(
+          (color) => color.toLowerCase() === part.toLowerCase()
+        );
       if (matchColor) {
         selection.color = part;
         return;
@@ -823,7 +1021,7 @@ export function ProductForm({
           next[field.id] = existing;
           return;
         }
-        const formVariant:any = variantValues?.[index];
+        const formVariant: any = variantValues?.[index];
         const currentLabel = formVariant?.label ?? field.label ?? "";
         const selectionFromValues: VariantSelection = {
           processorId: formVariant?.processorId || undefined,
@@ -831,7 +1029,7 @@ export function ProductForm({
           storageId: formVariant?.storageId || undefined,
           graphicsId: formVariant?.graphicsId || undefined,
           color: formVariant?.color || undefined,
-          note: formVariant?.note ?? currentLabel,
+          note: formVariant?.note ?? "",
         };
         const hasExplicitSelection =
           selectionFromValues.processorId ||
@@ -858,11 +1056,16 @@ export function ProductForm({
     patch: Partial<VariantSelection>
   ) {
     setVariantSelections((prev) => {
-      const current = prev[fieldId] ?? { note: variantValues?.[index]?.label ?? "" };
+      const current = prev[fieldId] ?? {
+        note: variantValues?.[index]?.label ?? "",
+      };
       const nextSelection = { ...current, ...patch };
       const next = { ...prev, [fieldId]: nextSelection };
       const label = composeVariantLabel(nextSelection);
-      setValue(`variants.${index}.label`, label, { shouldValidate: true, shouldDirty: true });
+      setValue(`variants.${index}.label`, label, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
       syncVariantFields(index, nextSelection);
       return next;
     });
@@ -891,7 +1094,9 @@ export function ProductForm({
         }
 
         const data = await response.json().catch(() => null);
-        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(data?.categories)
+        const fetched: Pick<CategorySummary, "id" | "name">[] = Array.isArray(
+          data?.categories
+        )
           ? data.categories.filter(
               (item: unknown): item is Pick<CategorySummary, "id" | "name"> =>
                 typeof item === "object" &&
@@ -946,9 +1151,7 @@ export function ProductForm({
       setSubMastersError(null);
 
       try {
-        const response = await fetch(
-          "/api/submasters"
-        );
+        const response = await fetch("/api/submasters");
         if (!response.ok) {
           throw new Error("Failed to load submaster options");
         }
@@ -987,7 +1190,9 @@ export function ProductForm({
           );
         });
 
-        const productSubMasterNames: Partial<Record<keyof typeof subMasterFieldMap, string | undefined>> = {
+        const productSubMasterNames: Partial<
+          Record<keyof typeof subMasterFieldMap, string | undefined>
+        > = {
           companySubMasterId: product?.companySubmaster?.name,
           processorSubMasterId: product?.processorSubmaster?.name,
           ramSubMasterId: product?.ramSubmaster?.name,
@@ -996,7 +1201,9 @@ export function ProductForm({
           osSubMasterId: product?.osSubmaster?.name,
         };
 
-        const productMasterNames: Partial<Record<MasterOptionType, string | undefined>> = {
+        const productMasterNames: Partial<
+          Record<MasterOptionType, string | undefined>
+        > = {
           company: product?.company?.name,
           processor: product?.processor?.name,
           ram: product?.ram?.name,
@@ -1005,32 +1212,37 @@ export function ProductForm({
           os: product?.os?.name,
         };
 
-        (Object.keys(subMasterFieldMap) as Array<keyof typeof subMasterFieldMap>).forEach(
-          (field) => {
-            const selected = getValues(field as keyof ProductFormValues);
-            const parentField = subMasterParentFieldMap[field];
-            const parentId:any = getValues(parentField as keyof ProductFormValues);
-            if (typeof selected !== "string" || selected.length === 0) {
-              return;
-            }
-            const type = subMasterFieldMap[field];
-            if (!parentId) {
-              return;
-            }
-            const exists =
-              parsed[type][parentId]?.some((option) => option.id === selected) ?? false;
-            if (!exists) {
-              parsed[type][parentId] = parsed[type][parentId] ?? [];
-              parsed[type][parentId].push({
-                id: selected,
-                masterId: parentId,
-                masterName: productMasterNames[type] ?? "Current master",
-                masterType: type,
-                name: productSubMasterNames[field] ?? "Current submaster",
-              });
-            }
+        (
+          Object.keys(subMasterFieldMap) as Array<
+            keyof typeof subMasterFieldMap
+          >
+        ).forEach((field) => {
+          const selected = getValues(field as keyof ProductFormValues);
+          const parentField = subMasterParentFieldMap[field];
+          const parentId: any = getValues(
+            parentField as keyof ProductFormValues
+          );
+          if (typeof selected !== "string" || selected.length === 0) {
+            return;
           }
-        );
+          const type = subMasterFieldMap[field];
+          if (!parentId) {
+            return;
+          }
+          const exists =
+            parsed[type][parentId]?.some((option) => option.id === selected) ??
+            false;
+          if (!exists) {
+            parsed[type][parentId] = parsed[type][parentId] ?? [];
+            parsed[type][parentId].push({
+              id: selected,
+              masterId: parentId,
+              masterName: productMasterNames[type] ?? "Current master",
+              masterType: type,
+              name: productSubMasterNames[field] ?? "Current submaster",
+            });
+          }
+        });
 
         if (cancelled) {
           return;
@@ -1041,7 +1253,9 @@ export function ProductForm({
         console.error(error);
         if (!cancelled) {
           setSubMasters(createEmptySubMasters());
-          setSubMastersError("Unable to load submaster options. Please refresh.");
+          setSubMastersError(
+            "Unable to load submaster options. Please refresh."
+          );
         }
       } finally {
         if (!cancelled) {
@@ -1089,22 +1303,22 @@ export function ProductForm({
           parsed[type] = items;
         });
 
-        (Object.keys(masterFieldMap) as Array<keyof typeof masterFieldMap>).forEach(
-          (field) => {
-            const selected = getValues(field as keyof ProductFormValues);
-            if (typeof selected !== "string" || selected.length === 0) {
-              return;
-            }
-            const type = masterFieldMap[field];
-            const exists = parsed[type].some((option) => option.id === selected);
-            if (!exists) {
-              parsed[type] = [
-                ...parsed[type],
-                { id: selected, name: "Current selection", type },
-              ];
-            }
+        (
+          Object.keys(masterFieldMap) as Array<keyof typeof masterFieldMap>
+        ).forEach((field) => {
+          const selected = getValues(field as keyof ProductFormValues);
+          if (typeof selected !== "string" || selected.length === 0) {
+            return;
           }
-        );
+          const type = masterFieldMap[field];
+          const exists = parsed[type].some((option) => option.id === selected);
+          if (!exists) {
+            parsed[type] = [
+              ...parsed[type],
+              { id: selected, name: "Current selection", type },
+            ];
+          }
+        });
 
         if (cancelled) {
           return;
@@ -1145,11 +1359,27 @@ export function ProductForm({
         | "osSubMasterId"
       >;
     }> = [
-      { type: "company", masterId: selectedCompanyId, field: "companySubMasterId" },
-      { type: "processor", masterId: selectedProcessorId, field: "processorSubMasterId" },
+      {
+        type: "company",
+        masterId: selectedCompanyId,
+        field: "companySubMasterId",
+      },
+      {
+        type: "processor",
+        masterId: selectedProcessorId,
+        field: "processorSubMasterId",
+      },
       { type: "ram", masterId: selectedRamId, field: "ramSubMasterId" },
-      { type: "storage", masterId: selectedStorageId, field: "storageSubMasterId" },
-      { type: "graphics", masterId: selectedGraphicsId, field: "graphicsSubMasterId" },
+      {
+        type: "storage",
+        masterId: selectedStorageId,
+        field: "storageSubMasterId",
+      },
+      {
+        type: "graphics",
+        masterId: selectedGraphicsId,
+        field: "graphicsSubMasterId",
+      },
       { type: "os", masterId: selectedOsId, field: "osSubMasterId" },
     ];
 
@@ -1162,13 +1392,17 @@ export function ProductForm({
       const options = masterId ? subMasters[type][masterId] ?? [] : [];
       if (!masterId || options.length === 0) {
         if (current) {
-          setValue(field, "" as ProductFormValues[typeof field], { shouldValidate: true });
+          setValue(field, "" as ProductFormValues[typeof field], {
+            shouldValidate: true,
+          });
         }
         return;
       }
       const exists = options.some((option) => option.id === current);
       if (current && !exists) {
-        setValue(field, "" as ProductFormValues[typeof field], { shouldValidate: true });
+        setValue(field, "" as ProductFormValues[typeof field], {
+          shouldValidate: true,
+        });
       }
     });
   }, [
@@ -1200,22 +1434,45 @@ export function ProductForm({
     const rawVariants = Array.isArray(values.variants) ? values.variants : [];
     const variantPayloads = variantFields.map((field, index) => {
       const variant = rawVariants[index] ?? {};
-      const selection = variantSelections[field.id] ?? {};
-      const price = Number(variant?.price);
-      const color =
-        typeof selection.color === "string" && selection.color.trim().length > 0
-          ? selection.color.trim()
-          : typeof variant?.color === "string" && variant.color.trim().length > 0
-          ? variant.color.trim()
-          : undefined;
-      return {
-        label: (variant?.label ?? "").trim(),
-        price: Number.isFinite(price) ? price : 0,
-        processorId: selection.processorId || variant?.processorId || undefined,
-        ramId: selection.ramId || variant?.ramId || undefined,
-        storageId: selection.storageId || variant?.storageId || undefined,
-        graphicsId: selection.graphicsId || variant?.graphicsId || undefined,
-        color,
+    const selection = variantSelections[field.id] ?? {};
+    const price = Number(variant?.price);
+    const color =
+      typeof selection.color === "string" && selection.color.trim().length > 0
+        ? selection.color.trim()
+        : typeof variant?.color === "string" &&
+          variant.color.trim().length > 0
+        ? variant.color.trim()
+        : undefined;
+    const condition =
+      productConditions.includes((variant as any)?.condition)
+        ? ((variant as any)?.condition as ProductFormValues["variants"][number]["condition"])
+        : values.condition;
+    const variantGallery =
+      Array.isArray((variant as any)?.galleryImages) && (variant as any).galleryImages.length > 0
+        ? (variant as any).galleryImages
+        : [];
+    const normalizedVariantGallery = variantGallery
+      .map((entry: any) =>
+        typeof entry === "string"
+          ? entry.trim()
+          : typeof entry?.url === "string"
+          ? entry.url.trim()
+          : ""
+      )
+      .filter((url: string, idx: number, arr: string[]) => url.length > 0 && arr.indexOf(url) === idx)
+      .slice(0, 12);
+    return {
+      label: (variant?.label ?? "").trim(),
+      price: Number.isFinite(price) ? price : 0,
+      description: typeof variant?.description === "string" ? variant.description.trim() : "",
+      imageUrl: typeof variant?.imageUrl === "string" ? variant.imageUrl.trim() : "",
+      galleryImages: normalizedVariantGallery,
+      processorId: selection.processorId || variant?.processorId || undefined,
+      ramId: selection.ramId || variant?.ramId || undefined,
+      storageId: selection.storageId || variant?.storageId || undefined,
+      graphicsId: selection.graphicsId || variant?.graphicsId || undefined,
+      color,
+      condition,
       };
     });
 
@@ -1250,7 +1507,9 @@ export function ProductForm({
 
     const uniqueColors = normalizedColors.filter(
       (item, index) =>
-        normalizedColors.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index
+        normalizedColors.findIndex(
+          (candidate) => candidate.toLowerCase() === item.toLowerCase()
+        ) === index
     );
 
     if (uniqueColors.length !== normalizedColors.length) {
@@ -1262,7 +1521,7 @@ export function ProductForm({
       return;
     }
 
-    const colors = uniqueColors;
+    const colors = uniqueColors.slice(0, 1);
 
     const galleryImages = values.galleryImages
       .map((entry) => entry.url.trim())
@@ -1367,7 +1626,7 @@ export function ProductForm({
 
   const title =
     mode === "create"
-      ? "Add a new product"
+      ? ""
       : `Update ${product?.name ?? "product"}`;
 
   const companySubOptions =
@@ -1468,14 +1727,6 @@ export function ProductForm({
       <form onSubmit={submitHandler} className="space-y-6">
         <CardContent className="space-y-10">
           <section className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Basics & media
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Keep the shared identity (name and visuals) up top before tweaking variants.
-              </p>
-            </div>
             <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1496,11 +1747,14 @@ export function ProductForm({
                     <div className="space-y-1">
                       <Label htmlFor="imageUrl">Primary image</Label>
                       <p className="text-xs text-muted-foreground">
-                        Shown on listing cards and as the default hero image. Use a crisp 1200×900px photo.
+                        Shown on listing cards and as the default hero image.
+                        Use a crisp 1200×900px photo.
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {isUploadingPrimary ? "Uploading image…" : "Paste a URL or upload"}
+                      {isUploadingPrimary
+                        ? "Uploading image…"
+                        : "Paste a URL or upload"}
                     </span>
                   </div>
                   <Input
@@ -1527,7 +1781,9 @@ export function ProductForm({
                       </span>
                     </label>
                     <span className="text-xs text-muted-foreground">
-                      {isUploadingPrimary ? "Uploading image…" : "Upload directly from your computer."}
+                      {isUploadingPrimary
+                        ? "Uploading image…"
+                        : "Upload directly from your computer."}
                     </span>
                   </div>
                 </div>
@@ -1537,7 +1793,8 @@ export function ProductForm({
                   <div>
                     <Label>Gallery images</Label>
                     <p className="text-xs text-muted-foreground">
-                      Add alternate angles or lifestyle shots. The first three sit under the hero image.
+                      Add alternate angles or lifestyle shots. The first three
+                      sit under the hero image.
                     </p>
                   </div>
                   <Button
@@ -1552,7 +1809,9 @@ export function ProductForm({
                 </div>
                 <div className="space-y-3">
                   {galleryFields.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No gallery media yet.</p>
+                    <p className="text-xs text-muted-foreground">
+                      No gallery media yet.
+                    </p>
                   ) : null}
                   {galleryFields.map((field, index) => (
                     <div key={field.id} className="space-y-1">
@@ -1561,7 +1820,9 @@ export function ProductForm({
                           placeholder="https://images.example.com/gallery.jpg"
                           defaultValue={field.url ?? ""}
                           {...register(`galleryImages.${index}.url`)}
-                          aria-invalid={Boolean(errors.galleryImages?.[index]?.url)}
+                          aria-invalid={Boolean(
+                            errors.galleryImages?.[index]?.url
+                          )}
                         />
                         <div className="flex items-center gap-2">
                           <label className="inline-flex cursor-pointer items-center">
@@ -1569,11 +1830,15 @@ export function ProductForm({
                               type="file"
                               accept="image/*"
                               className="hidden"
-                              onChange={(event) => handleGalleryFileChange(event, index)}
+                              onChange={(event) =>
+                                handleGalleryFileChange(event, index)
+                              }
                               disabled={galleryUploadingIndex === index}
                             />
                             <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                              {galleryUploadingIndex === index ? "Uploading…" : "Upload"}
+                              {galleryUploadingIndex === index
+                                ? "Uploading…"
+                                : "Upload"}
                             </span>
                           </label>
                           <Button
@@ -1600,35 +1865,40 @@ export function ProductForm({
           </section>
 
           <section className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Selling defaults
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Set the base values that stay consistent while you adjust variants.
-              </p>
-            </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                  disabled={isLoadingCategories || categories.length === 0}
-                  {...register("category")}
-                >
-                  {isLoadingCategories ? (
-                    <option value="">Loading categories...</option>
-                  ) : categories.length > 0 ? (
-                    categories.map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No categories available</option>
+                <Controller
+                  control={control}
+                  name="category"
+                  render={({ field }) => (
+                    <select
+                      id="category"
+                      name={field.name}
+                      ref={field.ref}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                      disabled={isLoadingCategories || categories.length === 0}
+                      value={field.value ?? ""}
+                      onChange={(event) => {
+                        field.onChange(event.target.value);
+                        clearErrors("category");
+                      }}
+                      onBlur={field.onBlur}
+                    >
+                      {isLoadingCategories ? (
+                        <option value="">Loading categories...</option>
+                      ) : categories.length > 0 ? (
+                        categories.map((category) => (
+                          <option key={category.id} value={category.name}>
+                            {category.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No categories available</option>
+                      )}
+                    </select>
                   )}
-                </select>
+                />
                 {errors.category ? (
                   <p className="text-sm text-destructive" role="alert">
                     {errors.category.message}
@@ -1639,9 +1909,12 @@ export function ProductForm({
                     {categoriesError}
                   </p>
                 ) : null}
-                {!isLoadingCategories && categories.length === 0 && !categoriesError ? (
+                {!isLoadingCategories &&
+                categories.length === 0 &&
+                !categoriesError ? (
                   <p className="text-xs text-muted-foreground">
-                    Create categories first so products can be assigned correctly.
+                    Create categories first so products can be assigned
+                    correctly.
                   </p>
                 ) : null}
               </div>
@@ -1704,14 +1977,6 @@ export function ProductForm({
           </section>
 
           <section className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Options & variants
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Capture colour choices and the configurations that change most between units.
-              </p>
-            </div>
             <div className="space-y-2 sm:max-w-3xl">
               <Label htmlFor="colors">Colour options</Label>
               <Controller
@@ -1733,14 +1998,15 @@ export function ProductForm({
                 <div>
                   <Label>Configuration variants</Label>
                   <p className="text-xs text-muted-foreground">
-                    Build processor / RAM / storage combinations with their own prices.
+                    Build processor / RAM / storage combinations with their own
+                    prices.
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => appendVariant({ label: "", price: product?.price ?? 0 })}
+                  onClick={() => appendVariant(buildVariantDefaults())}
                   disabled={variantFields.length >= 30}
                 >
                   Add option
@@ -1752,185 +2018,363 @@ export function ProductForm({
                 </p>
               ) : null}
               <div className="space-y-4">
-                {variantFields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="space-y-4 rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm"
-                  >
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="min-w-[200px] flex-1 space-y-1">
-                        <p className="text-sm font-semibold text-slate-800">
-                          Option {index + 1}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Compose the label by selecting specs below.
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          Label preview:{" "}
-                          <span className="font-semibold text-slate-700">
-                            {variantValues?.[index]?.label || "Select options below"}
-                          </span>
-                        </p>
-                        {errors.variants?.[index]?.label?.message ? (
-                          <p className="text-xs text-destructive" role="alert">
-                            {errors.variants[index]?.label?.message}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="w-full min-w-[180px] space-y-1 sm:w-auto">
-                        <Label className="text-xs font-semibold text-slate-600">
-                          Price
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="48999"
-                          defaultValue={field.price ?? product?.price ?? 0}
-                          {...register(`variants.${index}.price` as const, { valueAsNumber: true })}
-                          aria-invalid={Boolean(errors.variants?.[index]?.price)}
-                        />
-                        {errors.variants?.[index]?.price?.message ? (
-                          <p className="text-xs text-destructive" role="alert">
-                            {errors.variants[index]?.price?.message}
-                          </p>
-                        ) : null}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeVariantRow(index, field.id)}
-                        aria-label="Remove variant option"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-600">
-                          Processor
-                        </Label>
-                        <select
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                          value={variantSelections[field.id]?.processorId ?? ""}
-                          onChange={(event) =>
-                            updateVariantSelection(field.id, index, {
-                              processorId: event.target.value || undefined,
-                            })
-                          }
-                          disabled={isLoadingMasters}
+                {variantFields.map((field, index) => {
+                  const variantGalleryImages = Array.isArray(
+                    variantValues?.[index]?.galleryImages
+                  )
+                    ? variantValues[index]?.galleryImages ?? []
+                    : [];
+
+                  const handleVariantGalleryChange = (
+                    urlIndex: number,
+                    url: string
+                  ) => {
+                    const nextImages = [...variantGalleryImages];
+                    nextImages[urlIndex] = url;
+                    setValue(
+                      `variants.${index}.galleryImages`,
+                      nextImages as ProductFormValues["variants"][number]["galleryImages"],
+                      { shouldDirty: true, shouldValidate: true }
+                    );
+                  };
+
+                  const handleAddVariantGallery = () => {
+                    const nextImages = [...variantGalleryImages, ""];
+                    setValue(
+                      `variants.${index}.galleryImages`,
+                      nextImages as ProductFormValues["variants"][number]["galleryImages"],
+                      { shouldDirty: true, shouldValidate: true }
+                    );
+                  };
+
+                  const handleRemoveVariantGallery = (urlIndex: number) => {
+                    const nextImages = [...variantGalleryImages];
+                    nextImages.splice(urlIndex, 1);
+                    setValue(
+                      `variants.${index}.galleryImages`,
+                      nextImages as ProductFormValues["variants"][number]["galleryImages"],
+                      { shouldDirty: true, shouldValidate: true }
+                    );
+                  };
+
+                  return (
+                    <div
+                      key={field.id}
+                      className="space-y-4 rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-start gap-3">
+                        <div className="flex-1 space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Variant name
+                          </Label>
+                          <Input
+                            placeholder="M3 Pro • 16GB • 512GB"
+                            defaultValue={field.label ?? ""}
+                            {...register(`variants.${index}.label` as const)}
+                            aria-invalid={Boolean(
+                              errors.variants?.[index]?.label
+                            )}
+                          />
+                          {errors.variants?.[index]?.label?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.label?.message}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground">
+                              Autogenerated from the selections below - edit if
+                              needed.
+                            </p>
+                          )}
+                        </div>
+                        <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Price (₹)
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="48999"
+                            defaultValue={field.price ?? product?.price ?? 0}
+                            {...register(`variants.${index}.price` as const, {
+                              valueAsNumber: true,
+                            })}
+                            aria-invalid={Boolean(
+                              errors.variants?.[index]?.price
+                            )}
+                          />
+                          {errors.variants?.[index]?.price?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.price?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeVariantRow(index, field.id)}
+                          aria-label="Remove variant option"
                         >
-                          <option value="">Select</option>
-                          {masters.processor.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
+                          ×
+                        </Button>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-600">RAM</Label>
-                        <select
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                          value={variantSelections[field.id]?.ramId ?? ""}
-                          onChange={(event) =>
-                            updateVariantSelection(field.id, index, {
-                              ramId: event.target.value || undefined,
-                            })
-                          }
-                          disabled={isLoadingMasters}
-                        >
-                          <option value="">Select</option>
-                          {masters.ram.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-xs font-semibold text-slate-600">
-                          Storage
-                        </Label>
-                        <StoragePillSelector
-                          options={masters.storage}
-                          value={variantSelections[field.id]?.storageId}
-                          onChange={(selection) =>
-                            updateVariantSelection(field.id, index, {
-                              storageId: selection,
-                            })
-                          }
-                          disabled={isLoadingMasters}
-                        />
-                        <p className="text-[11px] text-muted-foreground">
-                          Tap a pill to toggle storage; use Clear if this option has no storage override.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-600">
-                          Graphics (optional)
-                        </Label>
-                        <select
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                          value={variantSelections[field.id]?.graphicsId ?? ""}
-                          onChange={(event) =>
-                            updateVariantSelection(field.id, index, {
-                              graphicsId: event.target.value || undefined,
-                            })
-                          }
-                          disabled={isLoadingMasters}
-                        >
-                          <option value="">Select</option>
-                          {masters.graphics.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {availableColors.length > 0 ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold text-slate-600">
-                            Colour (optional)
+                            Processor
                           </Label>
                           <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                            value={variantSelections[field.id]?.color ?? ""}
+                            value={
+                              variantSelections[field.id]?.processorId ?? ""
+                            }
                             onChange={(event) =>
                               updateVariantSelection(field.id, index, {
-                                color: event.target.value || undefined,
+                                processorId: event.target.value || undefined,
                               })
                             }
+                            disabled={isLoadingMasters}
                           >
                             <option value="">Select</option>
-                            {availableColors.map((color) => (
-                              <option key={color} value={color}>
-                                {color}
+                            {masters.processor.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name}
                               </option>
                             ))}
                           </select>
                         </div>
-                      ) : null}
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-xs font-semibold text-slate-600">
-                          Custom note (optional)
-                        </Label>
-                        <Input
-                          placeholder="Add extra details (e.g., FHD display)"
-                          value={variantSelections[field.id]?.note ?? ""}
-                          onChange={(event) =>
-                            updateVariantSelection(field.id, index, {
-                              note: event.target.value,
-                            })
-                          }
-                        />
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            RAM
+                          </Label>
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                            value={variantSelections[field.id]?.ramId ?? ""}
+                            onChange={(event) =>
+                              updateVariantSelection(field.id, index, {
+                                ramId: event.target.value || undefined,
+                              })
+                            }
+                            disabled={isLoadingMasters}
+                          >
+                            <option value="">Select</option>
+                            {masters.ram.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Storage
+                          </Label>
+                          <StoragePillSelector
+                            options={masters.storage}
+                            value={variantSelections[field.id]?.storageId}
+                            onChange={(selection) =>
+                              updateVariantSelection(field.id, index, {
+                                storageId: selection,
+                              })
+                            }
+                            disabled={isLoadingMasters}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            Tap a pill to toggle storage; use Clear if this
+                            option has no storage override.
+                          </p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Graphics (optional)
+                          </Label>
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                            value={
+                              variantSelections[field.id]?.graphicsId ?? ""
+                            }
+                            onChange={(event) =>
+                              updateVariantSelection(field.id, index, {
+                                graphicsId: event.target.value || undefined,
+                              })
+                            }
+                            disabled={isLoadingMasters}
+                          >
+                            <option value="">Select</option>
+                            {masters.graphics.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Colour (optional)
+                          </Label>
+                          <ColorOptionsEditor
+                            value={
+                              variantSelections[field.id]?.color
+                                ? [variantSelections[field.id]!.color!]
+                                : []
+                            }
+                            onChange={(colors) => {
+                              const color =
+                                Array.isArray(colors) && colors.length > 0
+                                  ? colors[0]
+                                  : undefined;
+                              updateVariantSelection(field.id, index, { color });
+                            }}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            Add a single colour specific to this variant.
+                          </p>
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Custom note (optional)
+                          </Label>
+                          <Input
+                            placeholder="Add extra details (e.g., FHD display)"
+                            value={variantSelections[field.id]?.note ?? ""}
+                            onChange={(event) =>
+                              updateVariantSelection(field.id, index, {
+                                note: event.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Condition (variant)
+                          </Label>
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                            {...register(`variants.${index}.condition` as const)}
+                            defaultValue={
+                              field.condition ??
+                              selectedCondition ??
+                              product?.condition ??
+                              "refurbished"
+                            }
+                          >
+                            {productConditions.map((condition) => (
+                              <option key={condition} value={condition}>
+                                {conditionLabels[condition]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      <input
-                        type="hidden"
-                        defaultValue={field.label ?? ""}
-                        {...register(`variants.${index}.label` as const)}
-                      />
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Variant description (optional)
+                          </Label>
+                          <Textarea
+                            placeholder="Describe this configuration"
+                            defaultValue={field.description ?? ""}
+                            {...register(
+                              `variants.${index}.description` as const
+                            )}
+                          />
+                          {errors.variants?.[index]?.description?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.description?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Variant image URL (optional)
+                          </Label>
+                          <Input
+                            placeholder="https://images.example.com/variant.jpg"
+                            defaultValue={field.imageUrl ?? ""}
+                            {...register(`variants.${index}.imageUrl` as const)}
+                          />
+                          {errors.variants?.[index]?.imageUrl?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.imageUrl?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-semibold text-slate-600">
+                                Variant gallery (optional)
+                              </Label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Add up to 12 images for this option.
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleAddVariantGallery}
+                              disabled={variantGalleryImages.length >= 12}
+                            >
+                              Add image
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {variantGalleryImages.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">
+                                No gallery images yet.
+                              </p>
+                            ) : (
+                              variantGalleryImages.map((url, urlIndex) => (
+                                <div
+                                  key={`${field.id}-gallery-${urlIndex}`}
+                                  className="space-y-1"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      value={url ?? ""}
+                                      placeholder="https://images.example.com/gallery.jpg"
+                                      onChange={(event) =>
+                                        handleVariantGalleryChange(
+                                          urlIndex,
+                                          event.target.value
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        handleRemoveVariantGallery(urlIndex)
+                                      }
+                                      aria-label="Remove variant gallery image"
+                                    >
+                                      ×
+                                    </Button>
+                                  </div>
+                                  {errors.variants?.[index]?.galleryImages?.[
+                                    urlIndex
+                                  ]?.message ? (
+                                    <p
+                                      className="text-xs text-destructive"
+                                      role="alert"
+                                    >
+                                      {
+                                        errors.variants?.[index]
+                                          ?.galleryImages?.[urlIndex]?.message
+                                      }
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       <input
                         type="hidden"
                         defaultValue={field.processorId ?? ""}
@@ -1957,8 +2401,8 @@ export function ProductForm({
                         {...register(`variants.${index}.color` as const)}
                       />
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -1974,7 +2418,9 @@ export function ProductForm({
                 </p>
               </div>
               {isLoadingMasters || isLoadingSubMasters ? (
-                <span className="text-xs text-muted-foreground">Loading...</span>
+                <span className="text-xs text-muted-foreground">
+                  Loading...
+                </span>
               ) : null}
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -2000,7 +2446,9 @@ export function ProductForm({
                 ) : null}
                 {companySubOptions.length > 0 ? (
                   <div className="space-y-1.5">
-                    <Label htmlFor="companySubMasterId">Submaster (optional)</Label>
+                    <Label htmlFor="companySubMasterId">
+                      Submaster (optional)
+                    </Label>
                     <select
                       id="companySubMasterId"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2023,7 +2471,9 @@ export function ProductForm({
                 ) : null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="processorId">{masterTypeLabels.processor}</Label>
+                <Label htmlFor="processorId">
+                  {masterTypeLabels.processor}
+                </Label>
                 <select
                   id="processorId"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2044,7 +2494,9 @@ export function ProductForm({
                 ) : null}
                 {processorSubOptions.length > 0 ? (
                   <div className="space-y-1.5">
-                    <Label htmlFor="processorSubMasterId">Submaster (optional)</Label>
+                    <Label htmlFor="processorSubMasterId">
+                      Submaster (optional)
+                    </Label>
                     <select
                       id="processorSubMasterId"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2132,7 +2584,9 @@ export function ProductForm({
                 ) : null}
                 {storageSubOptions.length > 0 ? (
                   <div className="space-y-1.5">
-                    <Label htmlFor="storageSubMasterId">Submaster (optional)</Label>
+                    <Label htmlFor="storageSubMasterId">
+                      Submaster (optional)
+                    </Label>
                     <select
                       id="storageSubMasterId"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2176,7 +2630,9 @@ export function ProductForm({
                 ) : null}
                 {graphicsSubOptions.length > 0 ? (
                   <div className="space-y-1.5">
-                    <Label htmlFor="graphicsSubMasterId">Submaster (optional)</Label>
+                    <Label htmlFor="graphicsSubMasterId">
+                      Submaster (optional)
+                    </Label>
                     <select
                       id="graphicsSubMasterId"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2256,14 +2712,6 @@ export function ProductForm({
           </section>
 
           <section className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Story & highlights
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Long-form details sit at the bottom so the quick inputs stay fast.
-              </p>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea

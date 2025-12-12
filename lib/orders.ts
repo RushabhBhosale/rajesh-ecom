@@ -25,6 +25,7 @@ export interface OrderSummary {
   status: string;
   subtotal: number;
   tax: number;
+  shipping: number;
   total: number;
   currency: string;
   itemCount: number;
@@ -71,6 +72,7 @@ function mapOrder(order: OrderDocument): OrderSummary {
     status: order.status,
     subtotal: order.subtotal,
     tax: order.tax,
+    shipping: order.shipping ?? 0,
     total: order.total,
     currency: order.currency,
     itemCount: items.reduce((total, item) => total + item.quantity, 0),

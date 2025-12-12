@@ -119,9 +119,9 @@ export function UserOrdersList({ orders: initialOrders }: UserOrdersListProps) {
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold text-foreground">Items</h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {order.items.map((item) => (
+                  {order.items.map((item, idx) => (
                     <li
-                      key={`${order.id}-${item.productId}-${item.color ?? "default"}`}
+                      key={idx}
                       className="flex items-center justify-between gap-3"
                     >
                       <span>

@@ -120,7 +120,9 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
             </div>
             <div className="flex items-center justify-between">
               <span>Shipping</span>
-              <span className="font-semibold text-emerald-600">Complimentary</span>
+              <span className="font-semibold text-foreground">
+                {order.shipping > 0 ? formatCurrency(order.shipping) : "Complimentary"}
+              </span>
             </div>
             <div className="flex items-center justify-between border-t border-slate-200 pt-3 text-base font-semibold text-foreground">
               <span>Total</span>

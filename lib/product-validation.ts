@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { MAX_PRODUCT_HIGHLIGHTS, productConditions } from "@/lib/product-constants";
+import {
+  MAX_PRODUCT_HIGHLIGHTS,
+  productConditions,
+} from "@/lib/product-constants";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
@@ -8,7 +11,7 @@ function isRelativeUpload(path: string) {
   return path.startsWith("/uploads/");
 }
 
-function validateUrlOrUpload(value: string) {
+export function validateUrlOrUpload(value: string) {
   if (!value) {
     return true;
   }
@@ -25,66 +28,121 @@ function validateUrlOrUpload(value: string) {
 }
 
 export const productPayloadSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
+  name: z
+    .string()
+    .trim()
+    .max(200, "Name should be under 200 characters")
+    .optional()
+    .default(""),
   category: z.string().min(2, "Category must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().min(0, "Price must be 0 or greater"),
+  sku: z
+    .string()
+    .trim()
+    .max(120, "SKU should be under 120 characters")
+    .optional()
+    .default(""),
+  stock: z.coerce
+    .number()
+    .min(0, "Stock must be 0 or greater")
+    .optional()
+    .default(1),
   condition: z.enum(productConditions),
   companyId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid company"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid company"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   companySubMasterId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid company submaster"), z.literal("")])
+    .union([
+      z
+        .string()
+        .trim()
+        .regex(objectIdRegex, "Select a valid company submaster"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   processorId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid processor"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid processor"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   processorSubMasterId: z
     .union([
-      z.string().trim().regex(objectIdRegex, "Select a valid processor submaster"),
+      z
+        .string()
+        .trim()
+        .regex(objectIdRegex, "Select a valid processor submaster"),
       z.literal(""),
     ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   ramId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid RAM"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   ramSubMasterId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM submaster"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid RAM submaster"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   storageId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid storage option"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   storageSubMasterId: z
     .union([
-      z.string().trim().regex(objectIdRegex, "Select a valid storage submaster"),
+      z
+        .string()
+        .trim()
+        .regex(objectIdRegex, "Select a valid storage submaster"),
       z.literal(""),
     ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   graphicsId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid graphics option"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   graphicsSubMasterId: z
     .union([
-      z.string().trim().regex(objectIdRegex, "Select a valid graphics submaster"),
+      z
+        .string()
+        .trim()
+        .regex(objectIdRegex, "Select a valid graphics submaster"),
       z.literal(""),
     ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   osId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid operating system"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid operating system"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   osSubMasterId: z
-    .union([z.string().trim().regex(objectIdRegex, "Select a valid OS submaster"), z.literal("")])
+    .union([
+      z.string().trim().regex(objectIdRegex, "Select a valid OS submaster"),
+      z.literal(""),
+    ])
     .optional()
     .transform((val) => (val ? val : undefined)),
   imageUrl: z
@@ -121,8 +179,49 @@ export const productPayloadSchema = z.object({
   variants: z
     .array(
       z.object({
-        label: z.string().trim().min(1, "Variant label cannot be empty").max(120),
+        label: z
+          .string()
+          .trim()
+          .min(1, "Variant label cannot be empty")
+          .max(120),
         price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+        description: z
+          .string()
+          .trim()
+          .max(5000, "Variant description is too long")
+          .optional()
+          .default(""),
+        imageUrl: z
+          .string()
+          .trim()
+          .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
+          .optional()
+          .default(""),
+        galleryImages: z
+          .array(
+            z
+              .string()
+              .trim()
+              .refine(validateUrlOrUpload, "Enter a valid image URL or upload")
+          )
+          .max(12, "You can add up to 12 gallery images per variant")
+          .optional()
+          .default([]),
+        condition: z
+          .enum(productConditions)
+          .optional()
+          .transform((val) => (val ? val : undefined)),
+        sku: z
+          .string()
+          .trim()
+          .max(120, "SKU should be under 120 characters")
+          .optional()
+          .default(""),
+        stock: z.coerce
+          .number()
+          .min(0, "Stock must be 0 or greater")
+          .optional()
+          .default(1),
         processorId: z
           .union([
             z.string().trim().regex(objectIdRegex, "Select a valid processor"),
@@ -131,19 +230,28 @@ export const productPayloadSchema = z.object({
           .optional()
           .transform((val) => (val ? val : undefined)),
         ramId: z
-          .union([z.string().trim().regex(objectIdRegex, "Select a valid RAM option"), z.literal("")])
+          .union([
+            z.string().trim().regex(objectIdRegex, "Select a valid RAM option"),
+            z.literal(""),
+          ])
           .optional()
           .transform((val) => (val ? val : undefined)),
         storageId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid storage option"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid storage option"),
             z.literal(""),
           ])
           .optional()
           .transform((val) => (val ? val : undefined)),
         graphicsId: z
           .union([
-            z.string().trim().regex(objectIdRegex, "Select a valid graphics option"),
+            z
+              .string()
+              .trim()
+              .regex(objectIdRegex, "Select a valid graphics option"),
             z.literal(""),
           ])
           .optional()
@@ -161,7 +269,7 @@ export const productPayloadSchema = z.object({
     .default([]),
   colors: z
     .array(z.string().min(1, "Colour name cannot be empty"))
-    .max(12, "You can add up to 12 colours")
+    .max(1, "Only one colour allowed. Add more colours as variants.")
     .optional()
     .default([]),
 });

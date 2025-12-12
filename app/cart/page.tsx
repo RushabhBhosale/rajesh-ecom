@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, ShoppingCart } from "lucide-react";
 
 import { CartLineItem } from "@/components/cart/cart-line-item";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
+import { defaultStoreSettings, type StoreSettings } from "@/lib/store-settings";
 import {
   useCartStore,
   useCartHydration,
@@ -15,14 +17,42 @@ import {
 } from "@/lib/stores/cart-store";
 
 export default function CartPage() {
+  const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const hydrated = useCartHydration();
   const items = useCartStore(selectCartItems);
   const subtotal = useCartStore(selectSubtotal);
   const itemCount = useCartStore(selectItemCount);
   const clearCart = useCartStore((state) => state.clearCart);
 
-  const gstEstimate = subtotal * 0.18;
-  const orderTotal = subtotal + gstEstimate;
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        const data = await response.json().catch(() => null);
+        if (!cancelled && response.ok && data?.settings) {
+          setSettings(data.settings);
+        }
+      } catch (error) {
+        console.error("Failed to load store settings", error);
+      } finally {
+        if (!cancelled) {
+          setSettingsLoading(false);
+        }
+      }
+    };
+
+    void loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const gstRate = settings.gstEnabled ? settings.gstRate / 100 : 0;
+  const gstEstimate = subtotal * gstRate;
+  const shipping = settings.shippingEnabled && items.length ? settings.shippingAmount : 0;
+  const orderTotal = subtotal + gstEstimate + shipping;
 
   if (!hydrated) {
     return (
@@ -141,15 +171,17 @@ export default function CartPage() {
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>GST Estimate (18%)</span>
+              <span>
+                GST {settings.gstEnabled ? `(${settings.gstRate}%)` : "(disabled)"}
+              </span>
               <span className="font-semibold text-slate-900">
-                {formatCurrency(gstEstimate)}
+                {settings.gstEnabled || settingsLoading ? formatCurrency(gstEstimate) : "Not applied"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Shipping</span>
-              <span className="font-semibold text-emerald-600">
-                Complimentary
+              <span className="font-semibold text-slate-900">
+                {shipping > 0 ? formatCurrency(shipping) : "Complimentary"}
               </span>
             </div>
           </div>

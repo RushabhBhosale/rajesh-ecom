@@ -33,6 +33,7 @@ export interface SessionUser {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   role: Role;
 }
 
@@ -97,6 +98,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       id: user._id.toString(),
       email: user.email,
       name: user.name,
+      phone: user.phone ?? "",
       role: user.role,
     };
   } catch (error) {

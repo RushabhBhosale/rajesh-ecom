@@ -61,13 +61,14 @@ export function ProductManager({ products }: ProductManagerProps) {
           product.variants
             ?.filter((variant) => !variant.isDefault)
             ?.map((variant) => ({
-              label: variant.label,
-              price: variant.price,
-              processorId: variant.processor?.id ?? undefined,
-              ramId: variant.ram?.id ?? undefined,
-              storageId: variant.storage?.id ?? undefined,
-              graphicsId: variant.graphics?.id ?? undefined,
-              color: variant.color ?? undefined,
+            label: variant.label,
+            price: variant.price,
+            condition: variant.condition ?? product.condition,
+            processorId: variant.processor?.id ?? undefined,
+            ramId: variant.ram?.id ?? undefined,
+            storageId: variant.storage?.id ?? undefined,
+            graphicsId: variant.graphics?.id ?? undefined,
+            color: variant.color ?? undefined,
             })) ?? [],
         colors: product.colors ?? [],
       };

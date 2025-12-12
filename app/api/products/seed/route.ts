@@ -31,6 +31,8 @@ const curatedProducts = [
     ram: "16GB DDR4",
     storage: "512GB SSD",
     os: "Windows 11 Pro",
+    stock: 12,
+    sku: "DELL-7420-BASE",
   },
   {
     name: "Lenovo ThinkPad X1 Carbon",
@@ -44,6 +46,8 @@ const curatedProducts = [
     ram: "16GB DDR4",
     storage: "512GB SSD",
     os: "Windows 11 Pro",
+    stock: 15,
+    sku: "LENOVO-X1-BASE",
   },
   {
     name: "HP EliteBook 840 G8",
@@ -57,6 +61,8 @@ const curatedProducts = [
     ram: "8GB DDR4",
     storage: "256GB SSD",
     os: "Windows 11 Pro",
+    stock: 10,
+    sku: "HP-840G8-BASE",
   },
   {
     name: 'Apple MacBook Pro 14"',
@@ -70,6 +76,8 @@ const curatedProducts = [
     ram: "16GB LPDDR5",
     storage: "512GB SSD",
     os: "macOS Ventura",
+    stock: 8,
+    sku: "APPLE-MBP14-BASE",
   },
   {
     name: "Lenovo USB-C 65W Charger",
@@ -80,6 +88,8 @@ const curatedProducts = [
     imageUrl: "https://images.example.com/lenovo-charger.jpg",
     company: "Lenovo",
     os: "Windows 11 Pro",
+    stock: 30,
+    sku: "LEN-CHARGER-65W",
   },
   {
     name: "Logitech MX Master 3S Mouse",
@@ -90,6 +100,8 @@ const curatedProducts = [
     imageUrl: "https://images.example.com/logitech-mx.jpg",
     company: "Logitech",
     os: "Windows 11 Pro",
+    stock: 25,
+    sku: "LOGI-MX3S",
   },
 ] as const;
 
@@ -125,46 +137,51 @@ async function buildMasterLookup() {
 async function seedCuratedProducts() {
   const masterLookup = await buildMasterLookup();
 
-  const operations = curatedProducts.map((product) => {
+  for (const product of curatedProducts) {
     const companyId = masterLookup.get(`company:${product.company ?? ""}`) ?? null;
     const processorId = product.processor ? masterLookup.get(`processor:${product.processor}`) ?? null : null;
     const ramId = product.ram ? masterLookup.get(`ram:${product.ram}`) ?? null : null;
     const storageId = product.storage ? masterLookup.get(`storage:${product.storage}`) ?? null : null;
     const osId = product.os ? masterLookup.get(`os:${product.os}`) ?? null : null;
 
-    return {
-      updateOne: {
-        filter: { name: product.name },
-        update: {
-          $setOnInsert: {
-            name: product.name,
-            category: product.category,
-            description: product.description,
-            price: product.price,
-            condition: product.condition,
-            imageUrl: product.imageUrl,
-            companyId,
-            companyName: product.company ?? "",
-            processorId,
-            processorName: product.processor ?? "",
-            ramId,
-            ramName: product.ram ?? "",
-            storageId,
-            storageName: product.storage ?? "",
-            osId,
-            osName: product.os ?? "",
-            featured: true,
-            inStock: true,
-            highlights: ["Warranty included", "Quality inspected"],
-          },
+    const productDoc = await ProductModel.findOneAndUpdate(
+      { name: product.name },
+      {
+        $setOnInsert: {
+          name: product.name,
+          category: product.category,
+          companyId,
         },
-        upsert: true,
       },
-    };
-  });
+      { new: true, upsert: true }
+    );
 
-  if (operations.length > 0) {
-    await ProductModel.bulkWrite(operations, { ordered: false });
+    if (!productDoc) {
+      continue;
+    }
+
+    const variant: VariantInput = {
+      label: "Base configuration",
+      price: product.price,
+      description: product.description,
+      condition: product.condition,
+      sku: product.sku ?? "",
+      stock: product.stock ?? 0,
+      processorId: processorId ?? undefined,
+      ramId: ramId ?? undefined,
+      storageId: storageId ?? undefined,
+      graphicsId: undefined,
+      osId: osId ?? undefined,
+      imageUrl: product.imageUrl,
+      galleryImages: [],
+      richDescription: "",
+      highlights: ["Warranty included", "Quality inspected"],
+      featured: true,
+      inStock: (product.stock ?? 0) > 0,
+      isDefault: true,
+    };
+
+    await replaceProductVariants(productDoc._id.toString(), [variant]);
   }
 }
 
@@ -175,40 +192,24 @@ async function backfillBaseVariantsForProducts() {
   })
     .select({
       _id: 1,
-      price: 1,
-      processorId: 1,
-      processorName: 1,
-      ramId: 1,
-      ramName: 1,
-      storageId: 1,
-      storageName: 1,
-      graphicsId: 1,
-      graphicsName: 1,
-      colors: 1,
+      name: 1,
     })
     .lean();
 
   const tasks = productsNeedingVariants.map((product) => {
-    const labelParts = [
-      product.processorName,
-      product.ramName,
-      product.storageName,
-      product.graphicsName,
-    ]
-      .map((item) => (typeof item === "string" ? item.trim() : ""))
-      .filter((item) => item.length > 0);
-
     const baseVariant: VariantInput = {
-      label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
-      price: Number.isFinite(Number(product.price)) ? Number(product.price) : 0,
-      processorId: product.processorId?.toString(),
-      ramId: product.ramId?.toString(),
-      storageId: product.storageId?.toString(),
-      graphicsId: product.graphicsId?.toString(),
-      color:
-        Array.isArray((product as any).colors) && (product as any).colors.length === 1
-          ? (product as any).colors[0]
-          : undefined,
+      label: "Base configuration",
+      price: 0,
+      description: `${product.name ?? "Product"} base variant`,
+      condition: "refurbished",
+      sku: `SKU-${product._id.toString()}`,
+      stock: 0,
+      imageUrl: "",
+      galleryImages: [],
+      richDescription: "",
+      highlights: [],
+      featured: false,
+      inStock: false,
       isDefault: true,
     };
 
@@ -254,12 +255,53 @@ export async function POST() {
     const bulkOps = products.map((product) => ({
       updateOne: {
         filter: { name: product.name },
-        update: { $setOnInsert: product },
+        update: {
+          $setOnInsert: {
+            name: product.name,
+            category: product.category,
+            companyId: null,
+            companySubmasterId: null,
+          },
+        },
         upsert: true,
       },
     }));
 
     const result = await ProductModel.bulkWrite(bulkOps, { ordered: false });
+    const productDocs = await ProductModel.find({ name: { $in: products.map((item) => item.name) } })
+      .select({ _id: 1, name: 1 })
+      .lean();
+
+    const dummyByName = new Map(products.map((product) => [product.name, product]));
+    const variantTasks = productDocs
+      .map((doc) => {
+        const source = dummyByName.get(doc.name);
+        if (!source) {
+          return null;
+        }
+        const variant: VariantInput = {
+          label: "Base configuration",
+          price: source.price,
+          description: source.description,
+          condition: source.condition,
+          sku: source.sku ?? "",
+          stock: source.stock ?? 0,
+          imageUrl: source.imageUrl,
+          galleryImages: [],
+          richDescription: "",
+          highlights: source.highlights ?? [],
+          featured: source.featured ?? false,
+          inStock: source.inStock ?? true,
+          isDefault: true,
+        };
+        return replaceProductVariants(doc._id.toString(), [variant]);
+      })
+      .filter((task): task is ReturnType<typeof replaceProductVariants> => Boolean(task));
+
+    if (variantTasks.length > 0) {
+      await Promise.all(variantTasks);
+    }
+
     await backfillBaseVariantsForProducts();
     const inserted = result.upsertedCount ?? 0;
     const matched = result.matchedCount ?? 0;

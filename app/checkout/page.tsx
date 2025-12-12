@@ -1,13 +1,20 @@
 import { Metadata } from "next";
 import Script from "next/script";
+import { redirect } from "next/navigation";
 
 import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Checkout | Rajesh Renewed",
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login?redirect=/checkout");
+  }
+
   return (
     <main className="relative flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-20">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />

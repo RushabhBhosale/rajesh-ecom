@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ type FormValues = {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const schema = useMemo(() => (mode === "login" ? loginSchema : registerSchema), [mode]);
@@ -62,6 +63,13 @@ export function AuthForm({ mode }: AuthFormProps) {
   } = form;
 
   const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
+  const redirectTo = useMemo(() => {
+    const target = searchParams.get("redirect") ?? searchParams.get("next");
+    if (target && target.startsWith("/")) {
+      return target;
+    }
+    return null;
+  }, [searchParams]);
 
   const getRedirectPath = (role?: string | null) => {
     if (role === "superadmin") {
@@ -104,7 +112,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       toast.success(mode === "login" ? "Signed in successfully" : "Account created");
       reset();
-      router.replace(getRedirectPath(data?.user?.role));
+      router.replace(redirectTo ?? getRedirectPath(data?.user?.role));
       router.refresh();
     } catch (fetchError) {
       console.error(fetchError);

@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { ORDER_STATUS_VALUES, type OrderStatusValue } from "@/lib/order-status";
 import { getOrderById } from "@/lib/orders";
 import { OrderModel } from "@/models/order";
+import { TransactionModel } from "@/models/transaction";
 
 const STATUS_VALUES = ORDER_STATUS_VALUES as [OrderStatusValue, ...OrderStatusValue[]];
 
@@ -29,14 +30,28 @@ export async function PATCH(
     const { status } = payloadSchema.parse(await request.json());
 
     await connectDB();
-    const updated = await OrderModel.findByIdAndUpdate(
-      params.orderId,
-      { status },
-      { new: true }
-    );
+    const order = await OrderModel.findById(params.orderId);
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const update: Record<string, unknown> = { status };
+    if (order.paymentMethod === "cod" && status === "delivered") {
+      update.paymentStatus = "paid";
+    }
+
+    const updated = await OrderModel.findByIdAndUpdate(params.orderId, update, { new: true });
 
     if (!updated) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (update.paymentStatus === "paid") {
+      await TransactionModel.findOneAndUpdate(
+        { orderId: updated._id },
+        { status: "paid" },
+        { sort: { createdAt: -1 } }
+      );
     }
 
     const summary = await getOrderById(updated._id.toString());

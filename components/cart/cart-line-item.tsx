@@ -53,7 +53,7 @@ export function CartLineItem({ item }: CartLineItemProps) {
           <h3 className="text-base font-semibold text-slate-900 line-clamp-2">
             {item.name}
           </h3>
-          {item.displayVariant ? (
+          {/* {item.displayVariant ? (
             <p className="text-xs font-medium text-slate-500">
                {item.displayVariant}
             </p>
@@ -61,16 +61,16 @@ export function CartLineItem({ item }: CartLineItemProps) {
             <p className="text-xs font-medium text-slate-500">
                {item.variant}
             </p>
-          ) : null}
+          ) : null} */}
           {item.color ? (
             <p className="text-xs font-medium text-slate-500">Colour: {item.color}</p>
           ) : null}
-          <p className="text-xs font-medium text-slate-600">
+          {/* <p className="text-xs font-medium text-slate-600">
             Unit:{" "}
             <span className="font-semibold text-slate-900">
               {formatCurrency(item.price)}
             </span>
-          </p>
+          </p> */}
         </div>
       </div>
 

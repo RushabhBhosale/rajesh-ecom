@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,9 +10,12 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { checkoutPayloadSchema } from "@/lib/checkout-validation";
 import { formatCurrency } from "@/lib/currency";
+import type { SavedAddress } from "@/lib/addresses";
+import { defaultStoreSettings, type StoreSettings } from "@/lib/store-settings";
 import {
   useCartHydration,
   useCartStore,
@@ -41,22 +44,14 @@ type SuccessState = {
   paymentReference?: string;
 };
 
-const TAX_RATE = 0.18;
-
 export function CheckoutForm() {
   const router = useRouter();
-  const cartHydrated = useCartHydration();
-  const items = useCartStore(selectCartItems);
-  const subtotal = useCartStore(selectSubtotal);
-  const clearCart = useCartStore((state) => state.clearCart);
-  const [success, setSuccess] = useState<SuccessState | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentPending, setPaymentPending] = useState(false);
-
-  const tax = useMemo(() => subtotal * TAX_RATE, [subtotal]);
-  const total = useMemo(() => subtotal + tax, [subtotal, tax]);
-
-  const form = useForm<CheckoutFormValues>({
+  const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [addressLoading, setAddressLoading] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customerName: "",
@@ -72,14 +67,105 @@ export function CheckoutForm() {
       notes: "",
     },
   });
-
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
     watch,
     reset,
   } = form;
+
+  const cartHydrated = useCartHydration();
+  const items = useCartStore(selectCartItems);
+  const subtotal = useCartStore(selectSubtotal);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const [success, setSuccess] = useState<SuccessState | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        const data = await response.json().catch(() => null);
+        if (!cancelled && response.ok && data?.settings) {
+          setSettings(data.settings);
+        }
+      } catch (error) {
+        console.error("Failed to load store settings", error);
+      } finally {
+        if (!cancelled) {
+          setSettingsLoading(false);
+        }
+      }
+    };
+
+    void loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfileAndAddresses = async () => {
+      try {
+        const [profileRes, addressRes] = await Promise.all([fetch("/api/me"), fetch("/api/addresses")]);
+        const profileData = await profileRes.json().catch(() => null);
+        if (!cancelled && profileRes.ok && profileData?.user) {
+          setValue("customerName", profileData.user.name ?? "", { shouldValidate: false });
+          setValue("customerEmail", profileData.user.email ?? "", { shouldValidate: false });
+          setValue("customerPhone", profileData.user.phone ?? "", { shouldValidate: false });
+        }
+        const addressData = await addressRes.json().catch(() => null);
+        if (!cancelled && addressRes.ok && Array.isArray(addressData?.addresses)) {
+          setAddresses(addressData.addresses);
+          const defaultAddress = addressData.addresses.find((addr: SavedAddress) => addr.isDefault);
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load saved data", error);
+      } finally {
+        if (!cancelled) {
+          setAddressLoading(false);
+        }
+      }
+    };
+    void loadProfileAndAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, [setValue]);
+
+  useEffect(() => {
+    if (!selectedAddressId) {
+      return;
+    }
+    const selected = addresses.find((addr) => addr.id === selectedAddressId);
+    if (!selected) {
+      return;
+    }
+    setValue("customerName", selected.recipientName, { shouldValidate: false, shouldDirty: true });
+    setValue("customerPhone", selected.phone, { shouldValidate: false, shouldDirty: true });
+    setValue("addressLine1", selected.line1, { shouldValidate: false, shouldDirty: true });
+    setValue("addressLine2", selected.line2 ?? "", { shouldValidate: false, shouldDirty: true });
+    setValue("city", selected.city, { shouldValidate: false, shouldDirty: true });
+    setValue("state", selected.state, { shouldValidate: false, shouldDirty: true });
+    setValue("postalCode", selected.postalCode, { shouldValidate: false, shouldDirty: true });
+    setValue("country", selected.country ?? "India", { shouldValidate: false, shouldDirty: true });
+  }, [addresses, selectedAddressId, setValue]);
+
+  const taxRate = settings.gstEnabled ? settings.gstRate / 100 : 0;
+  const tax = useMemo(() => subtotal * taxRate, [subtotal, taxRate]);
+  const shipping = useMemo(
+    () => (settings.shippingEnabled && items.length ? settings.shippingAmount : 0),
+    [items.length, settings.shippingAmount, settings.shippingEnabled]
+  );
+  const total = useMemo(() => subtotal + tax + shipping, [shipping, subtotal, tax]);
 
   const paymentMethod = watch("paymentMethod");
 
@@ -355,6 +441,31 @@ export function CheckoutForm() {
             <p className="text-sm text-slate-600">We currently ship pan India with trusted logistics partners.</p>
           </header>
 
+          <div className="space-y-2">
+            <Label htmlFor="saved-addresses">Saved addresses</Label>
+            <select
+              id="saved-addresses"
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={selectedAddressId}
+              onChange={(event) => setSelectedAddressId(event.target.value)}
+              disabled={addressLoading || addresses.length === 0}
+            >
+              <option value="">Enter a new address</option>
+              {addresses.map((address) => (
+                <option key={address.id} value={address.id}>
+                  {(address.label || address.recipientName) + (address.isDefault ? " (Default)" : "")}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              {addressLoading
+                ? "Loading saved addresses…"
+                : addresses.length === 0
+                  ? "No saved addresses yet — add one from your profile."
+                  : "Select a saved address or enter a new one below."}
+            </p>
+          </div>
+
           <div className="grid gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700" htmlFor="addressLine1">Address line 1</label>
@@ -444,7 +555,12 @@ export function CheckoutForm() {
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <Button type="button" variant="ghost" onClick={() => router.push("/cart")}>Back to cart</Button>
-          <Button type="submit" size="lg" className="rounded-full px-8" disabled={isSubmitting || paymentPending}>
+          <Button
+            type="submit"
+            size="lg"
+            className="rounded-full px-8"
+            disabled={isSubmitting || paymentPending || settingsLoading}
+          >
             {isSubmitting || paymentPending ? "Processing…" : paymentMethod === "cod" ? "Place order" : "Pay with Razorpay"}
           </Button>
         </div>
@@ -487,12 +603,16 @@ export function CheckoutForm() {
               <span className="font-semibold text-slate-900">{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>GST (18%)</span>
-              <span className="font-semibold text-slate-900">{formatCurrency(tax)}</span>
+              <span>GST {settings.gstEnabled ? `(${settings.gstRate}%)` : "(disabled)"}</span>
+              <span className="font-semibold text-slate-900">
+                {settings.gstEnabled || settingsLoading ? formatCurrency(tax) : "Not applied"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Shipping</span>
-              <span className="font-semibold text-emerald-600">Complimentary</span>
+              <span className="font-semibold text-slate-900">
+                {shipping > 0 ? formatCurrency(shipping) : "Complimentary"}
+              </span>
             </div>
           </div>
         </div>

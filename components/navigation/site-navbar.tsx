@@ -28,8 +28,6 @@ const authLinks = [
   // { href: "/register", label: "Create account", primary: true },
 ];
 
-const HIDDEN_ON_PATHS = [/^\/dashboard/, /^\/admin/, /^\/superadmin/];
-
 export function SiteNavbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,10 +39,11 @@ export function SiteNavbar() {
   const itemCount = useCartStore(selectItemCount);
   const cartCount = hasHydratedCart ? Math.min(itemCount, 99) : 0;
 
-  const shouldHide = HIDDEN_ON_PATHS.some((regex) => regex.test(pathname));
+  const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/superadmin");
+  const shouldHide = isAdminArea;
 
   useEffect(() => {
-    if (shouldHide) {
+    if (isAdminArea) {
       setCurrentUser(null);
       setIsFetchingUser(false);
       return;
@@ -87,13 +86,13 @@ export function SiteNavbar() {
       }
     }
 
-    fetchUser();
+    void fetchUser();
 
     return () => {
       isActive = false;
       controller.abort();
     };
-  }, [pathname, shouldHide]);
+  }, [isAdminArea, pathname]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -260,6 +259,15 @@ export function SiteNavbar() {
                         {currentUser.email}
                       </p>
                     </div>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 w-full justify-start"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Link href="/dashboard/profile">Profile & addresses</Link>
+                    </Button>
                     {accountLink ? (
                       <Button
                         asChild
@@ -376,6 +384,15 @@ export function SiteNavbar() {
                       {currentUser.email}
                     </p>
                   </div>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMenuOpen(false)}
+                    className="justify-start"
+                  >
+                    <Link href="/dashboard/profile">Profile & addresses</Link>
+                  </Button>
                   {accountLink ? (
                     <Button
                       asChild

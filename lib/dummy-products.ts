@@ -12,6 +12,8 @@ interface DummyProduct {
   featured: boolean;
   inStock: boolean;
   highlights: string[];
+  sku: string;
+  stock: number;
 }
 
 export function createDummyProductBatch(count = 50, batchId = Date.now()): DummyProduct[] {
@@ -23,6 +25,8 @@ export function createDummyProductBatch(count = 50, batchId = Date.now()): Dummy
     const price = 12000 + index * 250;
     const featured = index % 5 === 0;
     const inStock = index % 7 !== 0;
+    const stock = inStock ? Math.max(1, 20 - (index % 10)) : 0;
+    const sku = `SKU-${batchId}-${index + 1}`;
     const highlights =
       category === "Laptops"
         ? ["8GB RAM", "256GB SSD"]
@@ -40,6 +44,8 @@ export function createDummyProductBatch(count = 50, batchId = Date.now()): Dummy
       featured,
       inStock,
       highlights,
+      sku,
+      stock,
     });
   }
   return products;

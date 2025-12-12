@@ -85,6 +85,8 @@ describe("POST /api/products/seed", () => {
         featured: false,
         inStock: true,
         highlights: ["Point A", "Point B"],
+        stock: 5,
+        sku: "SKU-1",
       },
       {
         name: "Desktops Batch 1700000000000-2",
@@ -96,10 +98,30 @@ describe("POST /api/products/seed", () => {
         featured: true,
         inStock: false,
         highlights: ["Point C", "Point D"],
+        stock: 0,
+        sku: "SKU-2",
       },
     ];
     createDummyProductBatch.mockReturnValueOnce(products);
     bulkWrite.mockResolvedValueOnce({ upsertedCount: 2, matchedCount: 0 });
+    find
+      .mockImplementationOnce(
+        () =>
+          ({
+            select: vi.fn().mockReturnThis(),
+            lean: vi.fn().mockResolvedValue([
+              { _id: "id-1", name: products[0].name },
+              { _id: "id-2", name: products[1].name },
+            ]),
+          }) as any
+      )
+      .mockImplementationOnce(
+        () =>
+          ({
+            select: vi.fn().mockReturnThis(),
+            lean: vi.fn().mockResolvedValue([]),
+          }) as any
+      );
 
     const response = await seedProducts();
     const body = await response.json();
@@ -130,11 +152,29 @@ describe("POST /api/products/seed", () => {
       products.map((product) => ({
         updateOne: {
           filter: { name: product.name },
-          update: { $setOnInsert: product },
+          update: {
+            $setOnInsert: expect.objectContaining({
+              name: product.name,
+              category: product.category,
+              companyId: null,
+            }),
+          },
           upsert: true,
         },
       })),
       { ordered: false },
+    );
+    expect(replaceProductVariants).toHaveBeenCalledTimes(2);
+    expect(replaceProductVariants).toHaveBeenCalledWith(
+      "id-1",
+      expect.arrayContaining([
+        expect.objectContaining({
+          price: products[0].price,
+          description: products[0].description,
+          sku: products[0].sku,
+          stock: products[0].stock,
+        }),
+      ])
     );
 
     expect(response.status).toBe(201);
@@ -162,14 +202,39 @@ describe("POST /api/products/seed", () => {
         featured: false,
         inStock: true,
         highlights: ["Point A", "Point B"],
+        stock: 3,
       },
     ];
     createDummyProductBatch.mockReturnValueOnce(products);
     bulkWrite.mockResolvedValueOnce({ upsertedCount: 0, matchedCount: 1 });
+    find
+      .mockImplementationOnce(
+        () =>
+          ({
+            select: vi.fn().mockReturnThis(),
+            lean: vi.fn().mockResolvedValue([{ _id: "id-3", name: products[0].name }]),
+          }) as any
+      )
+      .mockImplementationOnce(
+        () =>
+          ({
+            select: vi.fn().mockReturnThis(),
+            lean: vi.fn().mockResolvedValue([]),
+          }) as any
+      );
 
     const response = await seedProducts();
     const body = await response.json();
 
+    expect(replaceProductVariants).toHaveBeenCalledWith(
+      "id-3",
+      expect.arrayContaining([
+        expect.objectContaining({
+          price: products[0].price,
+          description: products[0].description,
+        }),
+      ])
+    );
     expect(response.status).toBe(200);
     expect(body).toEqual({
       message: "Dummy products already exist",

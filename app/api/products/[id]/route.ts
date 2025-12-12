@@ -8,9 +8,10 @@ import {
   resolveProductMasters,
   type ProductMasterSelection,
 } from "@/lib/master-options";
+import { generateProductName } from "@/lib/product-name";
 import { productPayloadSchema } from "@/lib/product-validation";
 import { sanitizeRichText } from "@/lib/sanitize-html";
-import { resolveProductSubMasters } from "@/lib/submaster-options";
+import { resolveProductSubMasters, type ProductSubMasterSelection } from "@/lib/submaster-options";
 import {
   replaceProductVariants,
   type VariantInput,
@@ -62,39 +63,153 @@ function sanitizeColors(colors: string[] | undefined) {
     });
 }
 
+function buildBaseSku(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 120);
+}
+
+function buildVariantSku({
+  baseSku,
+  companyName,
+  category,
+  variantLabel,
+}: {
+  baseSku: string;
+  companyName?: string | null;
+  category?: string;
+  variantLabel?: string;
+}) {
+  const prefix = companyName?.trim() || category?.trim() || "";
+  const label = variantLabel?.trim() ?? "";
+  const combined = [prefix, label].filter(Boolean).join(" ");
+  if (!combined) {
+    return baseSku;
+  }
+  const generated = buildBaseSku(combined);
+  return generated || baseSku;
+}
+
 function buildVariantInputs(
   payload: ReturnType<typeof productPayloadSchema.parse>,
   colors: string[],
-  masterSelection: ProductMasterSelection
+  masterSelection: ProductMasterSelection,
+  subMasterSelection: ProductSubMasterSelection,
+  galleryImages: string[],
+  richDescription: string,
+  highlights: string[],
+  baseSku: string
 ): VariantInput[] {
+  const getMatchingSubmaster = (
+    variantMasterId: string | undefined,
+    selection: { id?: string; masterId?: string; name?: string } | undefined
+  ) => {
+    if (!variantMasterId || !selection?.id) {
+      return { id: undefined, name: undefined };
+    }
+    return selection.masterId === variantMasterId ? { id: selection.id, name: selection.name } : { id: undefined, name: undefined };
+  };
+
+  const baseProcessorSubmaster = getMatchingSubmaster(payload.processorId, subMasterSelection.processorSubMaster);
+  const baseRamSubmaster = getMatchingSubmaster(payload.ramId, subMasterSelection.ramSubMaster);
+  const baseStorageSubmaster = getMatchingSubmaster(payload.storageId, subMasterSelection.storageSubMaster);
+  const baseGraphicsSubmaster = getMatchingSubmaster(payload.graphicsId, subMasterSelection.graphicsSubMaster);
+  const baseOsSubmaster = getMatchingSubmaster(payload.osId, subMasterSelection.osSubMaster);
+
   const labelParts = [
     masterSelection.processor?.name,
     masterSelection.ram?.name,
     masterSelection.storage?.name,
     masterSelection.graphics?.name,
   ].filter(Boolean);
+  const baseVariantLabel =
+    labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration";
+  const baseVariantSku =
+    payload.sku?.trim() ||
+    (labelParts.length > 0
+      ? buildVariantSku({
+          baseSku,
+          companyName: masterSelection.company?.name,
+          category: payload.category,
+          variantLabel: baseVariantLabel,
+        })
+      : baseSku);
 
   const baseVariant: VariantInput = {
-    label: labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration",
+    label: baseVariantLabel,
     price: payload.price,
+    description: payload.description,
+    condition: payload.condition,
+    sku: baseVariantSku,
+    stock: payload.stock ?? 0,
     processorId: payload.processorId,
+    processorSubmasterId: baseProcessorSubmaster.id,
     ramId: payload.ramId,
+    ramSubmasterId: baseRamSubmaster.id,
     storageId: payload.storageId,
+    storageSubmasterId: baseStorageSubmaster.id,
     graphicsId: payload.graphicsId,
+    graphicsSubmasterId: baseGraphicsSubmaster.id,
+    osId: payload.osId,
+    osSubmasterId: baseOsSubmaster.id,
+    imageUrl: payload.imageUrl ?? "",
+    galleryImages,
+    richDescription,
+    highlights,
+    featured: payload.featured ?? false,
     color: colors.length === 1 ? colors[0] : undefined,
+    colors,
+    inStock: payload.inStock ?? true,
     isDefault: true,
   };
 
-  const additionalVariants: VariantInput[] = (payload.variants ?? []).map((variant) => ({
-    label: variant.label,
-    price: variant.price,
-    processorId: variant.processorId,
-    ramId: variant.ramId,
-    storageId: variant.storageId,
-    graphicsId: variant.graphicsId,
-    color: variant.color,
-    isDefault: false,
-  }));
+  const additionalVariants: VariantInput[] = (payload.variants ?? []).map((variant) => {
+    const processorSubmaster = getMatchingSubmaster(variant.processorId, subMasterSelection.processorSubMaster);
+    const ramSubmaster = getMatchingSubmaster(variant.ramId, subMasterSelection.ramSubMaster);
+    const storageSubmaster = getMatchingSubmaster(variant.storageId, subMasterSelection.storageSubMaster);
+    const graphicsSubmaster = getMatchingSubmaster(variant.graphicsId, subMasterSelection.graphicsSubMaster);
+    const variantGallery = sanitizeGallery(variant.galleryImages);
+    const variantLabel = variant.label?.trim() ?? "";
+    const variantColor = variant.color?.trim() || undefined;
+
+    return {
+      label: variantLabel,
+      price: variant.price,
+      description: variant.description?.trim() || payload.description,
+      condition: variant.condition ?? payload.condition,
+      sku:
+        variant.sku?.trim() ||
+        buildVariantSku({
+          baseSku,
+          companyName: masterSelection.company?.name,
+          category: payload.category,
+          variantLabel,
+        }),
+      stock: variant.stock ?? 0,
+      processorId: variant.processorId,
+      processorSubmasterId: processorSubmaster.id,
+      ramId: variant.ramId,
+      ramSubmasterId: ramSubmaster.id,
+      storageId: variant.storageId,
+      storageSubmasterId: storageSubmaster.id,
+      graphicsId: variant.graphicsId,
+      graphicsSubmasterId: graphicsSubmaster.id,
+      osId: payload.osId,
+      osSubmasterId: baseOsSubmaster.id,
+      imageUrl: variant.imageUrl?.trim() || payload.imageUrl || "",
+      galleryImages: variantGallery.length > 0 ? variantGallery : galleryImages,
+      richDescription,
+      highlights,
+      featured: payload.featured ?? false,
+      color: variantColor,
+      colors,
+      inStock: payload.inStock ?? true,
+      isDefault: false,
+    };
+  });
 
   return [baseVariant, ...additionalVariants];
 }
@@ -131,6 +246,12 @@ export async function PUT(request: Request, context: { params: { id: string } })
     const galleryImages = sanitizeGallery(payload.galleryImages);
     const richDescription = sanitizeRichText(payload.richDescription?.trim() ?? "");
     const colors = sanitizeColors(payload.colors);
+    if (colors.length > 1) {
+      return NextResponse.json(
+        { error: "Only one colour allowed. Add more colours as variants." },
+        { status: 400 }
+      );
+    }
 
     const masterResult = await resolveProductMasters({
       companyId: payload.companyId,
@@ -144,6 +265,13 @@ export async function PUT(request: Request, context: { params: { id: string } })
     if (!masterResult.ok) {
       return NextResponse.json({ error: masterResult.message }, { status: 400 });
     }
+
+    const autoName = generateProductName(payload, masterResult.selection);
+    const finalName =
+      typeof payload.name === "string" && payload.name.trim().length >= 3
+        ? payload.name.trim()
+        : autoName;
+    const baseSku = buildBaseSku(finalName);
 
     const subMasterResult = await resolveProductSubMasters(
       {
@@ -161,7 +289,16 @@ export async function PUT(request: Request, context: { params: { id: string } })
       return NextResponse.json({ error: subMasterResult.message }, { status: 400 });
     }
 
-    const variantInputs = buildVariantInputs(payload, colors, masterResult.selection);
+    const variantInputs = buildVariantInputs(
+      payload,
+      colors,
+      masterResult.selection,
+      subMasterResult.selection,
+      galleryImages,
+      richDescription,
+      highlights,
+      baseSku
+    );
 
     await connectDB();
     const exists = await ProductModel.exists({ _id: params.id });
@@ -182,43 +319,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
       params.id,
       {
         $set: {
-          name: payload.name,
+          name: finalName,
           category: payload.category,
-          description: payload.description,
-          price: payload.price,
-          condition: payload.condition,
           companyId: masterResult.selection.company?.id ?? null,
-          companyName: masterResult.selection.company?.name ?? "",
-          processorId: masterResult.selection.processor?.id ?? null,
-          processorName: masterResult.selection.processor?.name ?? "",
-          ramId: masterResult.selection.ram?.id ?? null,
-          ramName: masterResult.selection.ram?.name ?? "",
-          storageId: masterResult.selection.storage?.id ?? null,
-          storageName: masterResult.selection.storage?.name ?? "",
-          graphicsId: masterResult.selection.graphics?.id ?? null,
-          graphicsName: masterResult.selection.graphics?.name ?? "",
-          osId: masterResult.selection.os?.id ?? null,
-          osName: masterResult.selection.os?.name ?? "",
           companySubmasterId: subMasterResult.selection.companySubMaster?.id ?? null,
-          companySubmasterName: subMasterResult.selection.companySubMaster?.name ?? "",
-          processorSubmasterId: subMasterResult.selection.processorSubMaster?.id ?? null,
-          processorSubmasterName: subMasterResult.selection.processorSubMaster?.name ?? "",
-          ramSubmasterId: subMasterResult.selection.ramSubMaster?.id ?? null,
-          ramSubmasterName: subMasterResult.selection.ramSubMaster?.name ?? "",
-          storageSubmasterId: subMasterResult.selection.storageSubMaster?.id ?? null,
-          storageSubmasterName: subMasterResult.selection.storageSubMaster?.name ?? "",
-          graphicsSubmasterId: subMasterResult.selection.graphicsSubMaster?.id ?? null,
-          graphicsSubmasterName: subMasterResult.selection.graphicsSubMaster?.name ?? "",
-          osSubmasterId: subMasterResult.selection.osSubMaster?.id ?? null,
-          osSubmasterName: subMasterResult.selection.osSubMaster?.name ?? "",
-          imageUrl: payload.imageUrl ?? "",
-          galleryImages,
-          richDescription,
-          featured: payload.featured ?? false,
-          inStock: payload.inStock ?? true,
-          highlights,
-          variants: [],
-          colors,
         },
       },
       { new: true }
