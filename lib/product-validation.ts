@@ -37,6 +37,9 @@ export const productPayloadSchema = z.object({
   category: z.string().min(2, "Category must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().min(0, "Price must be 0 or greater"),
+  originalPrice: z.coerce.number().min(0, "Original price must be 0 or greater").optional().default(0),
+  discountedPrice: z.coerce.number().min(0, "Discounted price must be 0 or greater").optional().default(0),
+  onSale: z.boolean().optional().default(false),
   sku: z
     .string()
     .trim()
@@ -185,6 +188,17 @@ export const productPayloadSchema = z.object({
           .min(1, "Variant label cannot be empty")
           .max(120),
         price: z.coerce.number().min(0, "Variant price must be 0 or greater"),
+        originalPrice: z.coerce
+          .number()
+          .min(0, "Original price must be 0 or greater")
+          .optional()
+          .default(0),
+        discountedPrice: z.coerce
+          .number()
+          .min(0, "Discounted price must be 0 or greater")
+          .optional()
+          .default(0),
+        onSale: z.boolean().optional().default(false),
         description: z
           .string()
           .trim()

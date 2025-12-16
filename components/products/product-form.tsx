@@ -212,37 +212,43 @@ function ColorOptionsEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          id="colors"
-          value={colorInput}
-          placeholder="Enter a colour name or hex value"
-          onChange={(event) => {
-            setColorInput(event.target.value);
-            if (localError) {
-              setLocalError(null);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              handleAddColor();
-            }
-          }}
-          className="sm:max-w-[260px]"
-          aria-describedby="colors-helper"
-          aria-invalid={Boolean(errorMessage)}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleAddColor}
-          disabled={!canAddColor || reachedLimit}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add colour
-        </Button>
-      </div>
+      {!reachedLimit ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            id="colors"
+            value={colorInput}
+            placeholder="Enter a colour name or hex value"
+            onChange={(event) => {
+              setColorInput(event.target.value);
+              if (localError) {
+                setLocalError(null);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleAddColor();
+              }
+            }}
+            className="sm:max-w-[260px]"
+            aria-describedby="colors-helper"
+            aria-invalid={Boolean(errorMessage)}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleAddColor}
+            disabled={!canAddColor}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add colour
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          Only one colour is allowed. Remove the current colour to switch.
+        </div>
+      )}
       {normalizedValue.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {normalizedValue.map((color, index) => (
@@ -343,6 +349,9 @@ type ProductFormValues = {
   category: string;
   description: string;
   price: number;
+  originalPrice: number;
+  discountedPrice: number;
+  onSale: boolean;
   condition: (typeof productConditions)[number];
   companyId?: string;
   companySubMasterId?: string;
@@ -363,6 +372,9 @@ type ProductFormValues = {
   variants: {
     label: string;
     price: number;
+    originalPrice: number;
+    discountedPrice: number;
+    onSale: boolean;
     description?: string;
     imageUrl?: string;
     galleryImages?: string[];
@@ -424,6 +436,17 @@ export function ProductForm({
           .string()
           .min(10, "Description must be at least 10 characters"),
         price: z.coerce.number().min(0, "Price must be 0 or greater"),
+        originalPrice: z
+          .coerce.number()
+          .min(0, "Original price must be 0 or greater")
+          .optional()
+          .default(0),
+        discountedPrice: z
+          .coerce.number()
+          .min(0, "Discounted price must be 0 or greater")
+          .optional()
+          .default(0),
+        onSale: z.boolean().optional().default(false),
         condition: z.enum(productConditions),
         companyId: z
           .union([
@@ -605,6 +628,17 @@ export function ProductForm({
               price: z.coerce
                 .number()
                 .min(0, "Variant price must be 0 or greater"),
+              originalPrice: z
+                .coerce.number()
+                .min(0, "Original price must be 0 or greater")
+                .optional()
+                .default(0),
+              discountedPrice: z
+                .coerce.number()
+                .min(0, "Discounted price must be 0 or greater")
+                .optional()
+                .default(0),
+              onSale: z.boolean().optional().default(false),
               description: z
                 .string()
                 .trim()
@@ -701,6 +735,9 @@ export function ProductForm({
       category: product?.category ?? "",
       description: product?.description ?? "",
       price: product?.price ?? 0,
+      originalPrice: product?.originalPrice ?? product?.price ?? 0,
+      discountedPrice: product?.discountedPrice ?? product?.price ?? 0,
+      onSale: product?.onSale ?? false,
       condition: product?.condition ?? "refurbished",
       companyId: product?.company?.id ?? "",
       companySubMasterId: product?.companySubmaster?.id ?? "",
@@ -727,6 +764,9 @@ export function ProductForm({
           ?.map((variant) => ({
             label: variant.label,
             price: variant.price,
+            originalPrice: variant.originalPrice ?? variant.price,
+            discountedPrice: variant.discountedPrice ?? variant.price,
+            onSale: variant.onSale ?? false,
             description: variant.description ?? "",
             imageUrl: variant.imageUrl ?? "",
             galleryImages: variant.galleryImages ?? [],
@@ -814,6 +854,9 @@ export function ProductForm({
     return {
       label,
       price: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
+      originalPrice: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
+      discountedPrice: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
+      onSale: false,
       description: "",
       imageUrl: "",
       galleryImages: [],
@@ -836,12 +879,14 @@ export function ProductForm({
       masterNameLookup.storage[selectedStorageId ?? ""]?.trim();
     const graphicsName =
       masterNameLookup.graphics[selectedGraphicsId ?? ""]?.trim();
+    const colorName = availableColors[0]?.trim();
 
     const specParts = [
       processorName,
       ramName,
       storageName,
       graphicsName,
+      colorName,
     ].filter((part): part is string => Boolean(part));
 
     const base = companyName || selectedCategory?.trim() || "Product";
@@ -860,6 +905,7 @@ export function ProductForm({
     selectedProcessorId,
     selectedRamId,
     selectedStorageId,
+    availableColors,
   ]);
 
   const lastSuggestedRef = useRef(suggestedName);
@@ -1431,11 +1477,34 @@ export function ProductForm({
       return;
     }
 
+    const basePrice = Number.isFinite(values.price) ? values.price : 0;
+    const baseOriginalPrice = Number.isFinite(values.originalPrice)
+      ? values.originalPrice
+      : basePrice;
+    const baseDiscountedPrice =
+      Number.isFinite(values.discountedPrice) && values.discountedPrice > 0
+        ? values.discountedPrice
+        : baseOriginalPrice;
+    const baseOnSale = Boolean(values.onSale);
+    const baseHasDiscount = baseOnSale && baseDiscountedPrice < baseOriginalPrice;
+    const effectiveBasePrice = baseHasDiscount ? baseDiscountedPrice : basePrice;
+
     const rawVariants = Array.isArray(values.variants) ? values.variants : [];
     const variantPayloads = variantFields.map((field, index) => {
       const variant = rawVariants[index] ?? {};
     const selection = variantSelections[field.id] ?? {};
     const price = Number(variant?.price);
+    const originalPriceValue = Number((variant as any)?.originalPrice);
+    const discountedPriceValue = Number((variant as any)?.discountedPrice);
+    const sale = Boolean((variant as any)?.onSale);
+    const normalizedPrice = Number.isFinite(price) ? price : effectiveBasePrice;
+    const originalPrice = Number.isFinite(originalPriceValue) ? originalPriceValue : baseOriginalPrice;
+    const discountedPrice =
+      Number.isFinite(discountedPriceValue) && discountedPriceValue > 0
+        ? discountedPriceValue
+        : originalPrice;
+    const hasVariantDiscount = sale && discountedPrice < originalPrice;
+    const effectivePrice = hasVariantDiscount ? discountedPrice : normalizedPrice;
     const color =
       typeof selection.color === "string" && selection.color.trim().length > 0
         ? selection.color.trim()
@@ -1463,7 +1532,10 @@ export function ProductForm({
       .slice(0, 12);
     return {
       label: (variant?.label ?? "").trim(),
-      price: Number.isFinite(price) ? price : 0,
+      price: Number.isFinite(effectivePrice) ? effectivePrice : 0,
+      originalPrice: Number.isFinite(originalPrice) ? originalPrice : 0,
+      discountedPrice: Number.isFinite(discountedPrice) ? discountedPrice : 0,
+      onSale: hasVariantDiscount,
       description: typeof variant?.description === "string" ? variant.description.trim() : "",
       imageUrl: typeof variant?.imageUrl === "string" ? variant.imageUrl.trim() : "",
       galleryImages: normalizedVariantGallery,
@@ -1532,7 +1604,10 @@ export function ProductForm({
       name: values.name,
       category: values.category,
       description: values.description,
-      price: values.price,
+      price: effectiveBasePrice,
+      originalPrice: Number.isFinite(baseOriginalPrice) ? baseOriginalPrice : effectiveBasePrice,
+      discountedPrice: Number.isFinite(baseDiscountedPrice) ? baseDiscountedPrice : effectiveBasePrice,
+      onSale: baseHasDiscount,
       condition: values.condition,
       companyId: values.companyId || undefined,
       companySubMasterId: values.companySubMasterId || undefined,
@@ -1587,6 +1662,9 @@ export function ProductForm({
           category: "",
           description: "",
           price: 0,
+          originalPrice: 0,
+          discountedPrice: 0,
+          onSale: false,
           condition: "refurbished",
           companyId: "",
           companySubMasterId: "",
@@ -1933,7 +2011,7 @@ export function ProductForm({
                   </p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
-                  Base price used when no configuration override is selected.
+                  Base price used when no configuration override is selected; sale pricing applies the discounted amount.
                 </p>
               </div>
               <div className="space-y-2">
@@ -1955,6 +2033,52 @@ export function ProductForm({
                   </p>
                 ) : null}
               </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="originalPrice">Original price (₹)</Label>
+                <Input
+                  id="originalPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("originalPrice", { valueAsNumber: true })}
+                />
+                {errors.originalPrice ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.originalPrice.message}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  List price shown as the crossed-out amount.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountedPrice">Discounted price (₹)</Label>
+                <Input
+                  id="discountedPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("discountedPrice", { valueAsNumber: true })}
+                />
+                {errors.discountedPrice ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.discountedPrice.message}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  Used when “On sale” is enabled; also applied to the default variant.
+                </p>
+              </div>
+              <label className="flex items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  {...register("onSale")}
+                />
+                Mark as on sale
+              </label>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="flex flex-1 items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
@@ -2109,6 +2233,61 @@ export function ProductForm({
                             </p>
                           ) : null}
                         </div>
+                        <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Original price (₹)
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="52999"
+                            defaultValue={field.originalPrice ?? field.price ?? product?.price ?? 0}
+                            {...register(`variants.${index}.originalPrice` as const, {
+                              valueAsNumber: true,
+                            })}
+                            aria-invalid={Boolean(
+                              errors.variants?.[index]?.originalPrice
+                            )}
+                          />
+                          {errors.variants?.[index]?.originalPrice?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.originalPrice?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
+                          <Label className="text-xs font-semibold text-slate-600">
+                            Discounted price (₹)
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="48999"
+                            defaultValue={field.discountedPrice ?? field.price ?? product?.price ?? 0}
+                            {...register(`variants.${index}.discountedPrice` as const, {
+                              valueAsNumber: true,
+                            })}
+                            aria-invalid={Boolean(
+                              errors.variants?.[index]?.discountedPrice
+                            )}
+                          />
+                          {errors.variants?.[index]?.discountedPrice?.message ? (
+                            <p className="text-xs text-destructive" role="alert">
+                              {errors.variants[index]?.discountedPrice?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            {...register(`variants.${index}.onSale` as const)}
+                            defaultChecked={field.onSale ?? false}
+                          />
+                          On sale
+                        </label>
                         <Button
                           type="button"
                           variant="ghost"

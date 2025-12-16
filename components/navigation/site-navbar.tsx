@@ -19,14 +19,14 @@ import {
 } from "@/lib/stores/cart-store";
 
 const navLinks = [
-  { href: "/", label: "Home" },
+  // { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  // { href: "/about", label: "About" },
+  // { href: "/contact", label: "Contact" },
 ];
 
 const authLinks = [
-  { href: "/login", label: "Sign in" , primary: true}
+  { href: "/login", label: "Sign in", primary: true },
   // { href: "/register", label: "Create account", primary: true },
 ];
 
@@ -49,7 +49,8 @@ export function SiteNavbar() {
   const itemCount = useCartStore(selectItemCount);
   const cartCount = hasHydratedCart ? Math.min(itemCount, 99) : 0;
 
-  const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/superadmin");
+  const isAdminArea =
+    pathname.startsWith("/admin") || pathname.startsWith("/superadmin");
   const shouldHide = isAdminArea;
 
   useEffect(() => {
@@ -285,10 +286,14 @@ export function SiteNavbar() {
       >
         <div className="divide-y divide-border/60">
           {isSearching ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground">Searching products...</p>
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              Searching products...
+            </p>
           ) : suggestions.length ? (
             suggestions.map((product) => {
-              const taxonomy = [product.company?.name, product.category].filter(Boolean).join(" • ");
+              const taxonomy = [product.company?.name, product.category]
+                .filter(Boolean)
+                .join(" • ");
               return (
                 <Link
                   key={product.id}
@@ -300,8 +305,12 @@ export function SiteNavbar() {
                   }}
                 >
                   <div className="flex-1 space-y-1">
-                    <p className="line-clamp-2 font-semibold text-foreground">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{taxonomy || "View product"}</p>
+                    <p className="line-clamp-2 font-semibold text-foreground">
+                      {product.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {taxonomy || "View product"}
+                    </p>
                   </div>
                   <span className="whitespace-nowrap text-xs font-semibold text-foreground">
                     {formatCurrency(product.price)}
@@ -310,7 +319,9 @@ export function SiteNavbar() {
               );
             })
           ) : (
-            <p className="px-4 py-3 text-sm text-muted-foreground">No matching products yet</p>
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              No matching products yet
+            </p>
           )}
         </div>
       </div>

@@ -142,6 +142,9 @@ export interface ProductVariant {
   id: string;
   label: string;
   price: number;
+  originalPrice: number;
+  discountedPrice: number | null;
+  onSale: boolean;
   sku: string;
   stock: number;
   description: string;
@@ -173,6 +176,9 @@ export interface ProductSummary {
   category: string;
   description: string;
   price: number;
+  originalPrice: number;
+  discountedPrice: number | null;
+  onSale: boolean;
   condition: ProductCondition;
   imageUrl: string | null;
   galleryImages: string[];
@@ -284,9 +290,22 @@ function sortSummaries(
 }
 
 function mapVariantDocument(variant: VariantDocument, lookups: LookupCaches): ProductVariant {
-  const price = Number.isFinite(Number((variant as any)?.price))
-    ? Number((variant as any)?.price)
+  const rawPrice = Number.isFinite(Number((variant as any)?.price))
+    ? Math.max(0, Number((variant as any)?.price))
     : 0;
+  const originalPrice = Number.isFinite(Number((variant as any)?.originalPrice))
+    ? Math.max(0, Number((variant as any)?.originalPrice))
+    : rawPrice;
+  const discountedPriceRaw = Number.isFinite(Number((variant as any)?.discountedPrice))
+    ? Math.max(0, Number((variant as any)?.discountedPrice))
+    : null;
+  const discountedPrice =
+    discountedPriceRaw !== null && discountedPriceRaw > 0 ? discountedPriceRaw : null;
+  const onSale =
+    Boolean((variant as any)?.onSale) &&
+    discountedPrice !== null &&
+    discountedPrice < originalPrice;
+  const price = onSale && discountedPrice !== null ? discountedPrice : rawPrice;
   const stock =
     Number.isFinite(Number((variant as any)?.stock)) && Number((variant as any)?.stock) >= 0
       ? Number((variant as any)?.stock)
@@ -361,6 +380,9 @@ function mapVariantDocument(variant: VariantDocument, lookups: LookupCaches): Pr
     id: variant._id.toString(),
     label: typeof variant.label === "string" ? variant.label.trim() : "",
     price,
+    originalPrice,
+    discountedPrice,
+    onSale,
     sku,
     stock,
     description,
@@ -392,6 +414,9 @@ function buildFallbackVariant(product: ProductDocument): ProductVariant {
     id: `${product._id.toString()}-base`,
     label: "Base configuration",
     price: 0,
+    originalPrice: 0,
+    discountedPrice: null,
+    onSale: false,
     sku: "",
     stock: 0,
     description: "",
@@ -484,6 +509,9 @@ function mapProduct(
     category: product.category,
     description: defaultVariant?.description ?? "",
     price: defaultVariant?.price ?? 0,
+    originalPrice: defaultVariant?.originalPrice ?? defaultVariant?.price ?? 0,
+    discountedPrice: defaultVariant?.discountedPrice ?? null,
+    onSale: Boolean(defaultVariant?.onSale),
     condition: defaultVariant?.condition ?? ("refurbished" as ProductCondition),
     imageUrl: imageUrl || null,
     galleryImages,

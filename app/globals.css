@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "swiper/css";
+@import "swiper/css/pagination";
+@import "swiper/css/effect-fade";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -112,6 +115,25 @@
   --sidebar-ring: var(--ring);
 }
 
+@layer utilities {
+  .text-shadow-soft {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+  .text-shadow-medium {
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.25),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  .text-shadow-crisp {
+    text-shadow:
+      0 0 1px rgba(0, 0, 0, 0.4),
+      0 1px 1px rgba(0, 0, 0, 0.15);
+  }
+
+  .text-primary2{ color: #708ebe}
+}
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -160,4 +182,22 @@
     content: attr(data-placeholder);
     @apply text-slate-400;
   }
+}
+
+.slide {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.slide-1{
+  background-image: url('../public/hero/man-using-laptop-night-top-view-web-banner-with-copy-space.jpg');
+}
+
+.slide-3{
+  background-image: url('../public/hero/laptop-white-background-top-view-copy-space.jpg');
+}
+
+.slide-2{
+  background-image: url('../public/hero/photo-1668877780029-9f75961fcf39.avif');
 }

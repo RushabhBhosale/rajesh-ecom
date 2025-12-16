@@ -20,6 +20,20 @@ const VariantSchema = new Schema(
       required: true,
       min: 0,
     },
+    originalPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    discountedPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    onSale: {
+      type: Boolean,
+      default: false,
+    },
     sku: {
       type: String,
       trim: true,

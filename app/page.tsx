@@ -1,457 +1,482 @@
 import Link from "next/link";
 import {
-  Headphones,
-  Laptop,
-  MonitorSmartphone,
-  PackageCheck,
-  RefreshCcw,
-  ShieldCheck,
-  Sparkles,
-  Truck,
-  CheckCircle,
-  Award,
-  Wrench,
-  Recycle,
+  CreditCard,
   Headset,
-  Users,
+  PackageCheckIcon,
+  RotateCcw,
+  Laptop,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
 import { ProductCard } from "@/components/products/product-card";
 import { Button } from "@/components/ui/button";
 import { listProducts } from "@/lib/products";
+import { HeroSwiper } from "@/components/home/hero-swiper";
 
-export default async function HomePage() {
-  const featured = await listProducts({
-    featuredOnly: true,
-    inStockOnly: true,
-    limit: 8,
-  });
-  const popular = await listProducts({ inStockOnly: true, limit: 12 });
-  const curated = featured.length ? featured : popular;
-  const trending = curated.slice(0, 4);
-  const seenIds = new Set(trending.map((item) => item.id));
-  const moreToExplore = popular
-    .filter((product) => !seenIds.has(product.id))
-    .slice(0, 6);
+type Product = Awaited<ReturnType<typeof listProducts>>[number];
 
-  const categories = [
-    {
-      name: "Enterprise Laptops",
-      description:
-        "Certified ThinkPad, Latitude & EliteBook workstations with enterprise-grade specifications.",
-      href: "/products?category=Laptops",
-      icon: Laptop,
-    },
-    {
-      name: "Mobile Computing",
-      description:
-        "Surface Pro, iPad, and convertible devices optimized for productivity and collaboration.",
-      href: "/products?category=Tablets",
-      icon: MonitorSmartphone,
-    },
-    {
-      name: "Professional Accessories",
-      description:
-        "Docking stations, enterprise monitors, and certified peripherals for seamless workflows.",
-      href: "/products?category=Accessories",
-      icon: PackageCheck,
-    },
-    {
-      name: "Collaboration Technology",
-      description:
-        "Professional headsets, conferencing solutions, and audio equipment for hybrid workforces.",
-      href: "/products?category=Audio",
-      icon: Headphones,
-    },
-  ];
+function SectionTitle({
+  title,
+  actionHref,
+  actionText,
+}: {
+  title: string;
+  actionHref?: string;
+  actionText?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <h2 className="text-primary text-2xl font-bold sm:text-3xl">{title}</h2>
+      {actionHref && actionText ? (
+        <Link
+          href={actionHref}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        >
+          {actionText}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
 
-  const services = [
-    {
-      title: "Enterprise Logistics",
-      description:
-        "Nationwide deployment with asset tracking, white-glove delivery, and real-time visibility across your entire fleet.",
-      icon: Truck,
-    },
-    {
-      title: "Comprehensive Warranty",
-      description:
-        "Industry-leading 6-month hardware coverage with advance replacement and certified technician support.",
-      icon: ShieldCheck,
-    },
-    {
-      title: "Lifecycle Management",
-      description:
-        "Strategic refresh planning with trade-in programs and asset disposition services for sustainable IT operations.",
-      icon: RefreshCcw,
-    },
-  ];
+function TrustRow() {
+  return (
+    <section className="py-10">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
+            <PackageCheckIcon className="h-6 w-6 text-primary2" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-primary text-base font-semibold">
+              Pan India Delivery
+            </div>
+            <p className="mt-1 text-primary2 text-sm leading-6">
+              Fast shipping across India with tracking.
+            </p>
+          </div>
+        </div>
 
-  const testimonials = [
-    {
-      quote:
-        "Rajesh Renewed has equipped over 300 consultants annually with consistently reliable, deployment-ready devices. Their quality assurance and logistics capabilities are exceptional.",
-      author: "Priya N.",
-      role: "IT Director, Horizon Analytics",
-    },
-    {
-      quote:
-        "The rapid replacement program and 48-hour fulfillment ensures our distributed workforce maintains productivity while optimizing our hardware budget by 40%.",
-      author: "Michael R.",
-      role: "Operations Lead, Northwind Logistics",
-    },
-  ];
+        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
+            <CreditCard className="h-6 w-6 text-primary2" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-primary text-base font-semibold">
+              Secure Payments
+            </div>
+            <p className="mt-1 text-primary2 text-sm leading-6">
+              Encrypted checkout with trusted methods.
+            </p>
+          </div>
+        </div>
 
-  const stats = [
-    { label: "Enterprise Clients", value: "500+", icon: Users },
-    { label: "Devices Deployed", value: "25K+", icon: Laptop },
-    { label: "Quality Rating", value: "99.2%", icon: Award },
+        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
+            <RotateCcw className="h-6 w-6 text-primary2" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-primary text-base font-semibold">
+              Easy Returns
+            </div>
+            <p className="mt-1 text-primary2 text-sm leading-6">
+              Simple 7-day returns on eligible items.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
+            <Headset className="h-6 w-6 text-primary2" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-primary text-base font-semibold">
+              Dedicated Support
+            </div>
+            <p className="mt-1 text-primary2 text-sm leading-6">
+              Quick responses from our team.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PromoTiles() {
+  return (
+    <section className="py-12">
+      <div className="grid gap-6 lg:grid-cols-4">
+        <Link
+          href="/products?category=Laptops"
+          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 p-7 shadow-sm"
+        >
+          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+            Premium picks
+          </div>
+          <div className="mt-2 text-white text-2xl font-bold">
+            MacBooks & Premium
+          </div>
+          <div className="mt-2 text-white/80 text-sm">
+            Clean builds, top condition.
+          </div>
+          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+            Shop now <ArrowRight className="h-4 w-4" />
+          </div>
+          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        </Link>
+
+        <Link
+          href="/products?company=Dell"
+          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-primary to-primary2 p-7 shadow-sm"
+        >
+          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+            Workstation deals
+          </div>
+          <div className="mt-2 text-white text-2xl font-bold">
+            Premium Dell Laptops
+          </div>
+          <div className="mt-2 text-white/80 text-sm">
+            Business-ready, powerful, reliable.
+          </div>
+          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+            Shop now <ArrowRight className="h-4 w-4" />
+          </div>
+          <div className="pointer-events-none absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        </Link>
+
+        <Link
+          href="/products?category=Laptops&tag=gaming"
+          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 to-slate-700 p-7 shadow-sm"
+        >
+          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+            Performance
+          </div>
+          <div className="mt-2 text-white text-2xl font-bold">
+            OG Gaming Laptops
+          </div>
+          <div className="mt-2 text-white/80 text-sm">
+            High FPS builds, serious cooling.
+          </div>
+          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+            Shop now <ArrowRight className="h-4 w-4" />
+          </div>
+          <div className="pointer-events-none absolute -right-16 top-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+        </Link>
+
+        <Link
+          href="/products?category=Tablets"
+          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-100 to-white p-7 shadow-sm"
+        >
+          <div className="text-primary2 text-xs font-semibold uppercase tracking-widest">
+            Flexible
+          </div>
+          <div className="mt-2 text-primary text-2xl font-bold">
+            2-in-1 / Detachables
+          </div>
+          <div className="mt-2 text-primary2 text-sm">
+            Touch, pen, and portability.
+          </div>
+          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+            Shop now <ArrowRight className="h-4 w-4" />
+          </div>
+          <div className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full bg-slate-200/60 blur-2xl" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function ProductGrid({ items }: { items: Product[] }) {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {items.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+    </div>
+  );
+}
+
+function BudgetRow({
+  title,
+  items,
+  href,
+}: {
+  title: string;
+  items: Product[];
+  href: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-primary text-lg font-bold">{title}</div>
+        <Link
+          href={href}
+          className="text-sm font-semibold text-primary hover:underline"
+        >
+          View all
+        </Link>
+      </div>
+      <div className="mt-5 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {items.slice(0, 8).map((p) => (
+          <div key={p.id} className="w-[260px] shrink-0">
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FAQ() {
+  const faqs = [
+    {
+      q: "Are refurbished laptops reliable?",
+      a: "Yes. Each device is inspected, tested, cleaned, and sold with clear grading and warranty coverage.",
+    },
+    {
+      q: "What warranty do you provide?",
+      a: "We provide warranty coverage on eligible products. Exact duration depends on the product listing.",
+    },
+    {
+      q: "Can I return a product?",
+      a: "Yes, eligible products can be returned within 7 days as per return policy conditions.",
+    },
+    {
+      q: "Do you ship across India?",
+      a: "Yes, we offer pan-India delivery with tracking.",
+    },
   ];
 
   return (
-    <main className="flex min-h-screen flex-col bg-background">
-      <section
-        id="enterprise-hero"
-        aria-labelledby="enterprise-hero-heading"
-        className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-background to-slate-100/60 py-16 sm:py-20 lg:py-28"
-      >
-        {/* background tint + soft blobs */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-slate-950/[0.04] dark:bg-slate-950/25" />
-          <div className="absolute inset-0 bg-[radial-gradient(50rem_30rem_at_-10%_-10%,theme(colors.slate.200/35),transparent_60%)]" />
-          <div className="absolute -right-32 top-16 size-[28rem] rounded-full bg-slate-200/40 blur-3xl" />
-        </div>
-
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-          {/* Left: headline + copy + CTAs + stats */}
-          <div className="space-y-7 text-center lg:text-left">
-            <div className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-slate-900/5 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-              <Award className="mr-2 h-3.5 w-3.5" />
-              Enterprise Ready
-            </div>
-
-            <h1
-              id="enterprise-hero-heading"
-              className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl"
-            >
-              Refurbished hardware, deployment-ready.
-            </h1>
-
-            <p className="text-lg leading-7 text-slate-600">
-              Certified devices with warranty, imaging, and asset tagging
-              included. Scale faster with predictable refresh cycles and
-              priority support— without paying new-device premiums.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-full px-7 font-semibold bg-slate-900 hover:bg-slate-800"
-              >
-                <Link href="/products">Shop inventory</Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="rounded-full px-7 font-semibold border-slate-300 text-slate-700 hover:bg-slate-50"
-              >
-                <Link href="/register">Get pricing</Link>
-              </Button>
-            </div>
-
-            {/* compact stats */}
-            <dl className="grid grid-cols-3 gap-6 pt-4">
-              {[
-                { value: "10k+", label: "Devices shipped" },
-                { value: "50+", label: "QA checklist" },
-                { value: "1 Year", label: "Warranty" },
-              ].map((s) => (
-                <div key={s.label} className="text-center lg:text-left">
-                  <dd className="text-2xl font-bold text-slate-900">
-                    {s.value}
-                  </dd>
-                  <dt className="text-xs text-slate-600">{s.label}</dt>
-                </div>
-              ))}
-            </dl>
+    <section className="py-16">
+      <SectionTitle title="Frequently Asked Questions" />
+      <div className="mt-6 grid gap-4">
+        {faqs.map((f) => (
+          <div
+            key={f.q}
+            className="rounded-2xl border border-slate-200 bg-white p-6"
+          >
+            <div className="text-primary font-semibold">{f.q}</div>
+            <div className="mt-2 text-primary2 text-sm leading-6">{f.a}</div>
           </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-          {/* Right: fewer cards, more substance */}
-          <div className="grid gap-4">
-            <article className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition hover:shadow-md">
-              <div className="mb-3 inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-semibold text-slate-900">
-                Certified quality & longevity
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Each unit passes a 50-point inspection, component validation,
-                and battery health checks (≥85% capacity). Devices ship clean,
-                tested, and ready to enroll into your MDM.
-              </p>
-            </article>
+export default async function HomePage() {
+  const popular = await listProducts({ inStockOnly: true, limit: 24 });
+  const featured = await listProducts({
+    featuredOnly: true,
+    inStockOnly: true,
+    limit: 12,
+  });
 
-            <article className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-sm transition hover:shadow-md">
-              <div className="mb-3 inline-flex size-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700">
-                <Wrench className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-semibold text-slate-900">
-                Deployment services that scale
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Custom imaging, asset tags, and on-arrival configuration reduce
-                desk time. Pair with volume pricing and priority SLA for smooth
-                rollouts across teams and sites.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
+  const crazyDeals = featured.length
+    ? featured.slice(0, 12)
+    : popular.slice(0, 12);
 
-      <section className="border-y border-slate-200 bg-white py-12">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-8 px-4 text-slate-600 sm:px-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Trusted by Leading Organizations
+  const brandBuckets = popular.reduce<Record<string, Product[]>>(
+    (acc, item) => {
+      const b = item.company?.name?.trim();
+      if (!b) return acc;
+      (acc[b] ??= []).push(item);
+      return acc;
+    },
+    {}
+  );
+  const topBrands = Object.entries(brandBuckets)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 3);
+
+  const under20 = popular.filter(
+    (p) => typeof p.price === "number" && p.price <= 20000
+  );
+  const under30 = popular.filter(
+    (p) => typeof p.price === "number" && p.price > 20000 && p.price <= 30000
+  );
+  const under40 = popular.filter(
+    (p) => typeof p.price === "number" && p.price > 30000 && p.price <= 40000
+  );
+
+  return (
+    <main className="min-h-screen bg-background">
+      <HeroSwiper />
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <TrustRow />
+
+        {/* CRAZY DEALS */}
+        <section className="py-8">
+          <SectionTitle
+            title="Crazy Refurbished Deals"
+            actionHref="/products"
+            actionText="See all products"
+          />
+          <p className="mt-2 text-primary2 text-sm">
+            Handpicked deals with the best value-to-spec ratio.
           </p>
-          <ul className="flex flex-wrap items-center gap-6 text-sm font-medium">
-            {[
-              "TechNova Solutions",
-              "GreenGrid Energy",
-              "Orbit Laboratories",
-              "InsightWorks Consulting",
-              "RapidScale Technologies",
-              "BlueOrbit Systems",
-            ].map((brand) => (
-              <li
-                key={brand}
-                className="rounded-md border border-slate-200 bg-white px-4 py-2 text-slate-700 shadow-sm"
-              >
-                {brand}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          <div className="mt-6">
+            <ProductGrid items={crazyDeals} />
+          </div>
+        </section>
 
-      <section className="bg-background py-20 sm:py-24" id="solutions">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-              Featured Enterprise Solutions
-            </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Discover our most requested enterprise-grade devices, thoroughly
-              tested and certified for business deployment.
-            </p>
-          </div>
-          {trending.length ? (
-            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-              {trending.map((product) => (
-                <div key={product.id} id={product.id} className="scroll-mt-24">
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">
-              <PackageCheck className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-              <p className="text-lg font-medium">
-                Solutions catalog loading...
-              </p>
-              <p className="text-sm mt-2">
-                New enterprise inventory will be displayed here once available.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+        {/* PROMO TILES */}
+        <PromoTiles />
 
-      <section className="bg-slate-50 py-20 sm:py-24" id="categories">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-              Enterprise Product Categories
-            </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Comprehensive technology solutions designed for finance,
-              engineering, creative, and operational teams.
-            </p>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-2">
-            {categories.map(({ name, description, href, icon: Icon }) => (
-              <Link
-                key={name}
-                href={href}
-                className="group rounded-2xl border border-slate-200 bg-white p-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-slate-300"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-slate-800">
-                      {name}
-                    </h3>
-                    <p className="mt-3 text-base text-slate-600 leading-relaxed">
-                      {description}
-                    </p>
-                  </div>
-                  <div className="ml-6 flex-shrink-0">
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-hover:bg-slate-200 transition-colors">
-                      <Icon className="h-6 w-6" />
-                    </span>
-                  </div>
+        {/* BRAND SECTIONS */}
+        {topBrands.length ? (
+          <section className="py-10">
+            {topBrands.map(([brand, items]) => (
+              <div key={brand} className="py-8 border-t border-slate-200">
+                <SectionTitle
+                  title={`${brand} Refurbished Laptops`}
+                  actionHref={`/products?company=${encodeURIComponent(brand)}`}
+                  actionText="View all"
+                />
+                <div className="mt-6">
+                  <ProductGrid items={items.slice(0, 8)} />
                 </div>
-                <div className="mt-6 flex items-center text-sm font-semibold text-slate-700 group-hover:text-slate-900">
-                  <span>Explore Solutions</span>
-                  <span
-                    className="ml-2 transition-transform group-hover:translate-x-1"
-                    aria-hidden
-                  >
-                    →
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-background py-20 sm:py-24" id="inventory">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
-          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-                Additional Enterprise Inventory
-              </h2>
-              <p className="text-lg text-slate-600">
-                Carefully selected devices to complete your technology
-                ecosystem.
-              </p>
-            </div>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="rounded-md border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              <Link href="/products">View Complete Catalog</Link>
-            </Button>
-          </div>
-          {moreToExplore.length ? (
-            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-              {moreToExplore.map((product) => (
-                <div key={product.id} className="scroll-mt-24">
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center text-slate-500">
-              <Laptop className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-              <p className="text-lg font-medium">
-                Expanding inventory selection...
-              </p>
-              <p className="text-sm mt-2">
-                Additional enterprise products will be available here shortly.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="bg-slate-50 py-20 sm:py-24" id="services">
-        <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-              Enterprise Services & Support
-            </h2>
-            <p className="mt-4 text-lg text-slate-600">
-              Comprehensive service offerings designed to support your
-              organization's technology infrastructure and growth.
-            </p>
-          </div>
-          <div className="grid gap-8 sm:grid-cols-3">
-            {services.map(({ title, description, icon: Icon }) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-                  <Icon className="h-8 w-8 text-slate-700" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">
-                  {title}
-                </h3>
-                <p className="text-base text-slate-600 leading-relaxed">
-                  {description}
-                </p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
+          </section>
+        ) : null}
 
-      <section className="bg-background py-20 sm:py-24">
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-              Trusted by Enterprise IT Leaders
-            </h2>
-            <p className="text-lg text-slate-600 leading-relaxed">
-              Our commitment to transparent device grading, predictable
-              enterprise pricing, and dedicated support has established us as
-              the preferred partner for thousands of successful technology
-              deployments across diverse industries.
-            </p>
-            <div className="grid gap-6 sm:grid-cols-1">
-              {testimonials.map((testimonial) => (
-                <figure
-                  key={testimonial.author}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-8 shadow-sm"
-                >
-                  <blockquote className="text-base text-slate-700 leading-relaxed mb-6">
-                    "{testimonial.quote}"
-                  </blockquote>
-                  <figcaption className="text-sm font-semibold text-slate-900">
-                    {testimonial.author}
-                    <span className="font-normal text-slate-600">
-                      {" "}
-                      · {testimonial.role}
-                    </span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+        {/* BUDGET SECTION */}
+        <section className="py-12 border-t border-slate-200">
+          <SectionTitle
+            title="Budget Refurbished Laptops"
+            actionHref="/products"
+            actionText="Browse all"
+          />
+          <div className="mt-6 flex flex-col gap-5">
+            <BudgetRow
+              title="Under ₹20,000"
+              items={under20}
+              href="/products?maxPrice=20000"
+            />
+            <BudgetRow
+              title="₹20,000 – ₹30,000"
+              items={under30}
+              href="/products?minPrice=20000&maxPrice=30000"
+            />
+            <BudgetRow
+              title="₹30,000 – ₹40,000"
+              items={under40}
+              href="/products?minPrice=30000&maxPrice=40000"
+            />
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">
-              Ready to Scale Your Technology?
-            </h3>
-            <p className="text-base text-slate-600 mb-8 leading-relaxed">
-              Partner with our enterprise specialists for custom deployment
-              solutions, asset management, and strategic lifecycle planning
-              tailored to your organization's unique requirements.
-            </p>
+        </section>
+
+        {/* WHY REFURBISHED / CONTENT BLOCK */}
+        <section className="py-14 border-t border-slate-200">
+          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
             <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-primary2">
+                <Sparkles className="h-4 w-4" />
+                Why refurbished makes sense
+              </div>
+
+              <h3 className="text-primary text-2xl font-bold sm:text-3xl">
+                Save more without compromising on performance.
+              </h3>
+              <p className="text-primary2 text-sm leading-7">
+                Refurbished laptops are thoroughly checked, cleaned, and tested.
+                You get premium specs at a better price — ideal for students,
+                professionals, and businesses building fleets.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  asChild
+                  className="bg-primary text-white hover:opacity-90"
+                >
+                  <Link href="/products">Shop laptops</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-slate-300">
+                  <Link href="/register">Get bulk pricing</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-primary text-lg font-bold">Key Benefits</div>
+              <ul className="mt-4 space-y-3 text-primary2 text-sm">
+                <li className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
+                  Better specs per rupee compared to new devices.
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
+                  Tested devices with warranty support.
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
+                  Great for office, student, and WFH use-cases.
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
+                  Eco-friendly choice by extending device life.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* TESTIMONIALS */}
+        <section className="py-16 border-t border-slate-200">
+          <SectionTitle title="Hear It From Customers" />
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+              <div className="text-primary2 text-sm leading-7">
+                “Great experience. The laptop condition was excellent and
+                delivery was quick.”
+              </div>
+              <div className="mt-4 text-primary font-semibold">
+                Verified Customer
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+              <div className="text-primary2 text-sm leading-7">
+                “Solid performance and clean device. Support team responded
+                fast.”
+              </div>
+              <div className="mt-4 text-primary font-semibold">
+                Verified Customer
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <FAQ />
+
+        {/* Bottom CTA */}
+        <section className="pb-20">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-10 text-center">
+            <div className="text-primary text-2xl font-bold">
+              Ready to upgrade?
+            </div>
+            <p className="mt-2 text-primary2 text-sm">
+              Explore today’s best refurbished deals and find the right laptop.
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Button
                 asChild
-                size="lg"
-                className="w-full rounded-md bg-slate-900 hover:bg-slate-800 text-base font-semibold"
+                className="bg-primary text-white hover:opacity-90"
               >
-                <Link href="/register">Schedule Enterprise Consultation</Link>
+                <Link href="/products">Shop now</Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="w-full rounded-md border-slate-300 text-slate-700 hover:bg-slate-50 text-base font-semibold"
-              >
-                <Link href="/login">Access Customer Portal</Link>
+              <Button asChild variant="outline" className="border-slate-300">
+                <Link href="/login">My account</Link>
               </Button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

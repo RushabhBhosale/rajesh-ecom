@@ -8,6 +8,9 @@ import { VariantModel, type VariantDocument } from "@/models/variant";
 export interface VariantInput {
   label: string;
   price: number;
+  originalPrice?: number;
+  discountedPrice?: number;
+  onSale?: boolean;
   description: string;
   condition: ProductCondition;
   sku?: string;
@@ -56,14 +59,28 @@ export class VariantValidationError extends Error {
 }
 
 function normalizeVariantInput(variant: VariantInput): VariantInput {
-  const price = Number.isFinite(variant.price) ? variant.price : 0;
+  const price = Number.isFinite(variant.price) ? Math.max(0, variant.price) : 0;
+  const originalPrice = Number.isFinite(variant.originalPrice)
+    ? Math.max(0, Number(variant.originalPrice))
+    : price;
+  const discountedPrice = Number.isFinite(variant.discountedPrice)
+    ? Math.max(0, Number(variant.discountedPrice))
+    : undefined;
+  const onSale =
+    Boolean(variant.onSale) &&
+    typeof discountedPrice === "number" &&
+    discountedPrice < originalPrice;
+  const effectivePrice = onSale && typeof discountedPrice === "number" ? discountedPrice : price;
   const stockValue = Number.isFinite(Number(variant.stock)) ? Math.max(0, Number(variant.stock)) : 1;
   const normalizedCondition = productConditions.includes(variant.condition)
     ? variant.condition
     : "refurbished";
   return {
     label: variant.label.trim(),
-    price,
+    price: effectivePrice,
+    originalPrice,
+    discountedPrice,
+    onSale,
     description: variant.description?.trim() ?? "",
     condition: normalizedCondition,
     sku: variant.sku?.trim() || "",
@@ -154,6 +171,13 @@ function mapVariantDocument(doc: VariantDocument): VariantDocument {
   return {
     ...doc,
     sku: doc.sku ?? "",
+    originalPrice: Number.isFinite(Number((doc as any).originalPrice))
+      ? Math.max(0, Number((doc as any).originalPrice))
+      : doc.price ?? 0,
+    discountedPrice: Number.isFinite(Number((doc as any).discountedPrice))
+      ? Math.max(0, Number((doc as any).discountedPrice))
+      : doc.price ?? 0,
+    onSale: Boolean((doc as any).onSale),
     imageUrl: doc.imageUrl ?? "",
     galleryImages: Array.isArray(doc.galleryImages) ? doc.galleryImages : [],
     richDescription: doc.richDescription ?? "",
@@ -206,6 +230,13 @@ export async function replaceProductVariants(
       productId: productObjectId,
       label: variant.label,
       price: variant.price,
+      originalPrice: Number.isFinite(Number(variant.originalPrice))
+        ? Number(variant.originalPrice)
+        : variant.price,
+      discountedPrice: Number.isFinite(Number(variant.discountedPrice))
+        ? Number(variant.discountedPrice)
+        : variant.price,
+      onSale: Boolean(variant.onSale),
       description: variant.description,
       condition: variant.condition,
       sku: variant.sku ?? "",

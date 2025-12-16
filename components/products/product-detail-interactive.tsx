@@ -32,10 +32,16 @@ function VariantMedia({ product }: ProductDetailInteractiveProps) {
       return activeVariant.galleryImages[0];
     }
     return product.imageUrl ?? product.galleryImages[0] ?? null;
-  }, [activeVariant?.imageUrl, activeVariant?.galleryImages, product.imageUrl, product.galleryImages]);
+  }, [
+    activeVariant?.imageUrl,
+    activeVariant?.galleryImages,
+    product.imageUrl,
+    product.galleryImages,
+  ]);
 
-  const galleryImages =
-    activeVariant?.galleryImages?.length ? activeVariant.galleryImages : product.galleryImages;
+  const galleryImages = activeVariant?.galleryImages?.length
+    ? activeVariant.galleryImages
+    : product.galleryImages;
 
   const conditionLabel =
     (activeVariant?.condition ?? product.condition) === "refurbished"
@@ -45,7 +51,9 @@ function VariantMedia({ product }: ProductDetailInteractiveProps) {
   const colorLabel =
     activeVariant?.color ||
     (activeVariant?.colors?.length ? activeVariant.colors[0] : null) ||
-    (product.colors && product.colors.length ? product.colors.join(", ") : null);
+    (product.colors && product.colors.length
+      ? product.colors.join(", ")
+      : null);
 
   const displayName = buildDisplayName(product.name, activeVariant?.label);
 
@@ -81,7 +89,9 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
   const effectiveVariant = activeVariant ?? defaultVariant ?? null;
   const displayName = buildDisplayName(product.name, effectiveVariant?.label);
   const availableStock = effectiveVariant?.stock ?? product.stock ?? 0;
-  const variantInStock = Boolean((effectiveVariant?.inStock ?? product.inStock) && availableStock > 0);
+  const variantInStock = Boolean(
+    (effectiveVariant?.inStock ?? product.inStock) && availableStock > 0
+  );
 
   const description =
     effectiveVariant?.description && effectiveVariant.description.trim().length
@@ -89,21 +99,54 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
       : product.description;
 
   const currentCondition = effectiveVariant?.condition ?? product.condition;
-  const currentPrice = effectiveVariant?.price ?? product.price ?? 0;
+  const basePrice = effectiveVariant?.price ?? product.price ?? 0;
+  const currentOriginalPrice =
+    typeof effectiveVariant?.originalPrice === "number" && effectiveVariant.originalPrice > 0
+      ? effectiveVariant.originalPrice
+      : typeof product.originalPrice === "number" && product.originalPrice > 0
+      ? product.originalPrice
+      : basePrice;
+  const currentDiscountedPrice =
+    typeof effectiveVariant?.discountedPrice === "number" && effectiveVariant.discountedPrice > 0
+      ? effectiveVariant.discountedPrice
+      : typeof product.discountedPrice === "number" && product.discountedPrice > 0
+      ? product.discountedPrice
+      : null;
+  const hasCurrentDiscount =
+    currentDiscountedPrice !== null && currentDiscountedPrice < currentOriginalPrice;
+  const currentPrice = hasCurrentDiscount ? currentDiscountedPrice : basePrice;
+  const currentOnSale = hasCurrentDiscount;
   const currentSku = effectiveVariant?.sku ?? product.sku;
   const currentStock = effectiveVariant?.stock ?? product.stock ?? 0;
   const currentColor =
     effectiveVariant?.color ||
     (effectiveVariant?.colors?.length ? effectiveVariant.colors[0] : null) ||
-    (product.colors && product.colors.length ? product.colors.join(", ") : null);
+    (product.colors && product.colors.length
+      ? product.colors.join(", ")
+      : null);
 
   const specSheet = [
     { label: "Brand", value: product.company?.name },
-    { label: "Processor", value: effectiveVariant?.processor?.name ?? product.processor?.name },
-    { label: "Memory", value: effectiveVariant?.ram?.name ?? product.ram?.name },
-    { label: "Storage", value: effectiveVariant?.storage?.name ?? product.storage?.name },
-    { label: "Graphics", value: effectiveVariant?.graphics?.name ?? product.graphics?.name },
-    { label: "Condition", value: currentCondition === "new" ? "New" : "Refurbished" },
+    {
+      label: "Processor",
+      value: effectiveVariant?.processor?.name ?? product.processor?.name,
+    },
+    {
+      label: "Memory",
+      value: effectiveVariant?.ram?.name ?? product.ram?.name,
+    },
+    {
+      label: "Storage",
+      value: effectiveVariant?.storage?.name ?? product.storage?.name,
+    },
+    {
+      label: "Graphics",
+      value: effectiveVariant?.graphics?.name ?? product.graphics?.name,
+    },
+    {
+      label: "Condition",
+      value: currentCondition === "new" ? "New" : "Refurbished",
+    },
   ].filter((item) => Boolean(item.value));
 
   const hasVariants = product.variants.length > 1;
@@ -128,10 +171,19 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
 
         <div className="space-y-1">
           <p className="text-sm text-slate-500">Price</p>
-          <p className="text-3xl font-semibold text-slate-900">
-            ₹{currentPrice.toLocaleString("en-IN")}
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-semibold text-slate-900">
+              ₹{currentPrice.toLocaleString("en-IN")}
+            </p>
+            {hasCurrentDiscount ? (
+              <span className="text-base text-slate-500 line-through">
+                ₹{currentOriginalPrice.toLocaleString("en-IN")}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">
+            Taxes and shipping calculated at checkout
           </p>
-          <p className="text-xs text-slate-500">Taxes and shipping calculated at checkout</p>
         </div>
 
         <p className="text-base leading-7 text-slate-600">{description}</p>
@@ -160,7 +212,9 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
                   key={item.label}
                   className="flex items-start justify-between gap-3 text-sm text-slate-600"
                 >
-                  <span className="font-semibold text-slate-700">{item.label}</span>
+                  <span className="font-semibold text-slate-700">
+                    {item.label}
+                  </span>
                   <span className="text-right">{item.value ?? ""}</span>
                 </div>
               ))}
@@ -170,8 +224,8 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
 
         {hasVariants ? (
           <p className="text-xs text-slate-500">
-            Multiple configurations available. Select your preferred processor, memory, and storage
-            in the purchase panel.
+            Multiple configurations available. Select your preferred processor,
+            memory, and storage in the purchase panel.
           </p>
         ) : null}
       </div>
@@ -182,12 +236,17 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
           name: displayName,
           description,
           price: currentPrice,
+          originalPrice: currentOriginalPrice,
+          discountedPrice: currentDiscountedPrice,
+          onSale: currentOnSale,
           condition: currentCondition,
           inStock: variantInStock,
           stock: availableStock,
           imageUrl: effectiveVariant?.imageUrl ?? product.imageUrl,
-          galleryImages: effectiveVariant?.galleryImages ?? product.galleryImages,
-          richDescription: effectiveVariant?.richDescription ?? product.richDescription,
+          galleryImages:
+            effectiveVariant?.galleryImages ?? product.galleryImages,
+          richDescription:
+            effectiveVariant?.richDescription ?? product.richDescription,
           highlights: effectiveVariant?.highlights ?? product.highlights,
           sku: currentSku ?? product.sku,
         }}
@@ -196,10 +255,12 @@ function VariantInfo({ product }: ProductDetailInteractiveProps) {
   );
 }
 
-export function ProductDetailInteractive({ product }: ProductDetailInteractiveProps) {
+export function ProductDetailInteractive({
+  product,
+}: ProductDetailInteractiveProps) {
   return (
     <ProductVariantProvider product={product}>
-    <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+      <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <VariantMedia product={product} />
         <VariantInfo product={product} />
       </div>

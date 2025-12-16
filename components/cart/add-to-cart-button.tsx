@@ -69,7 +69,21 @@ export function AddToCartButton({
           onMissingVariant?.();
           return;
         }
-        const normalizedDisplayVariant = displayVariant?.trim() ?? normalizedVariant;
+        const normalizedDisplayVariant =
+          displayVariant?.trim() ?? normalizedVariant;
+        const truncate = (value: string, max = 60) =>
+          value.length > max ? `${value.slice(0, max - 3)}...` : value;
+        const variantSnippet =
+          normalizedDisplayVariant &&
+          normalizedDisplayVariant.toLowerCase() !== product.name.toLowerCase()
+            ? normalizedDisplayVariant
+            : "";
+        const detailParts = [variantSnippet, normalizedColor || ""]
+          .map((part) => part.trim())
+          .filter(Boolean);
+        const detailText = detailParts.length
+          ? ` — ${truncate(detailParts.join(" • "), 50)}`
+          : "";
 
         startTransition(() => {
           addItem(
@@ -87,11 +101,7 @@ export function AddToCartButton({
             1
           );
           toast.success("Added to cart", {
-            description: `${product.name}${
-              normalizedDisplayVariant || normalizedColor
-                ? ` (${[normalizedDisplayVariant, normalizedColor].filter(Boolean).join(" · ")})`
-                : ""
-            } was added to your cart`,
+            description: `${product.name} was added to your cart`,
           });
         });
       }}

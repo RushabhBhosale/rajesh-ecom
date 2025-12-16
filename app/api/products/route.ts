@@ -144,9 +144,28 @@ function buildVariantInputs(
         })
       : baseSku);
 
+  const baseOriginalPrice = Number.isFinite(payload.originalPrice)
+    ? Math.max(0, Number(payload.originalPrice))
+    : payload.price;
+  const baseDiscountedPriceRaw = Number.isFinite(payload.discountedPrice)
+    ? Math.max(0, Number(payload.discountedPrice))
+    : undefined;
+  const baseDiscountedPrice =
+    typeof baseDiscountedPriceRaw === "number" && baseDiscountedPriceRaw > 0
+      ? baseDiscountedPriceRaw
+      : baseOriginalPrice;
+  const baseOnSale =
+    Boolean(payload.onSale) &&
+    typeof baseDiscountedPrice === "number" &&
+    baseDiscountedPrice < baseOriginalPrice;
+  const basePrice = baseOnSale && typeof baseDiscountedPrice === "number" ? baseDiscountedPrice : payload.price;
+
   const baseVariant: VariantInput = {
     label: baseVariantLabel,
-    price: payload.price,
+    price: basePrice,
+    originalPrice: baseOriginalPrice,
+    discountedPrice: baseDiscountedPrice,
+    onSale: baseOnSale,
     description: payload.description,
     condition: payload.condition,
     sku: baseVariantSku,
@@ -181,10 +200,33 @@ function buildVariantInputs(
     const variantGallery = sanitizeGallery(variant.galleryImages);
     const variantLabel = variant.label?.trim() ?? "";
     const variantColor = variant.color?.trim() || undefined;
+    const variantOriginalPrice = Number.isFinite(variant.originalPrice)
+      ? Math.max(0, Number(variant.originalPrice))
+      : baseOriginalPrice;
+    const variantDiscountedPriceRaw = Number.isFinite(variant.discountedPrice)
+      ? Math.max(0, Number(variant.discountedPrice))
+      : undefined;
+    const variantDiscountedPrice =
+      typeof variantDiscountedPriceRaw === "number" && variantDiscountedPriceRaw > 0
+        ? variantDiscountedPriceRaw
+        : variantOriginalPrice;
+    const variantOnSale =
+      Boolean(variant.onSale) &&
+      typeof variantDiscountedPrice === "number" &&
+      variantDiscountedPrice < variantOriginalPrice;
+    const variantPrice =
+      variantOnSale && typeof variantDiscountedPrice === "number"
+        ? variantDiscountedPrice
+        : Number.isFinite(variant.price)
+        ? variant.price
+        : basePrice;
 
     return {
       label: variantLabel,
-      price: variant.price,
+      price: variantPrice,
+      originalPrice: variantOriginalPrice,
+      discountedPrice: variantDiscountedPrice,
+      onSale: variantOnSale,
       description: variant.description?.trim() || payload.description,
       condition: variant.condition ?? payload.condition,
       sku:

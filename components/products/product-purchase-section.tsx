@@ -23,14 +23,25 @@ interface ProductPurchaseSectionProps {
   product: ProductSummary & { inStock: boolean };
 }
 
-export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps) {
+export function ProductPurchaseSection({
+  product,
+}: ProductPurchaseSectionProps) {
   const hasHydrated = useCartHydration();
   const variantContext = useOptionalProductVariant();
-  const [selectedColorState, setSelectedColorState] = useState<string | null>(null);
-  const [selectedVariantState, setSelectedVariantState] = useState<string | null>(null);
+  const [selectedColorState, setSelectedColorState] = useState<string | null>(
+    null
+  );
+  const [selectedVariantState, setSelectedVariantState] = useState<
+    string | null
+  >(null);
   const colorOptionsKey = product.colors.join("|");
   const variantOptionsKey = product.variants
-    .map((variant) => `${variant.label}:${variant.price}:${variant.isDefault ? "1" : "0"}`)
+    .map(
+      (variant) =>
+        `${variant.label}:${variant.price}:${variant.originalPrice}:${
+          variant.discountedPrice ?? ""
+        }:${variant.onSale ? "1" : "0"}:${variant.isDefault ? "1" : "0"}`
+    )
     .join("|");
   const configurationOptions =
     variantContext?.configurationOptions ??
@@ -81,8 +92,7 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
     setSelectedVariantState(defaultVariant.label);
   }, [product.id, variantOptionsKey, defaultVariant?.label, variantContext]);
 
-  const selectedColor =
-    variantContext?.selectedColor ?? selectedColorState;
+  const selectedColor = variantContext?.selectedColor ?? selectedColorState;
   const setSelectedColor =
     variantContext?.setSelectedColor ?? setSelectedColorState;
   const selectedVariant =
@@ -93,17 +103,38 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
   const normalizedColor = selectedColor?.trim() ?? "";
   const colorForCart = normalizedColor || null;
   const variantForCart =
-    (selectedVariant ?? "").trim() ||
-    defaultVariant?.label ||
-    null;
+    (selectedVariant ?? "").trim() || defaultVariant?.label || null;
   const activeVariant =
     variantContext?.activeVariant ??
     (variantForCart
       ? configurationOptions.find(
-          (variant) => variant.label.toLowerCase() === variantForCart.toLowerCase()
+          (variant) =>
+            variant.label.toLowerCase() === variantForCart.toLowerCase()
         )
       : defaultVariant);
-  const displayPrice = variantContext?.displayPrice ?? (activeVariant ? activeVariant.price : product.price);
+  const basePrice = activeVariant?.price ?? product.price;
+  const activeOriginalPrice =
+    activeVariant?.originalPrice && activeVariant.originalPrice > 0
+      ? activeVariant.originalPrice
+      : product.originalPrice && product.originalPrice > 0
+      ? product.originalPrice
+      : basePrice;
+  const activeDiscountedPrice =
+    typeof activeVariant?.discountedPrice === "number" &&
+    activeVariant.discountedPrice > 0
+      ? activeVariant.discountedPrice
+      : typeof product.discountedPrice === "number" &&
+        product.discountedPrice > 0
+      ? product.discountedPrice
+      : null;
+  const hasDiscount =
+    activeDiscountedPrice !== null &&
+    activeDiscountedPrice < activeOriginalPrice;
+  const displayPrice =
+    variantContext?.displayPrice ??
+    (hasDiscount && activeDiscountedPrice !== null
+      ? activeDiscountedPrice
+      : basePrice);
   const quantitySelector = useMemo(
     () => selectQuantityByVariant(product.id, variantForCart, colorForCart),
     [product.id, variantForCart, colorForCart]
@@ -148,8 +179,18 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
             {requiresVariantSelection ? "Selected price" : "Price"}
           </p>
-          <p className="text-4xl font-bold text-slate-900">
-            {formatCurrency(displayPrice)}
+          <div className="flex items-baseline gap-2">
+            <p className="text-4xl font-bold text-slate-900">
+              {formatCurrency(displayPrice)}
+            </p>
+            {hasDiscount ? (
+              <span className="text-sm font-semibold text-slate-500 line-through">
+                {formatCurrency(activeOriginalPrice)}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-xs text-slate-500">
+            Taxes and shipping calculated at checkout
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -160,9 +201,25 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
               </p>
               <div className="flex w-full gap-2">
                 {configurationOptions.map((variant, idx) => {
-                  console.log("hjdd", variant)
+                  const variantOriginalPrice =
+                    typeof variant.originalPrice === "number" &&
+                    variant.originalPrice > 0
+                      ? variant.originalPrice
+                      : variant.price;
+                  const variantDiscountedPrice =
+                    typeof variant.discountedPrice === "number" &&
+                    variant.discountedPrice > 0
+                      ? variant.discountedPrice
+                      : null;
+                  const variantHasDiscount =
+                    variantDiscountedPrice !== null &&
+                    variantDiscountedPrice < variantOriginalPrice;
+                  const variantDisplayPrice = variantHasDiscount
+                    ? variantDiscountedPrice!
+                    : variant.price;
                   const isSelected =
-                    variant.label.toLowerCase() === (variantForCart ?? "").toLowerCase();
+                    variant.label.toLowerCase() ===
+                    (variantForCart ?? "").toLowerCase();
                   return (
                     <button
                       key={idx}
@@ -176,12 +233,28 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                       )}
                       aria-pressed={isSelected}
                     >
-                      <span>{variant.processor?.name} {variant?.processorSubmaster?.name}</span>
+                      <span>
+                        {variant.processor?.name}{" "}
+                        {variant?.processorSubmaster?.name}
+                      </span>
                       <span>{variant.graphics?.name}</span>
                       <span>{variant.ram?.name}</span>
                       <span>{variant.storage?.name}</span>
                       <span className="text-xs text-slate-500">
-                        {formatCurrency(variant.price)}
+                        {variantHasDiscount &&
+                        variantOriginalPrice &&
+                        variantOriginalPrice > variantDisplayPrice ? (
+                          <>
+                            <span className="font-semibold text-slate-900">
+                              {formatCurrency(variantDisplayPrice)}
+                            </span>
+                            <span className="ml-1 text-[11px] line-through">
+                              {formatCurrency(variantOriginalPrice)}
+                            </span>
+                          </>
+                        ) : (
+                          formatCurrency(variantDisplayPrice)
+                        )}
                       </span>
                     </button>
                   );
@@ -195,30 +268,32 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                 Colour
               </p>
               <div className="flex flex-wrap gap-2">
-                {(variantContext?.availableColors ?? product.colors).map((color) => {
-                  const isSelected = color === selectedColor;
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSelectedColor(color)}
-                      className={cn(
-                        "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
-                        isSelected
-                          ? "border-slate-900 bg-white text-slate-900 shadow-sm"
-                          : "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      <span
-                        className="size-5 rounded-full border border-slate-200"
-                        style={{ backgroundColor: color }}
-                        aria-hidden="true"
-                      />
-                      <span>{color}</span>
-                    </button>
-                  );
-                })}
+                {(variantContext?.availableColors ?? product.colors).map(
+                  (color) => {
+                    const isSelected = color === selectedColor;
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setSelectedColor(color)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400",
+                          isSelected
+                            ? "border-slate-900 bg-white text-slate-900 shadow-sm"
+                            : "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        <span
+                          className="size-5 rounded-full border border-slate-200"
+                          style={{ backgroundColor: color }}
+                          aria-hidden="true"
+                        />
+                        <span>{color}</span>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </div>
           ) : null}
@@ -246,7 +321,12 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                     removeItem(product.id, variantForCart, colorForCart);
                     return;
                   }
-                  updateQuantity(product.id, variantForCart, colorForCart, parsed);
+                  updateQuantity(
+                    product.id,
+                    variantForCart,
+                    colorForCart,
+                    parsed
+                  );
                 }}
                 onBlur={(event) => {
                   const parsed = Number.parseInt(event.target.value, 10);
@@ -254,7 +334,12 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                     removeItem(product.id, variantForCart, colorForCart);
                     return;
                   }
-                  updateQuantity(product.id, variantForCart, colorForCart, parsed);
+                  updateQuantity(
+                    product.id,
+                    variantForCart,
+                    colorForCart,
+                    parsed
+                  );
                 }}
                 inputMode="numeric"
                 className="h-9 w-16 rounded-full border-0 bg-transparent text-center text-sm font-semibold"
@@ -284,7 +369,9 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
                 inStock: product.inStock,
               }}
               selectedColor={colorForCart}
-              requireColor={(variantContext?.availableColors ?? product.colors).length > 0}
+              requireColor={
+                (variantContext?.availableColors ?? product.colors).length > 0
+              }
               selectedVariant={variantForCart}
               requireVariant={requiresVariantSelection}
               displayVariant={variantForCart || defaultVariant?.label || ""}
@@ -300,7 +387,12 @@ export function ProductPurchaseSection({ product }: ProductPurchaseSectionProps)
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             In cart: {quantity}
           </div>
-          <Button asChild size="sm" variant="ghost" className="rounded-full text-emerald-700 hover:text-emerald-800">
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="rounded-full text-emerald-700 hover:text-emerald-800"
+          >
             <Link href="/cart">View cart</Link>
           </Button>
         </div>

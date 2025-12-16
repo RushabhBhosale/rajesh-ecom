@@ -37,12 +37,29 @@ export function ProductVariantProvider({
   product,
   children,
 }: ProductVariantProviderProps) {
+  const getEffectivePrice = (variant: ProductVariant | null | undefined) => {
+    if (!variant) return product.price;
+    const base = Number.isFinite(variant.price) ? variant.price : product.price;
+    const original =
+      typeof variant.originalPrice === "number" && variant.originalPrice > 0
+        ? variant.originalPrice
+        : base;
+    const discounted =
+      typeof variant.discountedPrice === "number" && variant.discountedPrice > 0
+        ? variant.discountedPrice
+        : null;
+    const hasDiscount = discounted !== null && discounted < original;
+    return hasDiscount ? discounted : base;
+  };
+
   const variantOptionsKey = useMemo(
     () =>
       product.variants
         .map(
           (variant) =>
-            `${variant.label}:${variant.price}:${variant.isDefault ? "1" : "0"}`
+            `${variant.label}:${variant.price}:${variant.originalPrice}:${
+              variant.discountedPrice ?? ""
+            }:${variant.onSale ? "1" : "0"}:${variant.isDefault ? "1" : "0"}`
         )
         .join("|"),
     [product.variants]
@@ -115,7 +132,7 @@ export function ProductVariantProvider({
     }
   }, [activeVariant?.color]);
 
-  const displayPrice = activeVariant?.price ?? product.price;
+  const displayPrice = getEffectivePrice(activeVariant);
   const availableColors = useMemo(() => {
     const seen = new Set<string>();
     const variant = activeVariant ?? defaultVariant;
