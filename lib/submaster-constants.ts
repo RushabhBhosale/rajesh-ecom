@@ -6,6 +6,7 @@ export interface SubMasterOptionSummary {
   masterName: string;
   masterType: MasterOptionType;
   name: string;
+  parentId?: string | null;
   description?: string;
   sortOrder?: number;
 }

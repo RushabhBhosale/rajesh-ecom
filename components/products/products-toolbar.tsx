@@ -7,6 +7,7 @@ import { ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MasterOptionSummary } from "@/lib/master-constants";
+import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { cn } from "@/lib/utils";
 
 export interface ProductFilters {
@@ -22,6 +23,7 @@ export interface ProductFilters {
   graphics?: string;
   os?: string;
   sort?: string;
+  companySubMaster?: string;
 }
 
 interface MasterOptionsByType {
@@ -37,6 +39,7 @@ type FilterKey =
   | "category"
   | "condition"
   | "company"
+  | "companySubMaster"
   | "processor"
   | "ram"
   | "storage"
@@ -50,6 +53,7 @@ interface ProductsToolbarProps {
   categories: string[];
   conditions: string[];
   masterOptions: MasterOptionsByType;
+  companySubMasters: SubMasterOptionSummary[];
   filters: ProductFilters;
   resultCount: number;
 }
@@ -58,6 +62,7 @@ export function ProductsToolbar({
   categories,
   conditions,
   masterOptions,
+  companySubMasters,
   filters,
   resultCount,
 }: ProductsToolbarProps) {
@@ -92,12 +97,86 @@ export function ProductsToolbar({
     [pathname, router, searchParams, startTransition]
   );
 
+  const subMasterById = useMemo(() => {
+    const map = new Map<string, SubMasterOptionSummary>();
+    companySubMasters.forEach((option) => {
+      map.set(option.id, option);
+    });
+    return map;
+  }, [companySubMasters]);
+
+  const subMasterLabel = useCallback(
+    (id: string): string => {
+      const cache = new Map<string, string>();
+      const buildPath = (optionId: string): string => {
+        if (cache.has(optionId)) return cache.get(optionId)!;
+        const option = subMasterById.get(optionId);
+        if (!option) return "";
+        const parts = [option.name];
+        const seen = new Set<string>();
+        let parentId = option.parentId;
+        while (parentId) {
+          if (seen.has(parentId)) break;
+          seen.add(parentId);
+          const parent = subMasterById.get(parentId);
+          if (!parent) break;
+          parts.unshift(parent.name);
+          parentId = parent.parentId;
+        }
+        if (option.masterName) {
+          parts.unshift(option.masterName);
+        }
+        const label = parts.filter(Boolean).join(" / ");
+        cache.set(optionId, label);
+        return label;
+      };
+      return buildPath(id);
+    },
+    [subMasterById]
+  );
+
+  const companySubOptions = useMemo(() => {
+    const map = new Map<string, Array<{ value: string; label: string }>>();
+    companySubMasters.forEach((option) => {
+      const list = map.get(option.masterId) ?? [];
+      list.push({
+        value: option.id,
+        label: subMasterLabel(option.id) || option.name,
+      });
+      map.set(option.masterId, list);
+    });
+
+    // sort each list
+    map.forEach((list, key) => {
+      list.sort((a, b) => a.label.localeCompare(b.label));
+      map.set(key, list);
+    });
+
+    return map;
+  }, [companySubMasters, subMasterLabel]);
+
   const toggleFilter = useCallback(
     (key: FilterKey, value: string) => {
+      if (key === "company") {
+        const isActive = filters[key] === value;
+        const nextCompany = isActive ? null : value;
+        const updates: Record<string, string | null> = { company: nextCompany };
+        if (!nextCompany) {
+          updates.companySubMaster = null;
+        } else if (filters.companySubMaster) {
+          const subMaster = subMasterById.get(filters.companySubMaster);
+          const belongsToCompany = subMaster?.masterId === nextCompany;
+          if (!belongsToCompany) {
+            updates.companySubMaster = null;
+          }
+        }
+        updateParams(updates);
+        return;
+      }
       const isActive = filters[key] === value;
       updateParams({ [key]: isActive ? null : value });
     },
-    [filters, updateParams]
+    [filters, subMasterById, updateParams]
   );
 
   const clearFilters = useCallback(() => {
@@ -113,6 +192,7 @@ export function ProductsToolbar({
       storage: null,
       graphics: null,
       os: null,
+      companySubMaster: null,
       sort: null,
     });
   }, [updateParams]);
@@ -226,6 +306,13 @@ export function ProductsToolbar({
       const label = findName(masterOptions.companies, filters.company);
       items.push({ key: "company", label: `Company: ${label ?? filters.company}` });
     }
+    if (filters.companySubMaster) {
+      const label = subMasterLabel(filters.companySubMaster);
+      items.push({
+        key: "companySubMaster",
+        label: `Submaster: ${label || filters.companySubMaster}`,
+      });
+    }
     if (filters.processor) {
       const label = findName(masterOptions.processors, filters.processor);
       items.push({ key: "processor", label: `Processor: ${label ?? filters.processor}` });
@@ -253,6 +340,7 @@ export function ProductsToolbar({
   }, [
     filters.category,
     filters.condition,
+    filters.companySubMaster,
     filters.graphics,
     filters.maxPrice,
     filters.minPrice,
@@ -263,6 +351,7 @@ export function ProductsToolbar({
     filters.search,
     filters.sort,
     filters.storage,
+    subMasterLabel,
     masterOptions.companies,
     masterOptions.graphics,
     masterOptions.operatingSystems,
@@ -314,26 +403,60 @@ export function ProductsToolbar({
               <div className="space-y-1.5">
                 {group.options.map((option) => {
                   const isChecked = filters[group.key] === option.value;
+                  const subOptions =
+                    group.key === "company"
+                      ? companySubOptions.get(option.value) ?? []
+                      : [];
+                  const showSubSelect =
+                    group.key === "company" && isChecked && subOptions.length > 0;
                   return (
+                  <div key={option.value} className="space-y-1">
                     <label
-                      key={option.value}
                       className={cn(
                         "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition",
                         isChecked
-                          ? "border-primary/50 bg-primary/5 text-slate-900 shadow-sm"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
-                        checked={isChecked}
-                        onChange={() => toggleFilter(group.key, option.value)}
-                        disabled={isPending}
-                        aria-label={option.label}
-                      />
-                      <span className="truncate">{option.label}</span>
-                    </label>
+                            ? "border-primary/50 bg-primary/5 text-slate-900 shadow-sm"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
+                          checked={isChecked}
+                          onChange={() => toggleFilter(group.key, option.value)}
+                          disabled={isPending}
+                          aria-label={option.label}
+                        />
+                        <span className="truncate">{option.label}</span>
+                      </label>
+                      {showSubSelect ? (
+                        <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
+                          {subOptions.map((subOption) => {
+                            const isSubChecked = filters.companySubMaster === subOption.value;
+                            return (
+                              <label
+                                key={subOption.value}
+                                className="flex cursor-pointer items-center gap-2 pl-3 text-[11px] text-slate-700"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
+                                  checked={isSubChecked}
+                                  onChange={() =>
+                                    updateParams({
+                                      companySubMaster: isSubChecked ? null : subOption.value,
+                                    })
+                                  }
+                                  disabled={isPending}
+                                  aria-label={subOption.label}
+                                />
+                                <span className="truncate">{subOption.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })}
               </div>

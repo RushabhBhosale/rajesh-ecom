@@ -187,7 +187,15 @@ export function MasterForm({ mode, initialType = "company", initialData }: Maste
               const message = await response
                 .json()
                 .catch(() => (ok ? { message: "Created" } : { error: "Unable to create" }));
-              return { ok, message: message?.error ?? message?.message ?? "Unknown" };
+              const normalized =
+                typeof message?.error === "string"
+                  ? message.error
+                  : Array.isArray(message?.error?.name)
+                  ? message.error.name[0]
+                  : typeof message?.message === "string"
+                  ? message.message
+                  : "Unknown";
+              return { ok, message: normalized };
             }),
           );
 

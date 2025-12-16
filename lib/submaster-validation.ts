@@ -7,6 +7,10 @@ export const subMasterPayloadSchema = z.object({
     .string()
     .trim()
     .regex(objectIdRegex, "Select a valid master"),
+  parentId: z
+    .union([z.string().trim().regex(objectIdRegex, "Select a valid parent"), z.literal(""), z.null()])
+    .optional()
+    .transform((val) => (val ? val : undefined)),
   name: z
     .string()
     .trim()

@@ -21,6 +21,12 @@ const SubMasterOptionSchema = new Schema(
       required: true,
       trim: true,
     },
+    parentId: {
+      type: Schema.Types.ObjectId,
+      ref: "SubMasterOption",
+      default: null,
+      index: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -36,7 +42,7 @@ const SubMasterOptionSchema = new Schema(
   }
 );
 
-SubMasterOptionSchema.index({ masterId: 1, name: 1 }, { unique: true });
+SubMasterOptionSchema.index({ masterId: 1, parentId: 1, name: 1 }, { unique: true });
 
 export type SubMasterOptionDocument = InferSchemaType<typeof SubMasterOptionSchema> & {
   _id: mongoose.Types.ObjectId;

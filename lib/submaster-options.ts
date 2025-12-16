@@ -21,6 +21,7 @@ function mapSubMasterOption(
     masterName: master.name,
     masterType: master.type as MasterOptionType,
     name: subMaster.name,
+    parentId: subMaster.parentId ? subMaster.parentId.toString() : null,
     description: subMaster.description ?? "",
     sortOrder: typeof subMaster.sortOrder === "number" ? subMaster.sortOrder : 0,
   };
@@ -62,15 +63,65 @@ export async function listSubMasterOptions(options?: {
     .lean<MasterOptionDocument[]>();
 
   const masterLookup = new Map(masters.map((record) => [record._id.toString(), record]));
-  if (masterLookup.size === 0) {
+
+  const subMasters: SubMasterOptionDocument[] = [];
+  const seenSubMasterIds = new Set<string>();
+  let queueIds = new Set<string>();
+
+  const baseMasterIds = masterLookup.size ? Array.from(masterLookup.keys()) : masterIds;
+
+  if (!baseMasterIds.length) {
     return [];
   }
 
-  const subMasters = await SubMasterOptionModel.find({
-    masterId: { $in: Array.from(masterLookup.keys()) },
+  const initial = await SubMasterOptionModel.find({
+    masterId: { $in: baseMasterIds },
   })
     .sort({ sortOrder: 1, name: 1 })
     .lean<SubMasterOptionDocument[]>();
+
+  initial.forEach((record) => {
+    const id = record._id.toString();
+    if (!seenSubMasterIds.has(id)) {
+      seenSubMasterIds.add(id);
+      subMasters.push(record);
+      if (record.parentId) {
+        queueIds.add(record.parentId.toString());
+      }
+    }
+  });
+
+  // Fetch ancestors so paths can be built even if parents weren't in the base query.
+  while (queueIds.size) {
+    const toFetch = Array.from(queueIds).filter((id) => !seenSubMasterIds.has(id));
+    queueIds = new Set<string>();
+    if (!toFetch.length) break;
+    const ancestors = await SubMasterOptionModel.find({ _id: { $in: toFetch } })
+      .sort({ sortOrder: 1, name: 1 })
+      .lean<SubMasterOptionDocument[]>();
+    ancestors.forEach((record) => {
+      const id = record._id.toString();
+      if (seenSubMasterIds.has(id)) return;
+      seenSubMasterIds.add(id);
+      subMasters.push(record);
+      if (record.parentId) {
+        queueIds.add(record.parentId.toString());
+      }
+    });
+  }
+
+  // Ensure masters include any referenced by fetched ancestors.
+  const neededMasterIds = Array.from(
+    new Set(subMasters.map((record) => record.masterId.toString()))
+  ).filter((id) => !masterLookup.has(id));
+  if (neededMasterIds.length) {
+    const extraMasters = await MasterOptionModel.find({ _id: { $in: neededMasterIds } })
+      .select({ name: 1, type: 1 })
+      .lean<MasterOptionDocument[]>();
+    extraMasters.forEach((master) => {
+      masterLookup.set(master._id.toString(), master);
+    });
+  }
 
   return subMasters
     .map((subMaster) => {

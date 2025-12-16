@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { masterTypes } from "@/lib/master-constants";
 import { listMasterOptions } from "@/lib/master-options";
+import { listSubMasterOptions } from "@/lib/submaster-options";
 
 export const metadata: Metadata = {
   title: "Add submaster | Rajesh Control",
 };
 
 export default async function NewSubMasterPage() {
-  const masters = await listMasterOptions(masterTypes);
+  const [masters, submasters] = await Promise.all([
+    listMasterOptions(masterTypes),
+    listSubMasterOptions(),
+  ]);
 
   return (
     <section className="space-y-4">
@@ -40,7 +44,7 @@ export default async function NewSubMasterPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <SubMasterForm mode="create" masters={masters} />
+          <SubMasterForm mode="create" masters={masters} submasters={submasters} />
         </CardContent>
       </Card>
     </section>

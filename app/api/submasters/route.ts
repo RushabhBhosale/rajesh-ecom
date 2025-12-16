@@ -66,26 +66,45 @@ export async function POST(request: Request) {
     const payload = subMasterPayloadSchema.parse(await request.json());
 
     await connectDB();
-    const parent = await MasterOptionModel.findById(payload.masterId).lean();
-    if (!parent) {
+    let parentSub: Awaited<ReturnType<typeof SubMasterOptionModel.findById>> | null = null;
+    if (payload.parentId) {
+      parentSub = await SubMasterOptionModel.findById(payload.parentId).lean();
+      if (!parentSub) {
+        return NextResponse.json({ error: "Parent submaster not found" }, { status: 404 });
+      }
+    }
+
+    const masterIdToUse = parentSub ? parentSub.masterId.toString() : payload.masterId;
+
+    if (parentSub && parentSub.masterId.toString() !== payload.masterId) {
+      return NextResponse.json(
+        { error: "Parent submaster must belong to the selected master" },
+        { status: 400 }
+      );
+    }
+
+    const master = await MasterOptionModel.findById(masterIdToUse).lean();
+    if (!master) {
       return NextResponse.json({ error: "Parent master not found" }, { status: 404 });
     }
 
     const existing = await SubMasterOptionModel.findOne({
-      masterId: payload.masterId,
+      masterId: masterIdToUse,
+      parentId: payload.parentId ?? null,
       name: payload.name,
     }).lean();
 
     if (existing) {
       return NextResponse.json(
-        { error: `${parent.name} already has this submaster` },
+        { error: `${master.name} already has this submaster` },
         { status: 409 }
       );
     }
 
     await SubMasterOptionModel.create({
-      masterId: payload.masterId,
-      masterType: parent.type,
+      masterId: masterIdToUse,
+      parentId: payload.parentId ?? null,
+      masterType: master.type,
       name: payload.name,
       description: payload.description ?? "",
       sortOrder: payload.sortOrder ?? 0,

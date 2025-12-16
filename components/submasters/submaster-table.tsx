@@ -66,6 +66,34 @@ export function SubMasterTable({ data }: SubMasterTableProps) {
       return a.name.localeCompare(b.name);
     });
   }, [data, masterFilter, typeFilter]);
+  const parentLookup = useMemo(() => {
+    const map = new Map<string, SubMasterOptionSummary>();
+    data.forEach((item) => {
+      map.set(item.id, item);
+    });
+    const pathCache = new Map<string, string>();
+    const buildPath = (node: SubMasterOptionSummary): string => {
+      if (pathCache.has(node.id)) {
+        return pathCache.get(node.id)!;
+      }
+      const seen = new Set<string>();
+      const parts = [node.name];
+      let current: SubMasterOptionSummary | undefined = node;
+      while (current?.parentId) {
+        if (seen.has(current.parentId)) break;
+        seen.add(current.parentId);
+        const parent = map.get(current.parentId);
+        if (!parent) break;
+        parts.unshift(parent.name);
+        current = parent;
+      }
+      parts.unshift(node.masterName);
+      const path = parts.filter(Boolean).join(" / ");
+      pathCache.set(node.id, path);
+      return path;
+    };
+    return { map, buildPath };
+  }, [data]);
 
   function handleDelete(option: SubMasterOptionSummary) {
     const confirmed = window.confirm(
@@ -139,8 +167,7 @@ export function SubMasterTable({ data }: SubMasterTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Type</TableHead>
-              <TableHead>Master</TableHead>
-              <TableHead>Submaster</TableHead>
+              <TableHead>Path</TableHead>
               <TableHead>Description</TableHead>
               <TableHead className="text-right">Sort</TableHead>
               <TableHead className="w-[150px] text-right">Actions</TableHead>
@@ -159,8 +186,7 @@ export function SubMasterTable({ data }: SubMasterTableProps) {
                   <TableCell className="font-medium">
                     {masterTypeLabels[option.masterType]}
                   </TableCell>
-                  <TableCell>{option.masterName}</TableCell>
-                  <TableCell>{option.name}</TableCell>
+                  <TableCell>{parentLookup.buildPath(option)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {option.description || "—"}
                   </TableCell>

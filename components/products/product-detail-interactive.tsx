@@ -18,44 +18,45 @@ interface ProductDetailInteractiveProps {
 
 function buildDisplayName(baseName: string, variantLabel?: string | null) {
   const label = variantLabel?.trim();
-  return label && label.length > 0 ? label : baseName;
+  return label || baseName;
 }
 
 function VariantMedia({ product }: ProductDetailInteractiveProps) {
-  const { activeVariant } = useProductVariant();
+  const { activeVariant, defaultVariant } = useProductVariant();
+  const variantForDisplay = activeVariant ?? defaultVariant ?? null;
 
   const primaryImage = useMemo(() => {
-    if (activeVariant?.imageUrl) {
-      return activeVariant.imageUrl;
+    if (variantForDisplay?.imageUrl) {
+      return variantForDisplay.imageUrl;
     }
-    if (activeVariant?.galleryImages?.length) {
-      return activeVariant.galleryImages[0];
+    if (variantForDisplay?.galleryImages?.length) {
+      return variantForDisplay.galleryImages[0];
     }
     return product.imageUrl ?? product.galleryImages[0] ?? null;
   }, [
-    activeVariant?.imageUrl,
-    activeVariant?.galleryImages,
+    variantForDisplay?.imageUrl,
+    variantForDisplay?.galleryImages,
     product.imageUrl,
     product.galleryImages,
   ]);
 
-  const galleryImages = activeVariant?.galleryImages?.length
-    ? activeVariant.galleryImages
+  const galleryImages = variantForDisplay?.galleryImages?.length
+    ? variantForDisplay.galleryImages
     : product.galleryImages;
 
   const conditionLabel =
-    (activeVariant?.condition ?? product.condition) === "refurbished"
+    (variantForDisplay?.condition ?? product.condition) === "refurbished"
       ? "Enterprise Certified"
       : "Brand New";
 
   const colorLabel =
-    activeVariant?.color ||
-    (activeVariant?.colors?.length ? activeVariant.colors[0] : null) ||
+    variantForDisplay?.color ||
+    (variantForDisplay?.colors?.length ? variantForDisplay.colors[0] : null) ||
     (product.colors && product.colors.length
       ? product.colors.join(", ")
       : null);
 
-  const displayName = buildDisplayName(product.name, activeVariant?.label);
+  const displayName = buildDisplayName(product.name, variantForDisplay?.label);
 
   return (
     <div className="space-y-4 lg:sticky lg:top-24">

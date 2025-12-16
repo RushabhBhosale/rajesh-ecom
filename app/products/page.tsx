@@ -31,6 +31,7 @@ export default async function ProductsPage({
     storage?: string;
     graphics?: string;
     os?: string;
+    companySubMaster?: string;
   };
 }) {
   const facets = await getProductFacets();
@@ -88,9 +89,20 @@ export default async function ProductsPage({
     typeof searchParams.company === "string"
       ? searchParams.company
       : undefined;
+  const rawCompanySub =
+    typeof searchParams.companySubMaster === "string"
+      ? searchParams.companySubMaster
+      : undefined;
+  const subMasterOption = rawCompanySub
+    ? facets.companySubMasters.find((item) => item.id === rawCompanySub)
+    : undefined;
   const companyId = facets.companies.some((item) => item.id === rawCompany)
     ? rawCompany
-    : undefined;
+    : subMasterOption?.masterId;
+  const companySubMasterId =
+    subMasterOption && subMasterOption.masterId === companyId
+      ? subMasterOption.id
+      : undefined;
 
   const rawProcessor =
     typeof searchParams.processor === "string"
@@ -140,6 +152,7 @@ export default async function ProductsPage({
     minPrice,
     maxPrice,
     companyId,
+    companySubMasterId,
     processorId,
     ramId,
     storageId,
@@ -155,6 +168,7 @@ export default async function ProductsPage({
     minPrice: typeof minPrice === "number" ? String(minPrice) : undefined,
     maxPrice: typeof maxPrice === "number" ? String(maxPrice) : undefined,
     company: companyId ?? undefined,
+    companySubMaster: companySubMasterId ?? undefined,
     processor: processorId ?? undefined,
     ram: ramId ?? undefined,
     storage: storageId ?? undefined,
@@ -214,6 +228,7 @@ export default async function ProductsPage({
                 graphics: facets.graphics,
                 operatingSystems: facets.operatingSystems,
               }}
+              companySubMasters={facets.companySubMasters}
               filters={filterSnapshot}
               resultCount={products.length}
             />

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -349,9 +356,7 @@ type ProductFormValues = {
   category: string;
   description: string;
   price: number;
-  originalPrice: number;
   discountedPrice: number;
-  onSale: boolean;
   condition: (typeof productConditions)[number];
   companyId?: string;
   companySubMasterId?: string;
@@ -372,9 +377,7 @@ type ProductFormValues = {
   variants: {
     label: string;
     price: number;
-    originalPrice: number;
     discountedPrice: number;
-    onSale: boolean;
     description?: string;
     imageUrl?: string;
     galleryImages?: string[];
@@ -436,17 +439,11 @@ export function ProductForm({
           .string()
           .min(10, "Description must be at least 10 characters"),
         price: z.coerce.number().min(0, "Price must be 0 or greater"),
-        originalPrice: z
-          .coerce.number()
-          .min(0, "Original price must be 0 or greater")
-          .optional()
-          .default(0),
         discountedPrice: z
           .coerce.number()
           .min(0, "Discounted price must be 0 or greater")
           .optional()
           .default(0),
-        onSale: z.boolean().optional().default(false),
         condition: z.enum(productConditions),
         companyId: z
           .union([
@@ -628,17 +625,11 @@ export function ProductForm({
               price: z.coerce
                 .number()
                 .min(0, "Variant price must be 0 or greater"),
-              originalPrice: z
-                .coerce.number()
-                .min(0, "Original price must be 0 or greater")
-                .optional()
-                .default(0),
               discountedPrice: z
                 .coerce.number()
                 .min(0, "Discounted price must be 0 or greater")
                 .optional()
                 .default(0),
-              onSale: z.boolean().optional().default(false),
               description: z
                 .string()
                 .trim()
@@ -735,9 +726,7 @@ export function ProductForm({
       category: product?.category ?? "",
       description: product?.description ?? "",
       price: product?.price ?? 0,
-      originalPrice: product?.originalPrice ?? product?.price ?? 0,
       discountedPrice: product?.discountedPrice ?? product?.price ?? 0,
-      onSale: product?.onSale ?? false,
       condition: product?.condition ?? "refurbished",
       companyId: product?.company?.id ?? "",
       companySubMasterId: product?.companySubmaster?.id ?? "",
@@ -764,9 +753,7 @@ export function ProductForm({
           ?.map((variant) => ({
             label: variant.label,
             price: variant.price,
-            originalPrice: variant.originalPrice ?? variant.price,
             discountedPrice: variant.discountedPrice ?? variant.price,
-            onSale: variant.onSale ?? false,
             description: variant.description ?? "",
             imageUrl: variant.imageUrl ?? "",
             galleryImages: variant.galleryImages ?? [],
@@ -802,6 +789,12 @@ export function ProductForm({
   const nameValue = useWatch({ control, name: "name" });
   const availableColors = useWatch({ control, name: "colors" }) ?? [];
   const selectedCondition = useWatch({ control, name: "condition" });
+  const companySubMasterId = useWatch({ control, name: "companySubMasterId" });
+  const processorSubMasterId = useWatch({ control, name: "processorSubMasterId" });
+  const ramSubMasterId = useWatch({ control, name: "ramSubMasterId" });
+  const storageSubMasterId = useWatch({ control, name: "storageSubMasterId" });
+  const graphicsSubMasterId = useWatch({ control, name: "graphicsSubMasterId" });
+  const osSubMasterId = useWatch({ control, name: "osSubMasterId" });
 
   const {
     fields: galleryFields,
@@ -842,8 +835,64 @@ export function ProductForm({
     return lookup;
   }, [masters]);
 
+  const subMasterLabelLookup = useMemo(() => {
+    const optionMap = new Map<string, SubMasterOptionSummary>();
+    (Object.values(subMasters) as Record<string, SubMasterOptionSummary[]>[]).forEach(
+      (byMaster) => {
+        Object.values(byMaster).forEach((list) => {
+          list.forEach((option) => optionMap.set(option.id, option));
+        });
+      }
+    );
+    const cache = new Map<string, string>();
+    const buildPath = (id: string): string => {
+      if (cache.has(id)) return cache.get(id)!;
+      const option = optionMap.get(id);
+      if (!option) return "";
+      const parts = [option.name];
+      const seen = new Set<string>();
+      let currentParent = option.parentId ?? null;
+      while (currentParent) {
+        if (seen.has(currentParent)) break;
+        seen.add(currentParent);
+        const parent = optionMap.get(currentParent);
+        if (!parent) break;
+        parts.unshift(parent.name);
+        currentParent = parent.parentId ?? null;
+      }
+      parts.unshift(option.masterName);
+      const label = parts.filter(Boolean).join(" / ");
+      cache.set(id, label);
+      return label;
+    };
+    return buildPath;
+  }, [subMasters]);
+
+  const getSubMasterOptions = (
+    type: MasterOptionType,
+    masterId?: string | null
+  ): SubMasterOptionSummary[] => {
+    if (!masterId) return [];
+    return subMasters[type]?.[masterId] ?? [];
+  };
+
+  const getChildSubMasters = (
+    type: MasterOptionType,
+    masterId: string | undefined | null,
+    parentId: string | undefined | null
+  ): SubMasterOptionSummary[] => {
+    if (!masterId || !parentId) return [];
+    return getSubMasterOptions(type, masterId).filter((option) => option.parentId === parentId);
+  };
+
   function buildVariantDefaults(): ProductFormValues["variants"][number] {
     const basePrice = Number(getValues("price"));
+    const baseDiscount = Number(getValues("discountedPrice"));
+    const normalizedBasePrice = Number.isFinite(basePrice) ? basePrice : product?.price ?? 0;
+    const normalizedBaseDiscounted =
+      Number.isFinite(baseDiscount) && baseDiscount > 0
+        ? baseDiscount
+        : normalizedBasePrice;
     const selection: VariantSelection = {
       processorId: selectedProcessorId || undefined,
       ramId: selectedRamId || undefined,
@@ -853,10 +902,8 @@ export function ProductForm({
     const label = composeVariantLabel(selection);
     return {
       label,
-      price: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
-      originalPrice: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
-      discountedPrice: Number.isFinite(basePrice) ? basePrice : product?.price ?? 0,
-      onSale: false,
+      price: normalizedBasePrice,
+      discountedPrice: normalizedBaseDiscounted,
       description: "",
       imageUrl: "",
       galleryImages: [],
@@ -869,44 +916,101 @@ export function ProductForm({
     };
   }
 
-  const suggestedName = useMemo(() => {
-    const companyName =
-      masterNameLookup.company[selectedCompanyId ?? ""]?.trim();
-    const processorName =
-      masterNameLookup.processor[selectedProcessorId ?? ""]?.trim();
-    const ramName = masterNameLookup.ram[selectedRamId ?? ""]?.trim();
-    const storageName =
-      masterNameLookup.storage[selectedStorageId ?? ""]?.trim();
-    const graphicsName =
-      masterNameLookup.graphics[selectedGraphicsId ?? ""]?.trim();
-    const colorName = availableColors[0]?.trim();
+  const resolveSubMasterLeaf = useCallback(
+    (id?: string | null) => {
+      if (!id) return null;
+      const label = subMasterLabelLookup(id);
+      const leaf = label?.split("/").pop()?.trim();
+      return (leaf || label || "").trim() || null;
+    },
+    [subMasterLabelLookup]
+  );
 
-    const specParts = [
-      processorName,
-      ramName,
-      storageName,
-      graphicsName,
-      colorName,
-    ].filter((part): part is string => Boolean(part));
+  const buildFullName = useCallback(
+    (
+      options: {
+        selection?: VariantSelection;
+        condition?: ProductFormValues["condition"];
+        colorOverride?: string | null;
+      } = {}
+    ) => {
+      const selection = options.selection ?? {};
+      const conditionValue =
+        options.condition ?? selectedCondition ?? product?.condition ?? "refurbished";
 
-    const base = companyName || selectedCategory?.trim() || "Product";
+      const companyName =
+        masterNameLookup.company[selectedCompanyId ?? ""]?.trim() || "";
+      const subCompanyName = resolveSubMasterLeaf(companySubMasterId);
 
-    let name = base;
-    if (specParts.length > 0) {
-      name = `${name} ${specParts.join(" • ")}`;
-    }
+      const processorName =
+        masterNameLookup.processor[
+          selection.processorId ?? selectedProcessorId ?? ""
+        ]?.trim() || "";
+      const processorSubName = resolveSubMasterLeaf(processorSubMasterId);
+      const ramName =
+        masterNameLookup.ram[selection.ramId ?? selectedRamId ?? ""]?.trim() ||
+        "";
+      const ramSubName = resolveSubMasterLeaf(ramSubMasterId);
+      const storageName =
+        masterNameLookup.storage[
+          selection.storageId ?? selectedStorageId ?? ""
+        ]?.trim() || "";
+      const storageSubName = resolveSubMasterLeaf(storageSubMasterId);
+      const osName =
+        masterNameLookup.os[selectedOsId ?? ""]?.trim() ||
+        "";
+      const osSubName = resolveSubMasterLeaf(osSubMasterId);
+      const colorName =
+        options.colorOverride ??
+        selection.color?.trim() ??
+        availableColors[0]?.trim() ??
+        "";
+      const conditionLabel = conditionValue
+        ? conditionLabels[conditionValue] ?? conditionValue
+        : "";
 
-    return name.trim();
-  }, [
-    masterNameLookup,
-    selectedCategory,
-    selectedCompanyId,
-    selectedGraphicsId,
-    selectedProcessorId,
-    selectedRamId,
-    selectedStorageId,
-    availableColors,
-  ]);
+      const specParts = [
+        processorSubName || processorName,
+        ramSubName || ramName,
+        storageSubName || storageName,
+        osSubName || osName,
+        colorName,
+        conditionLabel,
+      ].filter((part): part is string => Boolean(part));
+
+      const prefix =
+        [companyName, subCompanyName].filter(Boolean).join(" ").trim() ||
+        selectedCategory?.trim() ||
+        "Product";
+
+      const nameParts = [prefix, ...specParts].filter(Boolean);
+
+      return nameParts.join(" | ").trim();
+    },
+    [
+      availableColors,
+      companySubMasterId,
+      masterNameLookup,
+      product?.condition,
+      ramSubMasterId,
+      resolveSubMasterLeaf,
+      selectedCategory,
+      selectedCompanyId,
+      selectedCondition,
+      selectedOsId,
+      selectedProcessorId,
+      selectedRamId,
+      selectedStorageId,
+      storageSubMasterId,
+      osSubMasterId,
+      processorSubMasterId,
+    ]
+  );
+
+  const suggestedName = useMemo(
+    () => buildFullName(),
+    [buildFullName]
+  );
 
   const lastSuggestedRef = useRef(suggestedName);
 
@@ -957,39 +1061,18 @@ export function ProductForm({
     );
   }
 
-  function composeVariantLabel(selection: VariantSelection) {
-    const parts: string[] = [];
-    if (
-      selection.processorId &&
-      masterNameLookup.processor[selection.processorId]
-    ) {
-      parts.push(masterNameLookup.processor[selection.processorId]);
-    }
-    if (selection.ramId && masterNameLookup.ram[selection.ramId]) {
-      parts.push(masterNameLookup.ram[selection.ramId]);
-    }
-    if (selection.storageId && masterNameLookup.storage[selection.storageId]) {
-      parts.push(masterNameLookup.storage[selection.storageId]);
-    }
-    if (
-      selection.graphicsId &&
-      masterNameLookup.graphics[selection.graphicsId]
-    ) {
-      parts.push(masterNameLookup.graphics[selection.graphicsId]);
-    }
-    if (selection.color) {
-      parts.push(selection.color);
-    }
-    const note = selection.note?.trim();
-    if (note) {
-      parts.push(note);
-    }
-    return parts.join(" • ");
-  }
+  const composeVariantLabel = useCallback(
+    (
+      selection: VariantSelection,
+      condition?: ProductFormValues["condition"],
+      colorOverride?: string | null
+    ) => buildFullName({ selection, condition, colorOverride }),
+    [buildFullName]
+  );
 
   function deriveVariantSelectionFromLabel(label: string): VariantSelection {
     const parts = label
-      .split("•")
+      .split(/[|•]/)
       .map((item) => item.trim())
       .filter(Boolean);
 
@@ -1107,7 +1190,10 @@ export function ProductForm({
       };
       const nextSelection = { ...current, ...patch };
       const next = { ...prev, [fieldId]: nextSelection };
-      const label = composeVariantLabel(nextSelection);
+      const variantCondition = getValues(
+        `variants.${index}.condition` as const
+      ) as ProductFormValues["condition"];
+      const label = composeVariantLabel(nextSelection, variantCondition);
       setValue(`variants.${index}.label`, label, {
         shouldValidate: true,
         shouldDirty: true,
@@ -1116,6 +1202,31 @@ export function ProductForm({
       return next;
     });
   }
+
+  useEffect(() => {
+    variantFields.forEach((field, index) => {
+      const selection = variantSelections[field.id] ?? {};
+      const variantCondition = getValues(
+        `variants.${index}.condition` as const
+      ) as ProductFormValues["condition"];
+      const label = composeVariantLabel(selection, variantCondition);
+      const currentLabel = getValues(
+        `variants.${index}.label` as const
+      ) as string;
+      if (label !== currentLabel) {
+        setValue(`variants.${index}.label`, label, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+      }
+    });
+  }, [
+    composeVariantLabel,
+    getValues,
+    setValue,
+    variantFields,
+    variantSelections,
+  ]);
 
   function removeVariantRow(index: number, fieldId: string) {
     removeVariant(index);
@@ -1478,82 +1589,82 @@ export function ProductForm({
     }
 
     const basePrice = Number.isFinite(values.price) ? values.price : 0;
-    const baseOriginalPrice = Number.isFinite(values.originalPrice)
-      ? values.originalPrice
-      : basePrice;
     const baseDiscountedPrice =
       Number.isFinite(values.discountedPrice) && values.discountedPrice > 0
         ? values.discountedPrice
-        : baseOriginalPrice;
-    const baseOnSale = Boolean(values.onSale);
-    const baseHasDiscount = baseOnSale && baseDiscountedPrice < baseOriginalPrice;
+        : basePrice;
+    const baseHasDiscount = baseDiscountedPrice < basePrice;
     const effectiveBasePrice = baseHasDiscount ? baseDiscountedPrice : basePrice;
 
     const rawVariants = Array.isArray(values.variants) ? values.variants : [];
     const variantPayloads = variantFields.map((field, index) => {
       const variant = rawVariants[index] ?? {};
-    const selection = variantSelections[field.id] ?? {};
-    const price = Number(variant?.price);
-    const originalPriceValue = Number((variant as any)?.originalPrice);
-    const discountedPriceValue = Number((variant as any)?.discountedPrice);
-    const sale = Boolean((variant as any)?.onSale);
-    const normalizedPrice = Number.isFinite(price) ? price : effectiveBasePrice;
-    const originalPrice = Number.isFinite(originalPriceValue) ? originalPriceValue : baseOriginalPrice;
-    const discountedPrice =
-      Number.isFinite(discountedPriceValue) && discountedPriceValue > 0
-        ? discountedPriceValue
-        : originalPrice;
-    const hasVariantDiscount = sale && discountedPrice < originalPrice;
-    const effectivePrice = hasVariantDiscount ? discountedPrice : normalizedPrice;
-    const color =
-      typeof selection.color === "string" && selection.color.trim().length > 0
-        ? selection.color.trim()
-        : typeof variant?.color === "string" &&
-          variant.color.trim().length > 0
-        ? variant.color.trim()
-        : undefined;
-    const condition =
-      productConditions.includes((variant as any)?.condition)
-        ? ((variant as any)?.condition as ProductFormValues["variants"][number]["condition"])
-        : values.condition;
-    const variantGallery =
-      Array.isArray((variant as any)?.galleryImages) && (variant as any).galleryImages.length > 0
-        ? (variant as any).galleryImages
-        : [];
-    const normalizedVariantGallery = variantGallery
-      .map((entry: any) =>
-        typeof entry === "string"
-          ? entry.trim()
-          : typeof entry?.url === "string"
-          ? entry.url.trim()
-          : ""
-      )
-      .filter((url: string, idx: number, arr: string[]) => url.length > 0 && arr.indexOf(url) === idx)
-      .slice(0, 12);
-    return {
-      label: (variant?.label ?? "").trim(),
-      price: Number.isFinite(effectivePrice) ? effectivePrice : 0,
-      originalPrice: Number.isFinite(originalPrice) ? originalPrice : 0,
-      discountedPrice: Number.isFinite(discountedPrice) ? discountedPrice : 0,
-      onSale: hasVariantDiscount,
-      description: typeof variant?.description === "string" ? variant.description.trim() : "",
-      imageUrl: typeof variant?.imageUrl === "string" ? variant.imageUrl.trim() : "",
-      galleryImages: normalizedVariantGallery,
-      processorId: selection.processorId || variant?.processorId || undefined,
-      ramId: selection.ramId || variant?.ramId || undefined,
-      storageId: selection.storageId || variant?.storageId || undefined,
-      graphicsId: selection.graphicsId || variant?.graphicsId || undefined,
-      color,
-      condition,
+      const selection = variantSelections[field.id] ?? {};
+      const price = Number(variant?.price);
+      const discountedPriceValue = Number((variant as any)?.discountedPrice);
+      const hasVariantPrice = Number.isFinite(price);
+      const normalizedPrice = hasVariantPrice ? price : basePrice;
+      const discountedPrice =
+        Number.isFinite(discountedPriceValue) && discountedPriceValue > 0
+          ? discountedPriceValue
+          : hasVariantPrice
+          ? normalizedPrice
+          : baseDiscountedPrice;
+      const hasVariantDiscount = discountedPrice < normalizedPrice;
+      const effectivePrice = hasVariantDiscount ? discountedPrice : normalizedPrice;
+      const originalPrice = Number.isFinite(normalizedPrice) ? normalizedPrice : 0;
+      const color =
+        typeof selection.color === "string" && selection.color.trim().length > 0
+          ? selection.color.trim()
+          : typeof variant?.color === "string" && variant.color.trim().length > 0
+          ? variant.color.trim()
+          : undefined;
+      const condition =
+        productConditions.includes((variant as any)?.condition)
+          ? ((variant as any)?.condition as ProductFormValues["variants"][number]["condition"])
+          : values.condition;
+      const variantGallery =
+        Array.isArray((variant as any)?.galleryImages) && (variant as any).galleryImages.length > 0
+          ? (variant as any).galleryImages
+          : [];
+      const normalizedVariantGallery = variantGallery
+        .map((entry: any) =>
+          typeof entry === "string"
+            ? entry.trim()
+            : typeof entry?.url === "string"
+            ? entry.url.trim()
+            : ""
+        )
+        .filter((url: string, idx: number, arr: string[]) => url.length > 0 && arr.indexOf(url) === idx)
+        .slice(0, 12);
+      return {
+        label: (variant?.label ?? "").trim(),
+        price: Number.isFinite(effectivePrice) ? effectivePrice : 0,
+        originalPrice: Number.isFinite(originalPrice) ? originalPrice : 0,
+        discountedPrice: Number.isFinite(discountedPrice) ? discountedPrice : 0,
+        onSale: hasVariantDiscount,
+        description: typeof variant?.description === "string" ? variant.description.trim() : "",
+        imageUrl: typeof variant?.imageUrl === "string" ? variant.imageUrl.trim() : "",
+        galleryImages: normalizedVariantGallery,
+        processorId: selection.processorId || variant?.processorId || undefined,
+        ramId: selection.ramId || variant?.ramId || undefined,
+        storageId: selection.storageId || variant?.storageId || undefined,
+        graphicsId: selection.graphicsId || variant?.graphicsId || undefined,
+        color,
+        condition,
       };
     });
 
-    const normalizedVariants = variantPayloads.filter(
-      (variant) => variant.label.length > 0 && variant.price >= 0
-    );
+    const variantEntries = variantPayloads
+      .map((payload, index) => ({
+        payload,
+        raw: rawVariants[index] ?? {},
+      }))
+      .filter((entry) => entry.payload.label.length > 0 && entry.payload.price >= 0);
+
     const seenVariantLabels = new Set<string>();
-    const uniqueVariants = normalizedVariants.filter((variant) => {
-      const key = variant.label.toLowerCase();
+    const uniqueEntries = variantEntries.filter(({ payload }) => {
+      const key = payload.label.toLowerCase();
       if (seenVariantLabels.has(key)) {
         return false;
       }
@@ -1561,16 +1672,22 @@ export function ProductForm({
       return true;
     });
 
-    if (uniqueVariants.length > 30) {
+    if (uniqueEntries.length > 30) {
       setServerError("You can add up to 30 variants.");
       return;
     }
 
-    if (uniqueVariants.length !== rawVariants.length) {
-      setValue("variants", uniqueVariants as ProductFormValues["variants"], {
-        shouldValidate: true,
-      });
+    if (uniqueEntries.length !== rawVariants.length) {
+      setValue(
+        "variants",
+        uniqueEntries.map((entry) => entry.raw) as ProductFormValues["variants"],
+        {
+          shouldValidate: true,
+        }
+      );
     }
+
+    const uniqueVariants = uniqueEntries.map((entry) => entry.payload);
 
     const rawColors = Array.isArray(values.colors) ? values.colors : [];
     const normalizedColors = rawColors
@@ -1605,7 +1722,7 @@ export function ProductForm({
       category: values.category,
       description: values.description,
       price: effectiveBasePrice,
-      originalPrice: Number.isFinite(baseOriginalPrice) ? baseOriginalPrice : effectiveBasePrice,
+      originalPrice: Number.isFinite(basePrice) ? basePrice : effectiveBasePrice,
       discountedPrice: Number.isFinite(baseDiscountedPrice) ? baseDiscountedPrice : effectiveBasePrice,
       onSale: baseHasDiscount,
       condition: values.condition,
@@ -1662,9 +1779,7 @@ export function ProductForm({
           category: "",
           description: "",
           price: 0,
-          originalPrice: 0,
           discountedPrice: 0,
-          onSale: false,
           condition: "refurbished",
           companyId: "",
           companySubMasterId: "",
@@ -2011,7 +2126,7 @@ export function ProductForm({
                   </p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
-                  Base price used when no configuration override is selected; sale pricing applies the discounted amount.
+                  Base price used when no configuration override is selected; discounting is applied automatically.
                 </p>
               </div>
               <div className="space-y-2">
@@ -2036,24 +2151,6 @@ export function ProductForm({
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="originalPrice">Original price (₹)</Label>
-                <Input
-                  id="originalPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register("originalPrice", { valueAsNumber: true })}
-                />
-                {errors.originalPrice ? (
-                  <p className="text-sm text-destructive" role="alert">
-                    {errors.originalPrice.message}
-                  </p>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  List price shown as the crossed-out amount.
-                </p>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="discountedPrice">Discounted price (₹)</Label>
                 <Input
                   id="discountedPrice"
@@ -2068,17 +2165,9 @@ export function ProductForm({
                   </p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
-                  Used when “On sale” is enabled; also applied to the default variant.
+                  If lower than price, the product is marked on sale automatically.
                 </p>
               </div>
-              <label className="flex items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  {...register("onSale")}
-                />
-                Mark as on sale
-              </label>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <label className="flex flex-1 items-center gap-3 rounded-lg border border-input bg-secondary/50 px-4 py-3 text-sm font-medium text-foreground shadow-sm">
@@ -2235,29 +2324,6 @@ export function ProductForm({
                         </div>
                         <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
                           <Label className="text-xs font-semibold text-slate-600">
-                            Original price (₹)
-                          </Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="52999"
-                            defaultValue={field.originalPrice ?? field.price ?? product?.price ?? 0}
-                            {...register(`variants.${index}.originalPrice` as const, {
-                              valueAsNumber: true,
-                            })}
-                            aria-invalid={Boolean(
-                              errors.variants?.[index]?.originalPrice
-                            )}
-                          />
-                          {errors.variants?.[index]?.originalPrice?.message ? (
-                            <p className="text-xs text-destructive" role="alert">
-                              {errors.variants[index]?.originalPrice?.message}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
-                          <Label className="text-xs font-semibold text-slate-600">
                             Discounted price (₹)
                           </Label>
                           <Input
@@ -2279,15 +2345,6 @@ export function ProductForm({
                             </p>
                           ) : null}
                         </div>
-                        <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            {...register(`variants.${index}.onSale` as const)}
-                            defaultChecked={field.onSale ?? false}
-                          />
-                          On sale
-                        </label>
                         <Button
                           type="button"
                           variant="ghost"
@@ -2430,7 +2487,22 @@ export function ProductForm({
                           </Label>
                           <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                            {...register(`variants.${index}.condition` as const)}
+                            {...register(`variants.${index}.condition` as const, {
+                              onChange: (event) => {
+                                const nextCondition = event.target
+                                  .value as ProductFormValues["condition"];
+                                const selection =
+                                  variantSelections[field.id] ?? {};
+                                const label = composeVariantLabel(
+                                  selection,
+                                  nextCondition
+                                );
+                                setValue(`variants.${index}.label`, label, {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                });
+                              },
+                            })}
                             defaultValue={
                               field.condition ??
                               selectedCondition ??
@@ -2637,10 +2709,42 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {companySubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {companySubMasterId
+                      ? getChildSubMasters("company", selectedCompanyId, companySubMasterId)
+                          .length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="companySubMasterChildId">
+                              Child submaster (optional)
+                            </Label>
+                            <select
+                              id="companySubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={companySubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "companySubMasterId",
+                                  event.target.value as ProductFormValues["companySubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={companySubMasterId}>Keep current</option>
+                              {getChildSubMasters("company", selectedCompanyId, companySubMasterId).map(
+                                (child) => (
+                                  <option key={child.id} value={child.id}>
+                                    {subMasterLabelLookup(child.id) || child.name}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.companySubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.companySubMasterId.message}
@@ -2685,10 +2789,47 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {processorSubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {processorSubMasterId
+                      ? getChildSubMasters(
+                          "processor",
+                          selectedProcessorId,
+                          processorSubMasterId
+                        ).length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="processorSubMasterChildId">
+                              Child submaster (optional)
+                            </Label>
+                            <select
+                              id="processorSubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={processorSubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "processorSubMasterId",
+                                  event.target.value as ProductFormValues["processorSubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={processorSubMasterId}>Keep current</option>
+                              {getChildSubMasters(
+                                "processor",
+                                selectedProcessorId,
+                                processorSubMasterId
+                              ).map((child) => (
+                                <option key={child.id} value={child.id}>
+                                  {subMasterLabelLookup(child.id) || child.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.processorSubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.processorSubMasterId.message}
@@ -2729,10 +2870,37 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {ramSubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {ramSubMasterId
+                      ? getChildSubMasters("ram", selectedRamId, ramSubMasterId).length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="ramSubMasterChildId">Child submaster (optional)</Label>
+                            <select
+                              id="ramSubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={ramSubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "ramSubMasterId",
+                                  event.target.value as ProductFormValues["ramSubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={ramSubMasterId}>Keep current</option>
+                              {getChildSubMasters("ram", selectedRamId, ramSubMasterId).map((child) => (
+                                <option key={child.id} value={child.id}>
+                                  {subMasterLabelLookup(child.id) || child.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.ramSubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.ramSubMasterId.message}
@@ -2775,10 +2943,47 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {storageSubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {storageSubMasterId
+                      ? getChildSubMasters(
+                          "storage",
+                          selectedStorageId,
+                          storageSubMasterId
+                        ).length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="storageSubMasterChildId">
+                              Child submaster (optional)
+                            </Label>
+                            <select
+                              id="storageSubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={storageSubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "storageSubMasterId",
+                                  event.target.value as ProductFormValues["storageSubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={storageSubMasterId}>Keep current</option>
+                              {getChildSubMasters(
+                                "storage",
+                                selectedStorageId,
+                                storageSubMasterId
+                              ).map((child) => (
+                                <option key={child.id} value={child.id}>
+                                  {subMasterLabelLookup(child.id) || child.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.storageSubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.storageSubMasterId.message}
@@ -2821,10 +3026,47 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {graphicsSubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {graphicsSubMasterId
+                      ? getChildSubMasters(
+                          "graphics",
+                          selectedGraphicsId,
+                          graphicsSubMasterId
+                        ).length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="graphicsSubMasterChildId">
+                              Child submaster (optional)
+                            </Label>
+                            <select
+                              id="graphicsSubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={graphicsSubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "graphicsSubMasterId",
+                                  event.target.value as ProductFormValues["graphicsSubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={graphicsSubMasterId}>Keep current</option>
+                              {getChildSubMasters(
+                                "graphics",
+                                selectedGraphicsId,
+                                graphicsSubMasterId
+                              ).map((child) => (
+                                <option key={child.id} value={child.id}>
+                                  {subMasterLabelLookup(child.id) || child.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.graphicsSubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.graphicsSubMasterId.message}
@@ -2865,10 +3107,41 @@ export function ProductForm({
                       <option value="">Select submaster</option>
                       {osSubOptions.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {subMasterLabelLookup(option.id) || option.name}
                         </option>
                       ))}
                     </select>
+                    {osSubMasterId
+                      ? getChildSubMasters("os", selectedOsId, osSubMasterId).length > 0 && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="osSubMasterChildId">
+                              Child submaster (optional)
+                            </Label>
+                            <select
+                              id="osSubMasterChildId"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                              disabled={isLoadingSubMasters}
+                              value={osSubMasterId ?? ""}
+                              onChange={(event) =>
+                                setValue(
+                                  "osSubMasterId",
+                                  event.target.value as ProductFormValues["osSubMasterId"],
+                                  { shouldValidate: true }
+                                )
+                              }
+                            >
+                              <option value={osSubMasterId}>Keep current</option>
+                              {getChildSubMasters("os", selectedOsId, osSubMasterId).map(
+                                (child) => (
+                                  <option key={child.id} value={child.id}>
+                                    {subMasterLabelLookup(child.id) || child.name}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
+                        )
+                      : null}
                     {errors.osSubMasterId ? (
                       <p className="text-sm text-destructive" role="alert">
                         {errors.osSubMasterId.message}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { masterTypes } from "@/lib/master-constants";
 import { listMasterOptions } from "@/lib/master-options";
-import { getSubMasterOptionById } from "@/lib/submaster-options";
+import { getSubMasterOptionById, listSubMasterOptions } from "@/lib/submaster-options";
 
 export const metadata: Metadata = {
   title: "Edit submaster | Rajesh Control",
@@ -18,9 +18,10 @@ export default async function EditSubMasterPage({
 }: {
   params: { id: string };
 }) {
-  const [submaster, masters] = await Promise.all([
+  const [submaster, masters, submasters] = await Promise.all([
     getSubMasterOptionById(params.id),
     listMasterOptions(masterTypes),
+    listSubMasterOptions(),
   ]);
 
   if (!submaster) {
@@ -57,6 +58,7 @@ export default async function EditSubMasterPage({
             masters={masters}
             initialData={submaster}
             initialMasterId={submaster.masterId}
+            submasters={submasters}
           />
         </CardContent>
       </Card>

@@ -101,7 +101,8 @@ function buildVariantInputs(
   galleryImages: string[],
   richDescription: string,
   highlights: string[],
-  baseSku: string
+  baseSku: string,
+  productName: string
 ): VariantInput[] {
   const getMatchingSubmaster = (
     variantMasterId: string | undefined,
@@ -120,13 +121,21 @@ function buildVariantInputs(
   const baseOsSubmaster = getMatchingSubmaster(payload.osId, subMasterSelection.osSubMaster);
 
   const labelParts = [
+    subMasterSelection.companySubMaster?.name,
     masterSelection.processor?.name,
+    subMasterSelection.processorSubMaster?.name,
     masterSelection.ram?.name,
+    subMasterSelection.ramSubMaster?.name,
     masterSelection.storage?.name,
+    subMasterSelection.storageSubMaster?.name,
     masterSelection.graphics?.name,
+    subMasterSelection.graphicsSubMaster?.name,
+    masterSelection.os?.name,
+    subMasterSelection.osSubMaster?.name,
   ].filter(Boolean);
   const baseVariantLabel =
-    labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration";
+    productName.trim() ||
+    (labelParts.length > 0 ? labelParts.join(" • ") : "Base configuration");
   const baseVariantSku =
     payload.sku?.trim() ||
     (labelParts.length > 0
@@ -308,13 +317,6 @@ export async function PUT(request: Request, context: { params: { id: string } })
       return NextResponse.json({ error: masterResult.message }, { status: 400 });
     }
 
-    const autoName = generateProductName(payload, masterResult.selection);
-    const finalName =
-      typeof payload.name === "string" && payload.name.trim().length >= 3
-        ? payload.name.trim()
-        : autoName;
-    const baseSku = buildBaseSku(finalName);
-
     const subMasterResult = await resolveProductSubMasters(
       {
         companySubMasterId: payload.companySubMasterId,
@@ -331,6 +333,17 @@ export async function PUT(request: Request, context: { params: { id: string } })
       return NextResponse.json({ error: subMasterResult.message }, { status: 400 });
     }
 
+    const autoName = generateProductName(
+      payload,
+      masterResult.selection,
+      subMasterResult.selection
+    );
+    const finalName =
+      typeof payload.name === "string" && payload.name.trim().length >= 3
+        ? payload.name.trim()
+        : autoName;
+    const baseSku = buildBaseSku(finalName);
+
     const variantInputs = buildVariantInputs(
       payload,
       colors,
@@ -339,7 +352,8 @@ export async function PUT(request: Request, context: { params: { id: string } })
       galleryImages,
       richDescription,
       highlights,
-      baseSku
+      baseSku,
+      finalName
     );
 
     await connectDB();

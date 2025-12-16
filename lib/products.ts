@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import type { MasterOptionSummary, MasterOptionType } from "@/lib/master-constants";
 import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { listMasterOptions } from "@/lib/master-options";
+import { listSubMasterOptions } from "@/lib/submaster-options";
 import type { ProductCondition } from "@/lib/product-constants";
 import { ProductModel, type ProductDocument } from "@/models/product";
 import { VariantModel, type VariantDocument } from "@/models/variant";
@@ -47,6 +48,7 @@ function mapSubMasterRecord(
     masterName: master?.name ?? "",
     masterType: subMaster.masterType as MasterOptionType,
     name: subMaster.name ?? "",
+    parentId: subMaster.parentId ? subMaster.parentId.toString() : null,
     description: subMaster.description ?? "",
     sortOrder: typeof subMaster.sortOrder === "number" ? subMaster.sortOrder : 0,
   };
@@ -216,6 +218,7 @@ export interface ListProductsOptions {
   minPrice?: number;
   maxPrice?: number;
   companyId?: string;
+  companySubMasterId?: string;
   processorId?: string;
   ramId?: string;
   storageId?: string;
@@ -457,6 +460,16 @@ function mapVariantsForProduct(
     variants[0].isDefault = true;
   }
 
+  const defaultIndex = variants.findIndex((variant) => variant.isDefault);
+  const defaultVariant = defaultIndex >= 0 ? variants[defaultIndex] : variants[0];
+  const normalizedProductName = product.name?.trim();
+  if (defaultVariant && normalizedProductName) {
+    variants[defaultIndex >= 0 ? defaultIndex : 0] = {
+      ...defaultVariant,
+      label: normalizedProductName,
+    };
+  }
+
   return variants;
 }
 
@@ -550,6 +563,9 @@ export async function listProducts(options: ListProductsOptions = {}): Promise<P
 
   if (isValidObjectId(options.companyId)) {
     filters.companyId = options.companyId;
+  }
+  if (isValidObjectId(options.companySubMasterId)) {
+    filters.companySubmasterId = options.companySubMasterId;
   }
 
   let query = ProductModel.find(filters).sort({ createdAt: -1 });
@@ -732,11 +748,12 @@ export interface ProductFacets {
   storages: MasterOptionSummary[];
   graphics: MasterOptionSummary[];
   operatingSystems: MasterOptionSummary[];
+  companySubMasters: SubMasterOptionSummary[];
 }
 
 export async function getProductFacets(): Promise<ProductFacets> {
   await connectDB();
-  const [categories, conditions, priceExtremes, masterOptions] = await Promise.all([
+  const [categories, conditions, priceExtremes, masterOptions, companySubMasters] = await Promise.all([
     ProductModel.distinct("category") as Promise<string[]>,
     VariantModel.distinct("condition") as Promise<ProductCondition[]>,
     VariantModel.aggregate<{ minPrice: number; maxPrice: number }>([
@@ -749,6 +766,7 @@ export async function getProductFacets(): Promise<ProductFacets> {
       },
     ]),
     listMasterOptions(["company", "processor", "ram", "storage", "graphics", "os"]),
+    listSubMasterOptions({ types: ["company"] }),
   ]);
 
   const priceBounds = priceExtremes[0] ?? { minPrice: 0, maxPrice: 0 };
@@ -769,5 +787,6 @@ export async function getProductFacets(): Promise<ProductFacets> {
     storages,
     graphics,
     operatingSystems,
+    companySubMasters,
   };
 }

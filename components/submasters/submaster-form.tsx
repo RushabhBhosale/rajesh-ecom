@@ -21,11 +21,13 @@ interface SubMasterFormProps {
   masters: MasterOptionSummary[];
   initialData?: SubMasterOptionSummary;
   initialMasterId?: string;
+  submasters?: SubMasterOptionSummary[];
 }
 
 type RowState = {
   id: string;
   masterId: string;
+  parentId: string;
   name: string;
   description: string;
   sortOrder: string;
@@ -37,6 +39,7 @@ export function SubMasterForm({
   masters,
   initialData,
   initialMasterId,
+  submasters = [],
 }: SubMasterFormProps) {
   const router = useRouter();
 
@@ -62,6 +65,7 @@ export function SubMasterForm({
         {
           id: initialData.id,
           masterId: initialData.masterId,
+          parentId: initialData.parentId ?? "",
           name: initialData.name,
           description: initialData.description ?? "",
           sortOrder:
@@ -71,20 +75,31 @@ export function SubMasterForm({
       ];
     }
     return [
-      {
-        id: "row-1",
-        masterId: fallbackMasterId,
-        name: "",
-        description: "",
-        sortOrder: "",
-        error: null,
-      },
+        {
+          id: "row-1",
+          masterId: fallbackMasterId,
+          parentId: "",
+          name: "",
+          description: "",
+          sortOrder: "",
+          error: null,
+        },
     ];
   });
 
   const [isPending, startTransition] = useTransition();
   const allowMultiple = mode === "create";
   const hasMasters = sortedMasters.length > 0;
+  const parentOptionsByMaster = useMemo(() => {
+    const grouped: Record<string, SubMasterOptionSummary[]> = {};
+    submasters.forEach((option) => {
+      if (!grouped[option.masterId]) {
+        grouped[option.masterId] = [];
+      }
+      grouped[option.masterId].push(option);
+    });
+    return grouped;
+  }, [submasters]);
 
   function addRow() {
     setRows((prev) => [
@@ -92,6 +107,7 @@ export function SubMasterForm({
       {
         id: `row-${prev.length + 1}-${Date.now()}`,
         masterId: prev[prev.length - 1]?.masterId || sortedMasters[0]?.id || "",
+        parentId: "",
         name: "",
         description: "",
         sortOrder: "",
@@ -102,7 +118,7 @@ export function SubMasterForm({
 
   function updateRow(
     id: string,
-    field: "masterId" | "name" | "description" | "sortOrder",
+    field: "masterId" | "parentId" | "name" | "description" | "sortOrder",
     value: string,
   ) {
     setRows((prev) =>
@@ -111,6 +127,7 @@ export function SubMasterForm({
           ? {
               ...row,
               [field]: value,
+              ...(field === "masterId" ? { parentId: "" } : {}),
               error: field === "name" || field === "masterId" ? null : row.error,
             }
           : row,
@@ -139,6 +156,7 @@ export function SubMasterForm({
     let hasError = false;
     const payloads: Array<{
       masterId: string;
+      parentId?: string;
       name: string;
       description: string;
       sortOrder: number;
@@ -162,6 +180,16 @@ export function SubMasterForm({
         error = "Select a parent master.";
       }
 
+      if (row.parentId) {
+        const parentCandidate = submasters.find((item) => item.id === row.parentId);
+        if (!parentCandidate || parentCandidate.masterId !== selectedMaster) {
+          error = "Parent submaster must belong to the selected master.";
+        }
+        if (mode === "edit" && initialData?.id === row.parentId) {
+          error = "A submaster cannot be its own parent.";
+        }
+      }
+
       if (row.sortOrder) {
         const parsed = Number.parseInt(row.sortOrder, 10);
         if (Number.isNaN(parsed) || parsed < 0) {
@@ -177,6 +205,7 @@ export function SubMasterForm({
 
       payloads.push({
         masterId: selectedMaster,
+        parentId: row.parentId || undefined,
         name: trimmedName,
         description: row.description.trim(),
         sortOrder: row.sortOrder ? Number.parseInt(row.sortOrder, 10) : 0,
@@ -228,7 +257,15 @@ export function SubMasterForm({
               const message = await response
                 .json()
                 .catch(() => (ok ? { message: "Created" } : { error: "Unable to create" }));
-              return { ok, message: message?.error ?? message?.message ?? "Unknown" };
+              const normalized =
+                typeof message?.error === "string"
+                  ? message.error
+                  : Array.isArray(message?.error?.name)
+                  ? message.error.name[0]
+                  : typeof message?.message === "string"
+                  ? message.message
+                  : "Unknown";
+              return { ok, message: normalized };
             }),
           );
 
@@ -292,7 +329,7 @@ export function SubMasterForm({
                     </Button>
                   ) : null}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor={`submaster-parent-${row.id}`}>Parent master</Label>
                     <Select
@@ -311,6 +348,35 @@ export function SubMasterForm({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`submaster-parent-sub-${row.id}`}>
+                      Parent submaster (optional)
+                    </Label>
+                    <Select
+                      value={row.parentId || "none"}
+                      onValueChange={(value) =>
+                        updateRow(row.id, "parentId", value === "none" ? "" : value)
+                      }
+                      disabled={!hasMasters || isPending}
+                    >
+                      <SelectTrigger id={`submaster-parent-sub-${row.id}`} className="w-full">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {(parentOptionsByMaster[row.masterId] ?? [])
+                          .filter((option) => option.id !== row.id)
+                          .map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Use this to nest under another submaster for deeper hierarchies.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`submaster-name-${row.id}`}>Name</Label>
