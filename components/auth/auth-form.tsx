@@ -138,7 +138,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <CardContent className="space-y-4">
           {mode === "register" && (
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label required htmlFor="name">Name</Label>
               <Input
                 id="name"
                 autoComplete="name"
@@ -153,7 +153,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label required htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
@@ -168,7 +168,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label required htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"

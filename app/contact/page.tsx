@@ -142,11 +142,15 @@ export default function ContactPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium">Name *</span>
+                  <span className="font-medium">
+                    Name <span className="text-red-500" aria-hidden>*</span>
+                  </span>
                   <Input name="name" placeholder="Your name" required />
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium">Email *</span>
+                  <span className="font-medium">
+                    Email <span className="text-red-500" aria-hidden>*</span>
+                  </span>
                   <Input
                     name="email"
                     type="email"
@@ -162,7 +166,9 @@ export default function ContactPage() {
               </label>
 
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium">Message *</span>
+                <span className="font-medium">
+                  Message <span className="text-red-500" aria-hidden>*</span>
+                </span>
                 <Textarea
                   name="message"
                   placeholder="Share details about your request…"

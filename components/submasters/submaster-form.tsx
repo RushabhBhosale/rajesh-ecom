@@ -331,7 +331,9 @@ export function SubMasterForm({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor={`submaster-parent-${row.id}`}>Parent master</Label>
+                    <Label htmlFor={`submaster-parent-${row.id}`} required>
+                      Parent master
+                    </Label>
                     <Select
                       value={row.masterId}
                       onValueChange={(value) => updateRow(row.id, "masterId", value)}
@@ -379,7 +381,9 @@ export function SubMasterForm({
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`submaster-name-${row.id}`}>Name</Label>
+                    <Label htmlFor={`submaster-name-${row.id}`} required>
+                      Name
+                    </Label>
                     <Input
                       id={`submaster-name-${row.id}`}
                       value={row.name}

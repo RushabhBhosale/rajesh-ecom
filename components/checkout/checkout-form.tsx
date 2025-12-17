@@ -412,14 +412,18 @@ export function CheckoutForm() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="customerName">Full name</label>
+            <label className="text-sm font-medium text-slate-700" htmlFor="customerName">
+              Full name <span className="text-red-500">*</span>
+            </label>
             <Input id="customerName" placeholder="Rajesh Kumar" aria-invalid={Boolean(errors.customerName)} {...register("customerName")} />
             {errors.customerName ? (
               <p className="text-xs text-red-600">{errors.customerName.message}</p>
             ) : null}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="customerPhone">Phone number</label>
+            <label className="text-sm font-medium text-slate-700" htmlFor="customerPhone">
+              Phone number <span className="text-red-500">*</span>
+            </label>
             <Input id="customerPhone" placeholder="9876543210" aria-invalid={Boolean(errors.customerPhone)} {...register("customerPhone")} />
             {errors.customerPhone ? (
               <p className="text-xs text-red-600">{errors.customerPhone.message}</p>
@@ -428,7 +432,9 @@ export function CheckoutForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700" htmlFor="customerEmail">Email address</label>
+          <label className="text-sm font-medium text-slate-700" htmlFor="customerEmail">
+            Email address <span className="text-red-500">*</span>
+          </label>
           <Input id="customerEmail" type="email" placeholder="you@company.com" aria-invalid={Boolean(errors.customerEmail)} {...register("customerEmail")} />
           {errors.customerEmail ? (
             <p className="text-xs text-red-600">{errors.customerEmail.message}</p>
@@ -468,7 +474,9 @@ export function CheckoutForm() {
 
           <div className="grid gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="addressLine1">Address line 1</label>
+              <label className="text-sm font-medium text-slate-700" htmlFor="addressLine1">
+                Address line 1 <span className="text-red-500">*</span>
+              </label>
               <Input id="addressLine1" placeholder="Building, street" aria-invalid={Boolean(errors.addressLine1)} {...register("addressLine1")} />
               {errors.addressLine1 ? (
                 <p className="text-xs text-red-600">{errors.addressLine1.message}</p>
@@ -480,26 +488,34 @@ export function CheckoutForm() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="city">City</label>
+                <label className="text-sm font-medium text-slate-700" htmlFor="city">
+                  City <span className="text-red-500">*</span>
+                </label>
                 <Input id="city" placeholder="Mumbai" aria-invalid={Boolean(errors.city)} {...register("city")} />
                 {errors.city ? <p className="text-xs text-red-600">{errors.city.message}</p> : null}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="state">State</label>
+                <label className="text-sm font-medium text-slate-700" htmlFor="state">
+                  State <span className="text-red-500">*</span>
+                </label>
                 <Input id="state" placeholder="Maharashtra" aria-invalid={Boolean(errors.state)} {...register("state")} />
                 {errors.state ? <p className="text-xs text-red-600">{errors.state.message}</p> : null}
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="postalCode">Postal code</label>
+                <label className="text-sm font-medium text-slate-700" htmlFor="postalCode">
+                  Postal code <span className="text-red-500">*</span>
+                </label>
                 <Input id="postalCode" placeholder="400001" aria-invalid={Boolean(errors.postalCode)} {...register("postalCode")} />
                 {errors.postalCode ? (
                   <p className="text-xs text-red-600">{errors.postalCode.message}</p>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="country">Country</label>
+                <label className="text-sm font-medium text-slate-700" htmlFor="country">
+                  Country <span className="text-red-500">*</span>
+                </label>
                 <Input id="country" placeholder="India" aria-invalid={Boolean(errors.country)} {...register("country")} />
                 {errors.country ? <p className="text-xs text-red-600">{errors.country.message}</p> : null}
               </div>

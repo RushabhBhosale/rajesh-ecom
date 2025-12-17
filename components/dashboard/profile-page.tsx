@@ -268,7 +268,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-recipient">Recipient name</Label>
+                <Label htmlFor="address-recipient" required>
+                  Recipient name
+                </Label>
                 <Input
                   id="address-recipient"
                   value={addressForm.recipientName}
@@ -277,7 +279,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-phone">Phone</Label>
+                <Label htmlFor="address-phone" required>
+                  Phone
+                </Label>
                 <Input
                   id="address-phone"
                   value={addressForm.phone}
@@ -286,7 +290,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address-line1">Address line 1</Label>
+                <Label htmlFor="address-line1" required>
+                  Address line 1
+                </Label>
                 <Input
                   id="address-line1"
                   value={addressForm.line1}
@@ -304,7 +310,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-city">City</Label>
+                <Label htmlFor="address-city" required>
+                  City
+                </Label>
                 <Input
                   id="address-city"
                   value={addressForm.city}
@@ -313,7 +321,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-state">State</Label>
+                <Label htmlFor="address-state" required>
+                  State
+                </Label>
                 <Input
                   id="address-state"
                   value={addressForm.state}
@@ -322,7 +332,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-postal">Postal code</Label>
+                <Label htmlFor="address-postal" required>
+                  Postal code
+                </Label>
                 <Input
                   id="address-postal"
                   value={addressForm.postalCode}
@@ -331,7 +343,9 @@ export function ProfilePage({ user }: ProfilePageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address-country">Country</Label>
+                <Label htmlFor="address-country" required>
+                  Country
+                </Label>
                 <Input
                   id="address-country"
                   value={addressForm.country}

@@ -258,7 +258,9 @@ export function MasterForm({ mode, initialType = "company", initialData }: Maste
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor={`master-type-${row.id}`}>Type</Label>
+                      <Label htmlFor={`master-type-${row.id}`} required>
+                        Type
+                      </Label>
                       <Select
                         value={row.type}
                         onValueChange={(value) => updateRow(row.id, "type", value as MasterOptionType)}
@@ -277,7 +279,9 @@ export function MasterForm({ mode, initialType = "company", initialData }: Maste
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`master-name-${row.id}`}>Name</Label>
+                      <Label htmlFor={`master-name-${row.id}`} required>
+                        Name
+                      </Label>
                       <Input
                         id={`master-name-${row.id}`}
                         value={row.name}

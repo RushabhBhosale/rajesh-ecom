@@ -1923,7 +1923,7 @@ export function ProductForm({
             <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Product name</Label>
+                  <Label htmlFor="name" required>Product name</Label>
                   <Input
                     id="name"
                     placeholder="ThinkPad X1 Carbon"
@@ -2060,7 +2060,9 @@ export function ProductForm({
           <section className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" required>
+                  Category
+                </Label>
                 <Controller
                   control={control}
                   name="category"
@@ -2112,7 +2114,9 @@ export function ProductForm({
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Price (₹)</Label>
+                <Label htmlFor="price" required>
+                  Price (₹)
+                </Label>
                 <Input
                   id="price"
                   type="number"
@@ -2130,7 +2134,9 @@ export function ProductForm({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="condition">Condition</Label>
+                <Label htmlFor="condition" required>
+                  Condition
+                </Label>
                 <select
                   id="condition"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -2277,7 +2283,7 @@ export function ProductForm({
                     >
                       <div className="flex flex-wrap items-start gap-3">
                         <div className="flex-1 space-y-1.5">
-                          <Label className="text-xs font-semibold text-slate-600">
+                          <Label className="text-xs font-semibold text-slate-600" required>
                             Variant name
                           </Label>
                           <Input
@@ -2300,7 +2306,7 @@ export function ProductForm({
                           )}
                         </div>
                         <div className="w-full min-w-[180px] space-y-1.5 sm:w-48">
-                          <Label className="text-xs font-semibold text-slate-600">
+                          <Label className="text-xs font-semibold text-slate-600" required>
                             Price (₹)
                           </Label>
                           <Input
@@ -3165,7 +3171,9 @@ export function ProductForm({
 
           <section className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" required>
+                Description
+              </Label>
               <Textarea
                 id="description"
                 placeholder="Share the device story, refurbishment process, and warranty coverage."

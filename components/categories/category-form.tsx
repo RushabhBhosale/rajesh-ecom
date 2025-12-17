@@ -118,8 +118,10 @@ export function CategoryForm({
       <form onSubmit={onSubmit} className="space-y-6">
         <CardContent className="grid gap-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Category name</Label>
-            <Input id="name" placeholder="Laptops" {...register("name")} />
+            <Label htmlFor="name" required>
+              Category name
+            </Label>
+            <Input id="name" placeholder="Laptops" required {...register("name")} />
             {errors.name ? (
               <p className="text-sm text-destructive" role="alert">
                 {errors.name.message}
