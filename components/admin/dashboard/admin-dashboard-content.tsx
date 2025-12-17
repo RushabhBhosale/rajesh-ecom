@@ -285,10 +285,16 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
           <CardContent className="h-[320px]">
             {hasPaymentData ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metrics.paymentMethods}>
+                <BarChart data={metrics.paymentMethods} margin={{ top: 8, right: 12, bottom: 8, left: 16 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => formatCurrency(value)} />
+                  <YAxis
+                    width={110}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => formatCurrency(value)}
+                  />
                   <Tooltip formatter={(value: number) => [formatCurrency(value), "Revenue"]} />
                   <Legend verticalAlign="top" height={32} />
                   <Bar dataKey="revenue" name="Revenue" radius={[6, 6, 0, 0]} fill={chartColors[0]} />
