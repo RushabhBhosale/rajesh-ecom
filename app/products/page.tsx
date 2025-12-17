@@ -8,6 +8,10 @@ import { getProductFacets, listProducts } from "@/lib/products";
 import type { ProductCondition } from "@/lib/product-constants";
 import { Package } from "lucide-react";
 
+function normalizeToken(value?: string | null) {
+  return value?.toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "") ?? "";
+}
+
 export const metadata = {
   title: "Enterprise Products | Rajesh Renewed",
   description:
@@ -20,12 +24,14 @@ export default async function ProductsPage({
   searchParams: {
     search?: string;
     category?: string;
+    categoryName?: string;
     condition?: string;
     sort?: string;
     minPrice?: string;
     maxPrice?: string;
     q?: string;
     company?: string;
+    companyName?: string;
     processor?: string;
     ram?: string;
     storage?: string;
@@ -59,10 +65,27 @@ export default async function ProductsPage({
     typeof searchParams.category === "string"
       ? searchParams.category
       : undefined;
-  const category =
-    rawCategory && facets.categories.includes(rawCategory)
-      ? rawCategory
+  const rawCategoryName =
+    typeof searchParams.categoryName === "string"
+      ? searchParams.categoryName
       : undefined;
+
+  const matchCategory = (value?: string) => {
+    if (!value) {
+      return undefined;
+    }
+    if (facets.categories.includes(value)) {
+      return value;
+    }
+    const normalized = normalizeToken(value);
+    if (!normalized) {
+      return undefined;
+    }
+    return facets.categories.find(
+      (categoryOption) => normalizeToken(categoryOption) === normalized
+    );
+  };
+  const category = matchCategory(rawCategory) ?? matchCategory(rawCategoryName);
 
   const rawCondition =
     typeof searchParams.condition === "string"
@@ -89,6 +112,10 @@ export default async function ProductsPage({
     typeof searchParams.company === "string"
       ? searchParams.company
       : undefined;
+  const rawCompanyName =
+    typeof searchParams.companyName === "string"
+      ? searchParams.companyName
+      : undefined;
   const rawCompanySub =
     typeof searchParams.companySubMaster === "string"
       ? searchParams.companySubMaster
@@ -96,9 +123,27 @@ export default async function ProductsPage({
   const subMasterOption = rawCompanySub
     ? facets.companySubMasters.find((item) => item.id === rawCompanySub)
     : undefined;
-  const companyId = facets.companies.some((item) => item.id === rawCompany)
-    ? rawCompany
-    : subMasterOption?.masterId;
+  const matchCompanyId = (value?: string) => {
+    if (!value) {
+      return undefined;
+    }
+    const direct = facets.companies.find((item) => item.id === value);
+    if (direct) {
+      return direct.id;
+    }
+    const token = normalizeToken(value);
+    if (!token) {
+      return undefined;
+    }
+    const match = facets.companies.find(
+      (item) => normalizeToken(item.name) === token
+    );
+    return match?.id;
+  };
+  const companyId =
+    matchCompanyId(rawCompany) ??
+    matchCompanyId(rawCompanyName) ??
+    subMasterOption?.masterId;
   const companySubMasterId =
     subMasterOption && subMasterOption.masterId === companyId
       ? subMasterOption.id
@@ -228,6 +273,7 @@ export default async function ProductsPage({
                 graphics: facets.graphics,
                 operatingSystems: facets.operatingSystems,
               }}
+              priceRange={facets.priceRange}
               companySubMasters={facets.companySubMasters}
               filters={filterSnapshot}
               resultCount={products.length}

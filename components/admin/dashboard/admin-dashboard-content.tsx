@@ -7,7 +7,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Legend,
   Pie,
   PieChart,
@@ -25,6 +24,8 @@ import { getOrderStatusLabel } from "@/lib/order-status";
 interface AdminDashboardContentProps {
   metrics: AdminDashboardMetrics;
 }
+
+type MonthlyOrderEntry = AdminDashboardMetrics["monthlyOrders"][number];
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -56,8 +57,31 @@ function formatNumber(value: number) {
 
 export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
   const hasMonthlyData = metrics.monthlyOrders.some((entry) => entry.orderCount > 0 || entry.revenue > 0);
+  const hasRevenueData = metrics.monthlyOrders.some((entry) => entry.revenue > 0);
+  const hasOrderData = metrics.monthlyOrders.some((entry) => entry.orderCount > 0);
   const hasPaymentData = metrics.paymentMethods.some((entry) => entry.revenue > 0);
   const hasTransactionData = metrics.transactionsByStatus.some((entry) => entry.count > 0 || entry.amount > 0);
+  const monthlyRevenuePeak = hasRevenueData
+    ? metrics.monthlyOrders.reduce<MonthlyOrderEntry | null>((best, entry) => {
+        if (!best || entry.revenue > best.revenue) {
+          return entry;
+        }
+        return best;
+      }, null)
+    : null;
+  const monthlyOrdersPeak = hasOrderData
+    ? metrics.monthlyOrders.reduce<MonthlyOrderEntry | null>((best, entry) => {
+        if (!best || entry.orderCount > best.orderCount) {
+          return entry;
+        }
+        return best;
+      }, null)
+    : null;
+  const useRevenueForBars = hasRevenueData;
+  const maxMonthlyValue = metrics.monthlyOrders.reduce((max, entry) => {
+    const value = useRevenueForBars ? entry.revenue : entry.orderCount;
+    return value > max ? value : max;
+  }, 0);
   const transactionChartData = metrics.transactionsByStatus.map((entry) => ({
     ...entry,
     label: entry.status.charAt(0).toUpperCase() + entry.status.slice(1),
@@ -119,16 +143,82 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
 
       <div className="grid gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">Orders &amp; revenue trend</CardTitle>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-lg font-semibold text-foreground">Monthly performance snapshot</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              A quick look at how the last four months have trended across orders and revenue.
+            </p>
           </CardHeader>
-          <CardContent className="h-[320px]">
+          <CardContent className="space-y-5">
             {hasMonthlyData ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedOrdersChart data={metrics.monthlyOrders} />
-              </ResponsiveContainer>
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-muted/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Revenue leader</p>
+                    {hasRevenueData && monthlyRevenuePeak ? (
+                      <>
+                        <p className="mt-2 text-lg font-semibold text-foreground">{monthlyRevenuePeak.month}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatCurrency(monthlyRevenuePeak.revenue)} generated
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Revenue data will appear after your first paid order.
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-2xl bg-muted/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Order leader</p>
+                    {hasOrderData && monthlyOrdersPeak ? (
+                      <>
+                        <p className="mt-2 text-lg font-semibold text-foreground">{monthlyOrdersPeak.month}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatNumber(monthlyOrdersPeak.orderCount)} orders fulfilled
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Orders will populate once customers start checking out.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <ul className="space-y-3">
+                  {metrics.monthlyOrders.map((entry) => {
+                    const metricValue = useRevenueForBars ? entry.revenue : entry.orderCount;
+                    const widthPercent =
+                      maxMonthlyValue > 0
+                        ? Math.min(
+                            100,
+                            Math.max((metricValue / maxMonthlyValue) * 100, metricValue > 0 ? 8 : 0)
+                          )
+                        : 0;
+                    const averageOrderValue = entry.orderCount ? entry.revenue / entry.orderCount : 0;
+
+                    return (
+                      <li key={entry.month} className="rounded-2xl border border-border/60 p-3">
+                        <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                          <span>{entry.month}</span>
+                          <span>{formatCurrency(entry.revenue)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{formatNumber(entry.orderCount)} orders</span>
+                          <span>Avg {formatCurrency(averageOrderValue)}</span>
+                        </div>
+                        <div className="mt-3 h-2 rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${widthPercent}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             ) : (
-              <EmptyChartState message="Orders will appear here once your store receives activity." />
+              <EmptyChartState message="Monthly performance data will appear once your store starts receiving orders." />
             )}
           </CardContent>
         </Card>
@@ -283,42 +373,5 @@ function EmptyChartState({ message }: { message: string }) {
     <div className="flex h-full w-full items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/40 px-6 text-center">
       <p className="text-sm text-muted-foreground">{message}</p>
     </div>
-  );
-}
-
-function ComposedOrdersChart({
-  data,
-}: {
-  data: AdminDashboardMetrics["monthlyOrders"];
-}) {
-  return (
-    <ComposedChart data={data}>
-      <CartesianGrid strokeDasharray="4 4" className="stroke-muted" />
-      <XAxis dataKey="month" tickLine={false} axisLine={false} />
-      <YAxis yAxisId="left" tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-      <YAxis
-        yAxisId="right"
-        orientation="right"
-        tickLine={false}
-        axisLine={false}
-        tickFormatter={(value) => formatCurrency(value)}
-      />
-      <Tooltip
-        formatter={(value: number, key) =>
-          key === "orderCount" ? formatNumber(value) : formatCurrency(value)
-        }
-      />
-      <Legend verticalAlign="top" height={32} />
-      <Bar yAxisId="left" dataKey="orderCount" name="Orders" fill={chartColors[0]} radius={[6, 6, 0, 0]} />
-      <Area
-        yAxisId="right"
-        type="monotone"
-        dataKey="revenue"
-        name="Revenue"
-        stroke={chartColors[1]}
-        fill={chartColors[1]}
-        fillOpacity={0.15}
-      />
-    </ComposedChart>
   );
 }

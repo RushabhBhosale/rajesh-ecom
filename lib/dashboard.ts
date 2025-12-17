@@ -65,9 +65,10 @@ function getOrderNumberFromId(id: string) {
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
   await connectDB();
 
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setHours(0, 0, 0, 0);
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5, 1);
+  const monthsToInclude = 4;
+  const dateRangeStart = new Date();
+  dateRangeStart.setHours(0, 0, 0, 0);
+  dateRangeStart.setMonth(dateRangeStart.getMonth() - (monthsToInclude - 1), 1);
 
   const [
     orderTotalsAggregation,
@@ -122,7 +123,7 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
       orderCount: number;
       revenue: number;
     }>([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      { $match: { createdAt: { $gte: dateRangeStart } } },
       {
         $group: {
           _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
@@ -150,7 +151,7 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
       count: number;
       amount: number;
     }>([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      { $match: { createdAt: { $gte: dateRangeStart } } },
       {
         $group: {
           _id: "$status",
@@ -202,7 +203,7 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
   const now = new Date();
   now.setDate(1);
   now.setHours(0, 0, 0, 0);
-  for (let index = 5; index >= 0; index -= 1) {
+  for (let index = monthsToInclude - 1; index >= 0; index -= 1) {
     const date = new Date(now);
     date.setMonth(now.getMonth() - index);
     const mapKey = `${date.getFullYear()}-${date.getMonth() + 1}`;

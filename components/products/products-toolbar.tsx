@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { MasterOptionSummary } from "@/lib/master-constants";
 import type { SubMasterOptionSummary } from "@/lib/submaster-constants";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ interface ProductsToolbarProps {
   categories: string[];
   conditions: string[];
   masterOptions: MasterOptionsByType;
+  priceRange: { minPrice: number; maxPrice: number };
   companySubMasters: SubMasterOptionSummary[];
   filters: ProductFilters;
   resultCount: number;
@@ -62,6 +64,7 @@ export function ProductsToolbar({
   categories,
   conditions,
   masterOptions,
+  priceRange,
   companySubMasters,
   filters,
   resultCount,
@@ -70,6 +73,16 @@ export function ProductsToolbar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const sliderBounds = useMemo(() => {
+    const min = Math.max(0, Math.floor(priceRange.minPrice ?? 0));
+    const upper = Math.max(min, Math.ceil(priceRange.maxPrice ?? min));
+    const max = upper === min ? min + 1000 : upper;
+    return { min, max };
+  }, [priceRange.maxPrice, priceRange.minPrice]);
+  const [minPriceInput, setMinPriceInput] = useState(filters.minPrice ?? "");
+  const [maxPriceInput, setMaxPriceInput] = useState(filters.maxPrice ?? "");
+  const [minSliderValue, setMinSliderValue] = useState(sliderBounds.min);
+  const [maxSliderValue, setMaxSliderValue] = useState(sliderBounds.max);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -96,6 +109,216 @@ export function ProductsToolbar({
     },
     [pathname, router, searchParams, startTransition]
   );
+
+  const sanitizePriceValue = useCallback((value: string) => {
+    const numericValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(numericValue) || numericValue < 0) {
+      return null;
+    }
+    return numericValue;
+  }, []);
+
+  const clampToBounds = useCallback(
+    (value: number) => Math.min(sliderBounds.max, Math.max(sliderBounds.min, value)),
+    [sliderBounds.max, sliderBounds.min]
+  );
+
+  useEffect(() => {
+    if (typeof filters.minPrice === "string" && filters.minPrice.length > 0) {
+      const nextMin = sanitizePriceValue(filters.minPrice) ?? sliderBounds.min;
+      setMinPriceInput(String(nextMin));
+      setMinSliderValue(clampToBounds(nextMin));
+    } else {
+      setMinPriceInput("");
+      setMinSliderValue(sliderBounds.min);
+    }
+    if (typeof filters.maxPrice === "string" && filters.maxPrice.length > 0) {
+      const nextMax = sanitizePriceValue(filters.maxPrice) ?? sliderBounds.max;
+      setMaxPriceInput(String(nextMax));
+      setMaxSliderValue(clampToBounds(nextMax));
+    } else {
+      setMaxPriceInput("");
+      setMaxSliderValue(sliderBounds.max);
+    }
+  }, [
+    clampToBounds,
+    filters.maxPrice,
+    filters.minPrice,
+    sanitizePriceValue,
+    sliderBounds.max,
+    sliderBounds.min,
+  ]);
+
+  const handleInputChange = useCallback(
+    (type: "min" | "max", value: string) => {
+      if (type === "min") {
+        setMinPriceInput(value);
+        if (!value.trim()) {
+          setMinSliderValue(sliderBounds.min);
+          return;
+        }
+        const numeric = sanitizePriceValue(value);
+        if (typeof numeric === "number") {
+          setMinSliderValue(Math.min(clampToBounds(numeric), maxSliderValue));
+        }
+        return;
+      }
+      setMaxPriceInput(value);
+      if (!value.trim()) {
+        setMaxSliderValue(sliderBounds.max);
+        return;
+      }
+      const numeric = sanitizePriceValue(value);
+      if (typeof numeric === "number") {
+        setMaxSliderValue(Math.max(clampToBounds(numeric), minSliderValue));
+      }
+    },
+    [
+      clampToBounds,
+      maxSliderValue,
+      minSliderValue,
+      sanitizePriceValue,
+      sliderBounds.max,
+      sliderBounds.min,
+    ]
+  );
+
+  const applyPriceFilter = useCallback(() => {
+    let nextMin = sanitizePriceValue(minPriceInput);
+    let nextMax = sanitizePriceValue(maxPriceInput);
+    if (
+      typeof nextMin === "number" &&
+      typeof nextMax === "number" &&
+      nextMin > nextMax
+    ) {
+      const swap = nextMin;
+      nextMin = nextMax;
+      nextMax = swap;
+    }
+    let normalizedMin =
+      typeof nextMin === "number" ? clampToBounds(nextMin) : null;
+    let normalizedMax =
+      typeof nextMax === "number" ? clampToBounds(nextMax) : null;
+    if (
+      typeof normalizedMin === "number" &&
+      typeof normalizedMax === "number" &&
+      normalizedMin > normalizedMax
+    ) {
+      const swap = normalizedMin;
+      normalizedMin = normalizedMax;
+      normalizedMax = swap;
+    }
+    setMinSliderValue(
+      typeof normalizedMin === "number" ? normalizedMin : sliderBounds.min
+    );
+    setMaxSliderValue(
+      typeof normalizedMax === "number" ? normalizedMax : sliderBounds.max
+    );
+    updateParams({
+      minPrice:
+        typeof normalizedMin === "number" ? String(normalizedMin) : null,
+      maxPrice:
+        typeof normalizedMax === "number" ? String(normalizedMax) : null,
+    });
+  }, [
+    clampToBounds,
+    maxPriceInput,
+    minPriceInput,
+    sanitizePriceValue,
+    sliderBounds.max,
+    sliderBounds.min,
+    updateParams,
+  ]);
+
+  const clearPriceFilter = useCallback(() => {
+    setMinPriceInput("");
+    setMaxPriceInput("");
+    setMinSliderValue(sliderBounds.min);
+    setMaxSliderValue(sliderBounds.max);
+    updateParams({
+      minPrice: null,
+      maxPrice: null,
+    });
+  }, [sliderBounds.max, sliderBounds.min, updateParams]);
+
+  const handleQuickPrice = useCallback(
+    (min?: number, max?: number) => {
+      setMinPriceInput(typeof min === "number" ? String(min) : "");
+      setMaxPriceInput(typeof max === "number" ? String(max) : "");
+      setMinSliderValue(
+        typeof min === "number" ? clampToBounds(min) : sliderBounds.min
+      );
+      setMaxSliderValue(
+        typeof max === "number" ? clampToBounds(max) : sliderBounds.max
+      );
+      updateParams({
+        minPrice: typeof min === "number" ? String(min) : null,
+        maxPrice: typeof max === "number" ? String(max) : null,
+      });
+    },
+    [clampToBounds, sliderBounds.max, sliderBounds.min, updateParams]
+  );
+
+  const quickPriceRanges = useMemo(() => {
+    const ranges: Array<{ label: string; min?: number; max?: number }> = [
+      { label: "Under ₹20k", max: 20000 },
+      { label: "₹20k – ₹30k", min: 20000, max: 30000 },
+      { label: "₹30k – ₹40k", min: 30000, max: 40000 },
+    ];
+    if (priceRange.maxPrice > 40000) {
+      ranges.push({ label: "₹40k+", min: 40000 });
+    }
+    return ranges;
+  }, [priceRange.maxPrice]);
+
+  const sliderRange = Math.max(1, sliderBounds.max - sliderBounds.min);
+  const sliderStep = Math.max(500, Math.round(sliderRange / 40));
+
+  const sliderHighlight = useMemo(() => {
+    const start =
+      ((minSliderValue - sliderBounds.min) / sliderRange) * 100;
+    const end = ((maxSliderValue - sliderBounds.min) / sliderRange) * 100;
+    return {
+      start: Math.max(0, Math.min(100, start)),
+      end: Math.max(0, Math.min(100, end)),
+    };
+  }, [maxSliderValue, minSliderValue, sliderBounds.min, sliderRange]);
+
+  const handleSliderChange = useCallback(
+    (type: "min" | "max", value: number) => {
+      if (type === "min") {
+        const next = Math.min(clampToBounds(value), maxSliderValue);
+        setMinSliderValue(next);
+        setMinPriceInput(String(next));
+        return;
+      }
+      const next = Math.max(clampToBounds(value), minSliderValue);
+      setMaxSliderValue(next);
+      setMaxPriceInput(String(next));
+    },
+    [clampToBounds, maxSliderValue, minSliderValue]
+  );
+
+  const handleSliderCommit = useCallback(() => {
+    const minValue =
+      minSliderValue <= sliderBounds.min
+        ? null
+        : String(Math.round(minSliderValue));
+    const maxValue =
+      maxSliderValue >= sliderBounds.max
+        ? null
+        : String(Math.round(maxSliderValue));
+    updateParams({
+      minPrice: minValue,
+      maxPrice: maxValue,
+    });
+  }, [
+    maxSliderValue,
+    minSliderValue,
+    sliderBounds.max,
+    sliderBounds.min,
+    updateParams,
+  ]);
 
   const subMasterById = useMemo(() => {
     const map = new Map<string, SubMasterOptionSummary>();
@@ -278,6 +501,7 @@ export function ProductsToolbar({
 
   const primaryGroups = checkboxGroups.slice(0, 3);
   const advancedGroups = checkboxGroups.slice(3);
+  const hasPriceFilter = Boolean(filters.minPrice || filters.maxPrice);
 
   const activeFilters = useMemo(() => {
     const items: Array<{ key: string; label: string }> = [];
@@ -391,6 +615,129 @@ export function ProductsToolbar({
             {activeFilters.length} filter{activeFilters.length === 1 ? "" : "s"} active
           </Badge>
         ) : null}
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-inner">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Price range
+            </p>
+            <p className="text-[0.7rem] text-slate-500">
+              Catalog: ₹{priceRange.minPrice.toLocaleString("en-IN")} - ₹
+              {priceRange.maxPrice.toLocaleString("en-IN")}
+            </p>
+          </div>
+          {hasPriceFilter ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-slate-500 hover:text-slate-900"
+              onClick={clearPriceFilter}
+              disabled={isPending}
+            >
+              Reset
+            </Button>
+          ) : null}
+        </div>
+        <div className="space-y-1.5">
+          <div className="price-range-slider relative h-8">
+            <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200" />
+            <div
+              className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary/60"
+              style={{
+                left: `${sliderHighlight.start}%`,
+                right: `${100 - sliderHighlight.end}%`,
+              }}
+            />
+            <input
+              type="range"
+              min={sliderBounds.min}
+              max={sliderBounds.max}
+              step={sliderStep}
+              value={minSliderValue}
+              onChange={(event) =>
+                handleSliderChange("min", Number(event.target.value))
+              }
+              onPointerUp={handleSliderCommit}
+              disabled={isPending}
+              aria-label="Minimum price slider"
+              className="absolute inset-x-0 top-0 h-8 w-full bg-transparent"
+            />
+            <input
+              type="range"
+              min={sliderBounds.min}
+              max={sliderBounds.max}
+              step={sliderStep}
+              value={maxSliderValue}
+              onChange={(event) =>
+                handleSliderChange("max", Number(event.target.value))
+              }
+              onPointerUp={handleSliderCommit}
+              disabled={isPending}
+              aria-label="Maximum price slider"
+              className="absolute inset-x-0 top-0 h-8 w-full bg-transparent"
+            />
+          </div>
+          <div className="flex items-center justify-between text-[0.65rem] text-slate-500">
+            <span>₹{minSliderValue.toLocaleString("en-IN")}</span>
+            <span>₹{maxSliderValue.toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min="0"
+            inputMode="numeric"
+            placeholder="Min"
+            value={minPriceInput}
+            onChange={(event) => handleInputChange("min", event.target.value)}
+            className="h-9 bg-white text-xs"
+            aria-label="Minimum price"
+          />
+          <span className="text-xs text-slate-400">to</span>
+          <Input
+            type="number"
+            min="0"
+            inputMode="numeric"
+            placeholder="Max"
+            value={maxPriceInput}
+            onChange={(event) => handleInputChange("max", event.target.value)}
+            className="h-9 bg-white text-xs"
+            aria-label="Maximum price"
+          />
+          <Button
+            size="sm"
+            className="text-xs"
+            onClick={applyPriceFilter}
+            disabled={isPending}
+          >
+            Apply
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {quickPriceRanges.map((range) => {
+            const isActive =
+              (filters.minPrice ?? "") === (typeof range.min === "number" ? String(range.min) : "") &&
+              (filters.maxPrice ?? "") === (typeof range.max === "number" ? String(range.max) : "");
+            return (
+              <Button
+                key={range.label}
+                type="button"
+                size="sm"
+                variant={isActive ? "default" : "outline"}
+                className={cn(
+                  "border-slate-200 px-3 py-1 text-[0.7rem]",
+                  isActive ? "bg-primary text-primary-foreground" : "bg-white text-slate-600"
+                )}
+                onClick={() => handleQuickPrice(range.min, range.max)}
+                disabled={isPending}
+              >
+                {range.label}
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-4">

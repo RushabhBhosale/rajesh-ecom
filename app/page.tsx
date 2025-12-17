@@ -109,80 +109,121 @@ function PromoTiles() {
   return (
     <section className="py-12">
       <div className="grid gap-6 lg:grid-cols-4">
+        {/* MacBooks / Premium */}
         <Link
-          href="/products?category=Laptops"
-          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 p-7 shadow-sm"
+          href={{
+            pathname: "/products",
+            query: { category: "Laptops", companyName: "Apple" },
+          }}
+          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
+      border border-amber-400/30 bg-gradient-to-br from-slate-900 to-slate-800
+      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-amber-400/50"
         >
-          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+          <div className="text-amber-400 text-xs font-semibold uppercase tracking-widest">
             Premium picks
           </div>
-          <div className="mt-2 text-white text-2xl font-bold">
+
+          <div className="mt-2 text-amber-300 text-2xl font-bold">
             MacBooks & Premium
           </div>
-          <div className="mt-2 text-white/80 text-sm">
+
+          <div className="mt-2 text-slate-300 text-sm">
             Clean builds, top condition.
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+
+          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300 transition">
             Shop now <ArrowRight className="h-4 w-4" />
           </div>
-          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+
+          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-400/15 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
         </Link>
 
+        {/* Dell */}
         <Link
-          href="/products?company=Dell"
-          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-primary to-primary2 p-7 shadow-sm"
+          href={{
+            pathname: "/products",
+            query: { category: "Laptops", companyName: "Dell" },
+          }}
+          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
+      border border-blue-400/30 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900
+      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-blue-400/50"
         >
-          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+          <div className="text-blue-300 text-xs font-semibold uppercase tracking-widest">
             Workstation deals
           </div>
-          <div className="mt-2 text-white text-2xl font-bold">
+
+          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
             Premium Dell Laptops
           </div>
-          <div className="mt-2 text-white/80 text-sm">
+
+          <div className="mt-2 text-blue-200 text-sm">
             Business-ready, powerful, reliable.
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+
+          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-300 group-hover:text-blue-200 transition">
             Shop now <ArrowRight className="h-4 w-4" />
           </div>
-          <div className="pointer-events-none absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+
+          <div className="pointer-events-none absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
         </Link>
 
+        {/* Gaming */}
         <Link
-          href="/products?category=Laptops&tag=gaming"
-          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 to-slate-700 p-7 shadow-sm"
+          href={{
+            pathname: "/products",
+            query: { category: "Gaming Laptops", search: "gaming" },
+          }}
+          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
+      border border-red-400/30 bg-gradient-to-br from-slate-900 via-red-950/90 to-slate-900
+      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-red-400/50"
         >
-          <div className="text-white/80 text-xs font-semibold uppercase tracking-widest">
+          <div className="text-red-400 text-xs font-semibold uppercase tracking-widest">
             Performance
           </div>
-          <div className="mt-2 text-white text-2xl font-bold">
+
+          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
             OG Gaming Laptops
           </div>
-          <div className="mt-2 text-white/80 text-sm">
+
+          <div className="mt-2 text-slate-300 text-sm">
             High FPS builds, serious cooling.
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+
+          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-red-400 group-hover:text-red-300 transition">
             Shop now <ArrowRight className="h-4 w-4" />
           </div>
-          <div className="pointer-events-none absolute -right-16 top-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+
+          <div className="pointer-events-none absolute -right-16 top-12 h-48 w-48 rounded-full bg-red-400/15 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
         </Link>
 
+        {/* 2-in-1 / Tablets */}
         <Link
           href="/products?category=Tablets"
-          className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-100 to-white p-7 shadow-sm"
+          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
+      border border-slate-700/60 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
+      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-slate-500/80"
         >
-          <div className="text-primary2 text-xs font-semibold uppercase tracking-widest">
+          <div className="text-slate-300 text-xs font-semibold uppercase tracking-widest">
             Flexible
           </div>
-          <div className="mt-2 text-primary text-2xl font-bold">
+
+          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
             2-in-1 / Detachables
           </div>
-          <div className="mt-2 text-primary2 text-sm">
+
+          <div className="mt-2 text-slate-400 text-sm">
             Touch, pen, and portability.
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+
+          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:text-white transition">
             Shop now <ArrowRight className="h-4 w-4" />
           </div>
-          <div className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full bg-slate-200/60 blur-2xl" />
+
+          <div className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full bg-slate-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
         </Link>
       </div>
     </section>
