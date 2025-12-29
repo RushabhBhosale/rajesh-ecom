@@ -43,7 +43,9 @@ export function InventoryTable({ items }: InventoryTableProps) {
   );
 
   const handleStockChange = useCallback((id: string, value: string) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, draftStock: value } : row)));
+    setRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, draftStock: value } : row))
+    );
   }, []);
 
   const handleSave = useCallback(async (row: InventoryRowState) => {
@@ -53,7 +55,11 @@ export function InventoryTable({ items }: InventoryTableProps) {
       return;
     }
 
-    setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, saving: true } : item)));
+    setRows((prev) =>
+      prev.map((item) =>
+        item.id === row.id ? { ...item, saving: true } : item
+      )
+    );
 
     try {
       const response = await fetch(`/api/admin/inventory/${row.id}`, {
@@ -61,20 +67,28 @@ export function InventoryTable({ items }: InventoryTableProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stock: nextStock }),
       });
-      const data: { variant?: { stock: number; inStock: boolean } } | null = await response
-        .json()
-        .catch(() => null);
+      const data: { variant?: { stock: number; inStock: boolean } } | null =
+        await response.json().catch(() => null);
 
       if (!response.ok) {
         const message =
-          typeof (data as any)?.error === "string" ? (data as any).error : "Unable to update stock.";
+          typeof (data as any)?.error === "string"
+            ? (data as any).error
+            : "Unable to update stock.";
         toast.error(message);
-        setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, saving: false } : item)));
+        setRows((prev) =>
+          prev.map((item) =>
+            item.id === row.id ? { ...item, saving: false } : item
+          )
+        );
         return;
       }
 
       const updatedStock = Number(data?.variant?.stock ?? nextStock);
-      const updatedInStock = typeof data?.variant?.inStock === "boolean" ? data.variant.inStock : updatedStock > 0;
+      const updatedInStock =
+        typeof data?.variant?.inStock === "boolean"
+          ? data.variant.inStock
+          : updatedStock > 0;
 
       setRows((prev) =>
         prev.map((item) =>
@@ -93,21 +107,48 @@ export function InventoryTable({ items }: InventoryTableProps) {
     } catch (error) {
       console.error(error);
       toast.error("Unable to update stock right now.");
-      setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, saving: false } : item)));
+      setRows((prev) =>
+        prev.map((item) =>
+          item.id === row.id ? { ...item, saving: false } : item
+        )
+      );
     }
   }, []);
 
   const columns = useMemo<ColumnDef<InventoryRowState>[]>(
     () => [
+      // {
+      //   id: "product",
+      //   header: ({ column }) => (
+      //     <DataTableColumnHeader column={column} title="Product" />
+      //   ),
+      //   cell: ({ row }) => (
+      //     <div className="space-y-1">
+      //       <p className="font-semibold text-foreground whitespace-nowrap">
+      //         {row.original.productName}
+      //       </p>
+      //       <p className="text-xs text-muted-foreground">
+      //         {row.original.variantLabel}
+      //       </p>
+      //     </div>
+      //   ),
+      // },
       {
         id: "sku",
-        accessorFn: (row) => [row.sku, row.productName, row.variantLabel].filter(Boolean).join(" "),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="SKU" />,
+        accessorFn: (row) =>
+          [row.sku, row.productName, row.variantLabel]
+            .filter(Boolean)
+            .join(" "),
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="SKU" />
+        ),
         cell: ({ row }) => {
           const original = row.original;
           return (
             <div className="space-y-1">
-              <p className="font-semibold text-foreground">{original.sku || "—"}</p>
+              <p className="font-semibold text-foreground">
+                {original.sku || "—"}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {original.category}
                 {original.company ? ` • ${original.company}` : ""}
@@ -117,25 +158,21 @@ export function InventoryTable({ items }: InventoryTableProps) {
         },
       },
       {
-        id: "product",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Product" />,
-        cell: ({ row }) => (
-          <div className="space-y-1">
-            <p className="font-semibold text-foreground">{row.original.productName}</p>
-            <p className="text-xs text-muted-foreground">{row.original.variantLabel}</p>
+        accessorKey: "price",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Price" align="right" />
+        ),
+        cell: ({ getValue }) => (
+          <div className="text-right font-semibold text-foreground">
+            {formatCurrency(getValue<number>())}
           </div>
         ),
       },
       {
-        accessorKey: "price",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Price" align="right" />,
-        cell: ({ getValue }) => (
-          <div className="text-right font-semibold text-foreground">{formatCurrency(getValue<number>())}</div>
-        ),
-      },
-      {
         id: "stock",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Stock" />,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Stock" />
+        ),
         cell: ({ row }) => {
           const original = row.original;
           const isSaving = original.saving;
@@ -146,14 +183,19 @@ export function InventoryTable({ items }: InventoryTableProps) {
                 inputMode="numeric"
                 min={0}
                 value={original.draftStock}
-                onChange={(event) => handleStockChange(original.id, event.target.value)}
+                onChange={(event) =>
+                  handleStockChange(original.id, event.target.value)
+                }
                 className="w-24"
                 aria-label={`Stock for ${original.sku || original.productName}`}
               />
               <Button
                 variant="outline"
                 size="sm"
-                className={cn("flex-shrink-0", isSaving ? "pointer-events-none opacity-70" : undefined)}
+                className={cn(
+                  "flex-shrink-0",
+                  isSaving ? "pointer-events-none opacity-70" : undefined
+                )}
                 onClick={() => handleSave(original)}
                 disabled={isSaving || original.draftStock === ""}
               >
@@ -165,7 +207,9 @@ export function InventoryTable({ items }: InventoryTableProps) {
       },
       {
         id: "status",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Status" />
+        ),
         cell: ({ row }) => {
           const original = row.original;
           const isOutOfStock = !original.inStock || original.stock <= 0;
@@ -192,7 +236,9 @@ export function InventoryTable({ items }: InventoryTableProps) {
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">{row.sku || "—"}</p>
+              <p className="text-sm font-semibold text-foreground">
+                {row.sku || "—"}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {row.category}
                 {row.company ? ` • ${row.company}` : ""}
@@ -203,24 +249,33 @@ export function InventoryTable({ items }: InventoryTableProps) {
             </Badge>
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">{row.productName}</p>
+            <p className="text-sm font-semibold text-foreground">
+              {row.productName}
+            </p>
             <p className="text-xs text-muted-foreground">{row.variantLabel}</p>
           </div>
-          <div className="text-sm font-semibold text-foreground">{formatCurrency(row.price)}</div>
+          <div className="text-sm font-semibold text-foreground">
+            {formatCurrency(row.price)}
+          </div>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               inputMode="numeric"
               min={0}
               value={row.draftStock}
-              onChange={(event) => handleStockChange(row.id, event.target.value)}
+              onChange={(event) =>
+                handleStockChange(row.id, event.target.value)
+              }
               className="w-24"
               aria-label={`Stock for ${row.sku || row.productName}`}
             />
             <Button
               variant="outline"
               size="sm"
-              className={cn("flex-shrink-0", row.saving ? "pointer-events-none opacity-70" : undefined)}
+              className={cn(
+                "flex-shrink-0",
+                row.saving ? "pointer-events-none opacity-70" : undefined
+              )}
               onClick={() => handleSave(row)}
               disabled={row.saving || row.draftStock === ""}
             >
@@ -240,8 +295,12 @@ export function InventoryTable({ items }: InventoryTableProps) {
     () =>
       [...rows].sort(
         (a, b) =>
-          a.sku.localeCompare(b.sku || "", undefined, { sensitivity: "base" }) ||
-          a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" })
+          a.sku.localeCompare(b.sku || "", undefined, {
+            sensitivity: "base",
+          }) ||
+          a.productName.localeCompare(b.productName, undefined, {
+            sensitivity: "base",
+          })
       ),
     [rows]
   );
