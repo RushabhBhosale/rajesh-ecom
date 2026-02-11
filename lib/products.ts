@@ -1,4 +1,4 @@
-import mongoose, { type FilterQuery } from "mongoose";
+import mongoose, { type QueryFilter } from "mongoose";
 
 import { connectDB } from "@/lib/db";
 import type { MasterOptionSummary, MasterOptionType } from "@/lib/master-constants";
@@ -399,16 +399,16 @@ function mapVariantDocument(variant: VariantDocument, lookups: LookupCaches): Pr
     colors,
     inStock,
     isDefault: Boolean(variant.isDefault),
-    processor: buildMasterSummary(variant.processorId, "processor"),
-    processorSubmaster: getSubMaster(variant.processorSubmasterId),
-    ram: buildMasterSummary(variant.ramId, "ram"),
-    ramSubmaster: getSubMaster(variant.ramSubmasterId),
-    storage: buildMasterSummary(variant.storageId, "storage"),
-    storageSubmaster: getSubMaster(variant.storageSubmasterId),
-    graphics: buildMasterSummary(variant.graphicsId, "graphics"),
-    graphicsSubmaster: getSubMaster(variant.graphicsSubmasterId),
-    os: buildMasterSummary(variant.osId, "os"),
-    osSubmaster: getSubMaster(variant.osSubmasterId),
+    processor: buildMasterSummary(variant.processorId ?? undefined, "processor"),
+    processorSubmaster: getSubMaster(variant.processorSubmasterId ?? undefined),
+    ram: buildMasterSummary(variant.ramId ?? undefined, "ram"),
+    ramSubmaster: getSubMaster(variant.ramSubmasterId ?? undefined),
+    storage: buildMasterSummary(variant.storageId ?? undefined, "storage"),
+    storageSubmaster: getSubMaster(variant.storageSubmasterId ?? undefined),
+    graphics: buildMasterSummary(variant.graphicsId ?? undefined, "graphics"),
+    graphicsSubmaster: getSubMaster(variant.graphicsSubmasterId ?? undefined),
+    os: buildMasterSummary(variant.osId ?? undefined, "os"),
+    osSubmaster: getSubMaster(variant.osSubmasterId ?? undefined),
   };
 }
 
@@ -556,7 +556,7 @@ function mapProduct(
 export async function listProducts(options: ListProductsOptions = {}): Promise<ProductSummary[]> {
   await connectDB();
 
-  const filters: FilterQuery<ProductDocument> = {};
+  const filters: QueryFilter<ProductDocument> = {};
   if (options.category && options.category !== "all") {
     filters.category = options.category;
   }

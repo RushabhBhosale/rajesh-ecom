@@ -2314,7 +2314,7 @@ export function ProductForm({
                             step="0.01"
                             min="0"
                             placeholder="48999"
-                            defaultValue={field.price ?? product?.price ?? 0}
+                            defaultValue={Number(field.price ?? product?.price ?? 0)}
                             {...register(`variants.${index}.price` as const, {
                               valueAsNumber: true,
                             })}
@@ -2337,7 +2337,7 @@ export function ProductForm({
                             step="0.01"
                             min="0"
                             placeholder="48999"
-                            defaultValue={field.discountedPrice ?? field.price ?? product?.price ?? 0}
+                            defaultValue={Number(field.discountedPrice ?? field.price ?? product?.price ?? 0)}
                             {...register(`variants.${index}.discountedPrice` as const, {
                               valueAsNumber: true,
                             })}

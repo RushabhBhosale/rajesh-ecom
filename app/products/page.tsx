@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { ProductCard } from "@/components/products/product-card";
 import { ProductsToolbar } from "@/components/products/products-toolbar";
@@ -262,22 +263,24 @@ export default async function ProductsPage({
       <section className="flex-1 py-10">
         <div className="mx-auto px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
-            <ProductsToolbar
-              categories={facets.categories}
-              conditions={facets.conditions}
-              masterOptions={{
-                companies: facets.companies,
-                processors: facets.processors,
-                rams: facets.rams,
-                storages: facets.storages,
-                graphics: facets.graphics,
-                operatingSystems: facets.operatingSystems,
-              }}
-              priceRange={facets.priceRange}
-              companySubMasters={facets.companySubMasters}
-              filters={filterSnapshot}
-              resultCount={products.length}
-            />
+            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading filters…</div>}>
+              <ProductsToolbar
+                categories={facets.categories}
+                conditions={facets.conditions}
+                masterOptions={{
+                  companies: facets.companies,
+                  processors: facets.processors,
+                  rams: facets.rams,
+                  storages: facets.storages,
+                  graphics: facets.graphics,
+                  operatingSystems: facets.operatingSystems,
+                }}
+                priceRange={facets.priceRange}
+                companySubMasters={facets.companySubMasters}
+                filters={filterSnapshot}
+                resultCount={products.length}
+              />
+            </Suspense>
 
             <div className="space-y-8">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -289,7 +292,9 @@ export default async function ProductsPage({
                     Enterprise hardware ready to deploy
                   </h2>
                 </div>
-                <ProductsSortControl sort={filterSnapshot.sort} />
+                <Suspense fallback={<div className="text-sm text-muted-foreground">Loading sort…</div>}>
+                  <ProductsSortControl sort={filterSnapshot.sort} />
+                </Suspense>
               </div>
 
               {emptyState ? (

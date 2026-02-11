@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import type { FilterQuery } from "mongoose";
+import type { QueryFilter } from "mongoose";
 
 import { connectDB } from "@/lib/db";
 import { masterTypes, type MasterOptionType } from "@/lib/master-constants";
@@ -50,7 +50,7 @@ export async function listSubMasterOptions(options?: {
   if (options?.masterId && masterIds.length === 0) {
     return [];
   }
-  const masterQuery: FilterQuery<MasterOptionDocument> = {
+  const masterQuery: QueryFilter<MasterOptionDocument> = {
     type: { $in: allowedTypes },
   };
   if (masterIds.length > 0) {

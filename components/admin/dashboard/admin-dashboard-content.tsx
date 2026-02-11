@@ -231,7 +231,16 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
               {metrics.ordersByStatus.some((entry) => entry.count > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Tooltip formatter={(value: number) => formatNumber(value)} />
+                    <Tooltip<number, string>
+                      formatter={(value) => {
+                        const numericValue = Array.isArray(value)
+                          ? Number(value[0] ?? 0)
+                          : typeof value === "number"
+                            ? value
+                            : Number(value ?? 0);
+                        return formatNumber(numericValue);
+                      }}
+                    />
                     <Legend verticalAlign="bottom" height={48} />
                     <Pie
                       data={metrics.ordersByStatus}
@@ -295,7 +304,16 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => formatCurrency(value)}
                   />
-                  <Tooltip formatter={(value: number) => [formatCurrency(value), "Revenue"]} />
+                  <Tooltip<number, "Revenue">
+                    formatter={(value) => {
+                      const numericValue = Array.isArray(value)
+                        ? Number(value[0] ?? 0)
+                        : typeof value === "number"
+                          ? value
+                          : Number(value ?? 0);
+                      return [formatCurrency(numericValue), "Revenue"] as const;
+                    }}
+                  />
                   <Legend verticalAlign="top" height={32} />
                   <Bar dataKey="revenue" name="Revenue" radius={[6, 6, 0, 0]} fill={chartColors[0]} />
                 </BarChart>
@@ -316,7 +334,16 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
                   <CartesianGrid strokeDasharray="4 4" className="stroke-muted" />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} />
                   <YAxis tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                  <Tooltip formatter={(value: number) => formatNumber(value)} />
+                  <Tooltip<number, string>
+                    formatter={(value) => {
+                      const numericValue = Array.isArray(value)
+                        ? Number(value[0] ?? 0)
+                        : typeof value === "number"
+                          ? value
+                          : Number(value ?? 0);
+                      return formatNumber(numericValue);
+                    }}
+                  />
                   <Legend verticalAlign="top" height={32} />
                   <Area
                     type="monotone"
