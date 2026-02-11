@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
@@ -20,8 +20,8 @@ async function ensureAdmin() {
   return { actor } as const;
 }
 
-export async function PATCH(request: Request, context: { params: { variantId: string } }) {
-  const { variantId } = context.params;
+export async function PATCH(request: NextRequest, context: { params: Promise<{ variantId: string }> }) {
+  const { variantId } = await context.params;
 
   if (!isValidId(variantId)) {
     return NextResponse.json({ error: "Invalid variant id" }, { status: 400 });

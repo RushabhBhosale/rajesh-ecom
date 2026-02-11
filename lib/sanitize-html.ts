@@ -49,9 +49,7 @@ export function sanitizeRichText(input: string): string {
   }
 
   const looksLikeHtml = /<[a-z][\s\S]*>/i.test(trimmed);
-  const rawHtml = looksLikeHtml
-    ? trimmed
-    : marked.parse(trimmed, { mangle: false, headerIds: false });
+  const rawHtml = looksLikeHtml ? trimmed : (marked.parse(trimmed, { async: false }) as string);
 
   return sanitizeHtml(rawHtml, {
     allowedTags,
@@ -67,7 +65,7 @@ export function sanitizeRichText(input: string): string {
     transformTags: {
       iframe: (tagName, attribs) => {
         if (!attribs.src) {
-          return { tagName: "p", text: "Embedded content missing source." };
+          return { tagName: "p", text: "Embedded content missing source.", attribs: {} };
         }
         return {
           tagName,
@@ -79,7 +77,7 @@ export function sanitizeRichText(input: string): string {
       },
       img: (tagName, attribs) => {
         if (!attribs.src) {
-          return { tagName: "span", text: "Image source missing" };
+          return { tagName: "span", text: "Image source missing", attribs: {} };
         }
         return {
           tagName,

@@ -25,7 +25,7 @@ type Slide = {
 
 export function HeroSwiper() {
   return (
-    <div className="bg-white/80 shadow-sm backdrop-blur-sm overflow-hidden">
+    <div className="bg-white/80 shadow-sm backdrop-blur-sm overflow-hidden rounded-b-3xl border-b border-slate-200">
       <Swiper
         // modules={[Autoplay]}
         slidesPerView={1}
@@ -36,7 +36,7 @@ export function HeroSwiper() {
         className="w-full"
       >
         <SwiperSlide>
-          <div className="p-6 sm:p-7 min-h-[400px] slide slide-1 flex items-center xl:pl-44">
+          <div className="p-6 sm:p-7 min-h-[360px] sm:min-h-[420px] slide slide-1 flex items-center xl:pl-44">
             <div className="flex flex-col">
               <div className="text-white font-medium text-[clamp(2rem,4vw,3.75rem)]">
                 Buy Refurbished <br /> Laptop Today
@@ -53,7 +53,7 @@ export function HeroSwiper() {
           </div>
         </SwiperSlide>
         <SwiperSlide>
-          <div className="p-6 sm:p-7 min-h-[400px] slide slide-2 flex items-center justify-center">
+          <div className="p-6 sm:p-7 min-h-[360px] sm:min-h-[420px] slide slide-2 flex items-center justify-center">
             <div className="flex flex-col items-center">
               <div className="text-white font-bold text-[clamp(2.25rem,4vw,3.75rem)] text-shadow-medium">
                 Get the best Gaming Laptops
@@ -70,7 +70,7 @@ export function HeroSwiper() {
           </div>
         </SwiperSlide>
         <SwiperSlide>
-          <div className="p-6 sm:p-7 min-h-[400px] slide slide-3 flex items-center xl:pl-44">
+          <div className="p-6 sm:p-7 min-h-[360px] sm:min-h-[420px] slide slide-3 flex items-center xl:pl-44">
             <div className="flex flex-col">
               <div className="text-black font-medium text-[clamp(1.4rem,4vw,3.75rem)] text-shadow-crisp">
                 Premium laptops

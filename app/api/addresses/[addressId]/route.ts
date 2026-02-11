@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
@@ -6,18 +6,19 @@ import { addressSchema } from "@/lib/address-validation";
 import { deleteAddress, updateAddress } from "@/lib/addresses";
 
 interface RouteParams {
-  params: { addressId: string };
+  params: Promise<{ addressId: string }>;
 }
 
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { addressId } = await params;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const payload = addressSchema.parse(await request.json());
-    const updated = await updateAddress(user.id, params.addressId, payload);
+    const updated = await updateAddress(user.id, addressId, payload);
     if (!updated) {
       return NextResponse.json({ error: "Address not found" }, { status: 404 });
     }
@@ -31,14 +32,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { addressId } = await params;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ok = await deleteAddress(user.id, params.addressId);
+    const ok = await deleteAddress(user.id, addressId);
     if (!ok) {
       return NextResponse.json({ error: "Address not found" }, { status: 404 });
     }

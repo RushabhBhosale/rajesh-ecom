@@ -241,22 +241,22 @@ export async function replaceProductVariants(
       condition: variant.condition,
       sku: variant.sku ?? "",
       stock: typeof variant.stock === "number" ? variant.stock : 1,
-      processorId: null,
+      processorId: variant.processorId ? new mongoose.Types.ObjectId(variant.processorId) : undefined,
       processorSubmasterId: variant.processorSubmasterId
         ? new mongoose.Types.ObjectId(variant.processorSubmasterId)
-        : null,
-      ramId: null,
-      ramSubmasterId: variant.ramSubmasterId ? new mongoose.Types.ObjectId(variant.ramSubmasterId) : null,
-      storageId: null,
+        : undefined,
+      ramId: variant.ramId ? new mongoose.Types.ObjectId(variant.ramId) : undefined,
+      ramSubmasterId: variant.ramSubmasterId ? new mongoose.Types.ObjectId(variant.ramSubmasterId) : undefined,
+      storageId: variant.storageId ? new mongoose.Types.ObjectId(variant.storageId) : undefined,
       storageSubmasterId: variant.storageSubmasterId
         ? new mongoose.Types.ObjectId(variant.storageSubmasterId)
-        : null,
-      graphicsId: null,
+        : undefined,
+      graphicsId: variant.graphicsId ? new mongoose.Types.ObjectId(variant.graphicsId) : undefined,
       graphicsSubmasterId: variant.graphicsSubmasterId
         ? new mongoose.Types.ObjectId(variant.graphicsSubmasterId)
-        : null,
-      osId: null,
-      osSubmasterId: variant.osSubmasterId ? new mongoose.Types.ObjectId(variant.osSubmasterId) : null,
+        : undefined,
+      osId: variant.osId ? new mongoose.Types.ObjectId(variant.osId) : undefined,
+      osSubmasterId: variant.osSubmasterId ? new mongoose.Types.ObjectId(variant.osSubmasterId) : undefined,
       imageUrl: variant.imageUrl ?? "",
       galleryImages: variant.galleryImages ?? [],
       richDescription: variant.richDescription ?? "",

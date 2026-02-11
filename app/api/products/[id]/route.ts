@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
@@ -280,10 +280,10 @@ async function ensureAdmin() {
   return { actor } as const;
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid product id" }, { status: 400 });
     }
 
@@ -357,13 +357,13 @@ export async function PUT(request: Request, context: { params: { id: string } })
     );
 
     await connectDB();
-    const exists = await ProductModel.exists({ _id: params.id });
+    const exists = await ProductModel.exists({ _id: id });
     if (!exists) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
     try {
-      await replaceProductVariants(params.id, variantInputs);
+      await replaceProductVariants(id, variantInputs);
     } catch (error) {
       if (error instanceof VariantValidationError) {
         return NextResponse.json({ error: error.message }, { status: 400 });
@@ -372,7 +372,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const updated = await ProductModel.findByIdAndUpdate(
-      params.id,
+      id,
       {
         $set: {
           name: finalName,
@@ -399,10 +399,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid product id" }, { status: 400 });
     }
 
@@ -412,7 +412,7 @@ export async function DELETE(request: Request, context: { params: { id: string }
     }
 
     await connectDB();
-    const deleted = await ProductModel.findByIdAndDelete(params.id);
+    const deleted = await ProductModel.findByIdAndDelete(id);
     if (!deleted) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }

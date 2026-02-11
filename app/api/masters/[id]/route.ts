@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
@@ -23,10 +23,10 @@ async function ensureAdmin() {
   return { actor } as const;
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid master id" }, { status: 400 });
     }
 
@@ -36,11 +36,11 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const payload = masterOptionPayloadSchema.parse(await request.json());
-    const id = masterIdSchema.parse(params.id);
+    const masterId = masterIdSchema.parse(id);
 
     await connectDB();
     const existing = await MasterOptionModel.findOne({
-      _id: { $ne: id },
+      _id: { $ne: masterId },
       type: payload.type,
       name: payload.name,
     }).lean();
@@ -53,7 +53,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const updated = await MasterOptionModel.findByIdAndUpdate(
-      id,
+      masterId,
       {
         $set: {
           type: payload.type,
@@ -79,10 +79,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function DELETE(_request: Request, context: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid master id" }, { status: 400 });
     }
 
@@ -92,7 +92,7 @@ export async function DELETE(_request: Request, context: { params: { id: string 
     }
 
     await connectDB();
-    const deleted = await MasterOptionModel.findByIdAndDelete(params.id);
+    const deleted = await MasterOptionModel.findByIdAndDelete(id);
     if (!deleted) {
       return NextResponse.json({ error: "Master option not found" }, { status: 404 });
     }

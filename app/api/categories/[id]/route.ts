@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
@@ -22,10 +22,10 @@ async function ensureAdmin() {
   return { actor } as const;
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid category id" }, { status: 400 });
     }
 
@@ -39,7 +39,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     await connectDB();
 
     const duplicate = await CategoryModel.findOne({
-      _id: { $ne: params.id },
+      _id: { $ne: id },
       name: payload.name,
     }).lean();
     if (duplicate) {
@@ -47,7 +47,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const updated = await CategoryModel.findByIdAndUpdate(
-      params.id,
+      id,
       {
         $set: {
           name: payload.name,

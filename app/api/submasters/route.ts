@@ -9,8 +9,8 @@ import {
   listSubMasterOptions,
 } from "@/lib/submaster-options";
 import { subMasterPayloadSchema } from "@/lib/submaster-validation";
-import { MasterOptionModel } from "@/models/master-option";
-import { SubMasterOptionModel } from "@/models/sub-master-option";
+import { MasterOptionModel, type MasterOptionDocument } from "@/models/master-option";
+import { SubMasterOptionModel, type SubMasterOptionDocument } from "@/models/sub-master-option";
 
 function parseTypesParam(value: string | null): MasterOptionType[] | undefined {
   if (!value) {
@@ -66,9 +66,9 @@ export async function POST(request: Request) {
     const payload = subMasterPayloadSchema.parse(await request.json());
 
     await connectDB();
-    let parentSub: Awaited<ReturnType<typeof SubMasterOptionModel.findById>> | null = null;
+    let parentSub: SubMasterOptionDocument | null = null;
     if (payload.parentId) {
-      parentSub = await SubMasterOptionModel.findById(payload.parentId).lean();
+      parentSub = await SubMasterOptionModel.findById(payload.parentId);
       if (!parentSub) {
         return NextResponse.json({ error: "Parent submaster not found" }, { status: 404 });
       }
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const master = await MasterOptionModel.findById(masterIdToUse).lean();
+    const master: MasterOptionDocument | null = await MasterOptionModel.findById(masterIdToUse);
     if (!master) {
       return NextResponse.json({ error: "Parent master not found" }, { status: 404 });
     }

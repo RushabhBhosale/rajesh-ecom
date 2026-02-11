@@ -609,17 +609,14 @@ export async function listProducts(options: ListProductsOptions = {}): Promise<P
     Boolean(graphicsFilterId) ||
     Boolean(osFilterId);
 
-  const masterOptionsForFilter = needsVariantFiltering
-    ? await listMasterOptions(
-        [
-          processorFilterId ? "processor" : null,
-          ramFilterId ? "ram" : null,
-          storageFilterId ? "storage" : null,
-          graphicsFilterId ? "graphics" : null,
-          osFilterId ? "os" : null,
-        ].filter((item): item is Exclude<typeof item, null> => Boolean(item))
-      )
-    : [];
+  const masterFilters: MasterOptionType[] = [];
+  if (processorFilterId) masterFilters.push("processor");
+  if (ramFilterId) masterFilters.push("ram");
+  if (storageFilterId) masterFilters.push("storage");
+  if (graphicsFilterId) masterFilters.push("graphics");
+  if (osFilterId) masterFilters.push("os");
+
+  const masterOptionsForFilter = needsVariantFiltering ? await listMasterOptions(masterFilters) : [];
 
   const filterOptionNameById = new Map(masterOptionsForFilter.map((item) => [item.id, item.name ?? ""]));
 

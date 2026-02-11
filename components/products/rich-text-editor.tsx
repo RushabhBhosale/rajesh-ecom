@@ -40,6 +40,9 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     }
 
     function handleInput() {
+      if (!element) {
+        return;
+      }
       onChange(element.innerHTML);
     }
 

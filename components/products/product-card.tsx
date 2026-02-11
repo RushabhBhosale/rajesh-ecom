@@ -58,7 +58,7 @@ export function ProductCard({ product, href }: ProductCardProps) {
 
   return (
     <Link href={detailsHref} className="group block">
-      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col min-h-[500px]">
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col min-h-[420px] sm:min-h-[500px]">
         {/* Image Container */}
         <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
           {showSale && (

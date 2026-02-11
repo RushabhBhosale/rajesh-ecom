@@ -18,7 +18,23 @@ const masterSeeds = {
   os: ["Windows 11 Pro", "Windows 11 Home", "macOS Ventura", "Ubuntu 22.04"],
 } as const;
 
-const curatedProducts = [
+type CuratedProductSeed = {
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  condition: "new" | "refurbished";
+  imageUrl: string;
+  company: string;
+  processor?: string;
+  ram?: string;
+  storage?: string;
+  os?: string;
+  stock?: number;
+  sku?: string;
+};
+
+const curatedProducts: CuratedProductSeed[] = [
   {
     name: "Dell Latitude 7420",
     category: "Laptops",
@@ -103,14 +119,14 @@ const curatedProducts = [
     stock: 25,
     sku: "LOGI-MX3S",
   },
-] as const;
+];
 
 function getIsTestEnv() {
   return typeof process !== "undefined" && (process.env.VITEST || process.env.VITEST_WORKER_ID);
 }
 
 async function seedMasters() {
-  const entries = Object.entries(masterSeeds) as Array<[keyof typeof masterSeeds, string[]]>;
+  const entries = Object.entries(masterSeeds) as Array<[keyof typeof masterSeeds, readonly string[]]>;
   for (const [type, values] of entries) {
     const operations = values.map((name, index) =>
       MasterOptionModel.updateOne(

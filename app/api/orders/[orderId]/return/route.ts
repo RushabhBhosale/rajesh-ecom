@@ -1,20 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { getOrderById } from "@/lib/orders";
 import { OrderModel } from "@/models/order";
 
 export async function POST(
-  _request: Request,
-  { params }: { params: { orderId: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const { orderId } = await params;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const order = await OrderModel.findOne({ _id: params.orderId, userId: user.id });
+    const order = await OrderModel.findOne({ _id: orderId, userId: user.id });
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }

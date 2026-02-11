@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { subMasterPayloadSchema, subMasterIdSchema } from "@/lib/submaster-validation";
 import { MasterOptionModel } from "@/models/master-option";
-import { SubMasterOptionModel } from "@/models/sub-master-option";
+import { SubMasterOptionModel, type SubMasterOptionDocument } from "@/models/sub-master-option";
 
 function isValidId(id: string) {
   return mongoose.Types.ObjectId.isValid(id);
@@ -23,10 +23,10 @@ async function ensureAdmin() {
   return { actor } as const;
 }
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid submaster id" }, { status: 400 });
     }
 
@@ -36,16 +36,16 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const payload = subMasterPayloadSchema.parse(await request.json());
-    const id = subMasterIdSchema.parse(params.id);
+    const subMasterId = subMasterIdSchema.parse(id);
 
     await connectDB();
 
-    let parentSub: Awaited<ReturnType<typeof SubMasterOptionModel.findById>> | null = null;
+    let parentSub: SubMasterOptionDocument | null = null;
     if (payload.parentId) {
-      if (payload.parentId === id) {
+      if (payload.parentId === subMasterId) {
         return NextResponse.json({ error: "A submaster cannot be its own parent" }, { status: 400 });
       }
-      parentSub = await SubMasterOptionModel.findById(payload.parentId).lean();
+      parentSub = await SubMasterOptionModel.findById(payload.parentId);
       if (!parentSub) {
         return NextResponse.json({ error: "Parent submaster not found" }, { status: 404 });
       }
@@ -60,13 +60,13 @@ export async function PUT(request: Request, context: { params: { id: string } })
       );
     }
 
-    const master = await MasterOptionModel.findById(masterIdToUse).lean();
+    const master = await MasterOptionModel.findById(masterIdToUse);
     if (!master) {
       return NextResponse.json({ error: "Parent master not found" }, { status: 404 });
     }
 
     const existing = await SubMasterOptionModel.findOne({
-      _id: { $ne: id },
+      _id: { $ne: subMasterId },
       masterId: masterIdToUse,
       parentId: payload.parentId ?? null,
       name: payload.name,
@@ -80,7 +80,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     }
 
     const updated = await SubMasterOptionModel.findByIdAndUpdate(
-      id,
+      subMasterId,
       {
         $set: {
           masterId: masterIdToUse,
@@ -111,10 +111,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function DELETE(_request: Request, context: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context;
-    if (!isValidId(params.id)) {
+    const { id } = await context.params;
+    if (!isValidId(id)) {
       return NextResponse.json({ error: "Invalid submaster id" }, { status: 400 });
     }
 
@@ -124,7 +124,7 @@ export async function DELETE(_request: Request, context: { params: { id: string 
     }
 
     await connectDB();
-    const deleted = await SubMasterOptionModel.findByIdAndDelete(params.id);
+    const deleted = await SubMasterOptionModel.findByIdAndDelete(id);
     if (!deleted) {
       return NextResponse.json({ error: "Submaster not found" }, { status: 404 });
     }

@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { ToasterProvider } from "@/components/providers/toaster-provider";
 import { SiteNavbar } from "@/components/navigation/site-navbar";
+import { PwaClient } from "@/components/pwa/pwa-client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +20,31 @@ export const metadata: Metadata = {
   title: "Rajesh Renewed | Premium refurbished electronics",
   description:
     "Shop professionally renewed laptops, tablets, and accessories with fast shipping, expert support, and sustainable savings.",
+  applicationName: "Rajesh Renewed",
+  manifest: "/manifest.webmanifest",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Rajesh Renewed",
+  },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: [
+      { url: "/pwa-icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/pwa-icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/pwa-icon-180.png", sizes: "180x180" }],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -28,7 +54,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} bg-background antialiased`}>
+      <body
+        suppressHydrationWarning
+        className={`${geistSans.variable} ${geistMono.variable} bg-background antialiased safe-inset`}
+      >
+        <PwaClient />
         <SiteNavbar />
         <ToasterProvider />
         <div className="min-h-screen">{children}</div>

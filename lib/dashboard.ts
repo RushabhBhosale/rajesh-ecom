@@ -232,7 +232,9 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
     }))
     .sort((a, b) => b.count - a.count);
 
-  const recentOrders: RecentOrderEntry[] = (recentOrdersDocs ?? []).map((order) => ({
+  const recentOrderList = Array.isArray(recentOrdersDocs) ? recentOrdersDocs : [];
+
+  const recentOrders: RecentOrderEntry[] = recentOrderList.map((order) => ({
     id: order._id.toString(),
     orderNumber: getOrderNumberFromId(order._id.toString()),
     customerName: order.customerName,

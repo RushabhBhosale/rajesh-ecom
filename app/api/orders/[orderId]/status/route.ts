@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
@@ -15,10 +15,11 @@ const payloadSchema = z.object({
 });
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { orderId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const { orderId } = await params;
     const actor = await getCurrentUser();
     if (!actor) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +31,7 @@ export async function PATCH(
     const { status } = payloadSchema.parse(await request.json());
 
     await connectDB();
-    const order = await OrderModel.findById(params.orderId);
+    const order = await OrderModel.findById(orderId);
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -40,7 +41,7 @@ export async function PATCH(
       update.paymentStatus = "paid";
     }
 
-    const updated = await OrderModel.findByIdAndUpdate(params.orderId, update, { new: true });
+    const updated = await OrderModel.findByIdAndUpdate(orderId, update, { new: true });
 
     if (!updated) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
