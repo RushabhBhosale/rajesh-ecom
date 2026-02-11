@@ -10,15 +10,16 @@ import { Button } from "@/components/ui/button";
 import { getProductById, listProducts } from "@/lib/products";
 
 interface ProductDetailPageProps {
-  params: {
+  params: Promise<{
     productId: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: ProductDetailPageProps): Promise<Metadata> {
-  const product = await getProductById(params.productId);
+  const { productId } = await params;
+  const product = await getProductById(productId);
 
   console.log("dcds", product)
 
@@ -39,7 +40,8 @@ export async function generateMetadata({
 }
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
-  const product = await getProductById(params.productId);
+  const { productId } = await params;
+  const product = await getProductById(productId);
 
   if (!product) {
     notFound();
@@ -144,4 +146,3 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     </main>
   );
 }
-

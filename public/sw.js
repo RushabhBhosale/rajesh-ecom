@@ -1,4 +1,4 @@
-const CACHE_VERSION = "rr-pwa-v1-20260211";
+const CACHE_VERSION = "rr-pwa-v2-20260211";
 const APP_SHELL = [
   "/",
   "/offline",
@@ -35,14 +35,28 @@ self.addEventListener("fetch", (event) => {
   // Let API and external requests pass through.
   if (!isSameOrigin || url.pathname.startsWith("/api")) return;
 
-  // App shell-style navigation fallback.
+  // Navigation: network-first with cached page fallback, then offline page.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline") || caches.match("/"))
+      (async () => {
+        const cache = await caches.open(CACHE_VERSION);
+        try {
+          const network = await fetch(request);
+          if (network && network.ok) {
+            cache.put(request, network.clone());
+          }
+          return network;
+        } catch (error) {
+          const cached = await cache.match(request);
+          if (cached) return cached;
+          return (await cache.match("/offline")) || (await cache.match("/")) || Response.error();
+        }
+      })()
     );
     return;
   }
 
+  // Static/assets: cache-first, then network, backfill cache.
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
