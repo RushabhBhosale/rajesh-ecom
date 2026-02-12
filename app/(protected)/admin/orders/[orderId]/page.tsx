@@ -7,7 +7,7 @@ import { getOrderStatusLabel, type OrderStatusValue } from "@/lib/order-status";
 import { getOrderById } from "@/lib/orders";
 
 interface AdminOrderDetailPageProps {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }
 
 export default async function AdminOrderDetailPage({ params }: AdminOrderDetailPageProps) {
@@ -19,7 +19,8 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
     redirect("/" );
   }
 
-  const order = await getOrderById(params.orderId);
+  const { orderId } = await params;
+  const order = await getOrderById(orderId);
   if (!order) {
     notFound();
   }

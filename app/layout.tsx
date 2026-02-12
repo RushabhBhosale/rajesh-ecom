@@ -4,7 +4,9 @@ import "./globals.css";
 
 import { ToasterProvider } from "@/components/providers/toaster-provider";
 import { SiteNavbar } from "@/components/navigation/site-navbar";
+import { SiteFooter } from "@/components/navigation/site-footer";
 import { PwaClient } from "@/components/pwa/pwa-client";
+import { brandName } from "@/utils/variable";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,10 +19,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rajesh Renewed | Premium refurbished electronics",
+  title: `${brandName} | Premium refurbished electronics`,
   description:
     "Shop professionally renewed laptops, tablets, and accessories with fast shipping, expert support, and sustainable savings.",
-  applicationName: "Rajesh Renewed",
+  applicationName: brandName,
   manifest: "/manifest.webmanifest",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#0f172a" },
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Rajesh Renewed",
+    title: brandName,
   },
   formatDetection: { telephone: false },
   icons: {
@@ -61,7 +63,10 @@ export default function RootLayout({
         <PwaClient />
         <SiteNavbar />
         <ToasterProvider />
-        <div className="min-h-screen">{children}</div>
+        <div className="flex min-h-screen flex-col">
+          <div className="flex-1">{children}</div>
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );

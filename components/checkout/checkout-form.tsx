@@ -22,6 +22,7 @@ import {
   selectCartItems,
   selectSubtotal,
 } from "@/lib/stores/cart-store";
+import { brandName } from "@/utils/variable";
 
 declare global {
   interface Window {
@@ -257,7 +258,7 @@ export function CheckoutForm() {
       key: orderResponse.razorpayKey,
       amount: orderResponse.amount,
       currency: orderResponse.currency,
-      name: "Rajesh Renewed",
+      name: brandName,
       description: `Order ${orderNumber}`,
       order_id: orderResponse.razorpayOrderId,
       prefill: {

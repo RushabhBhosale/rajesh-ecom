@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ export function ProductsToolbar({
   const [maxPriceInput, setMaxPriceInput] = useState(filters.maxPrice ?? "");
   const [minSliderValue, setMinSliderValue] = useState(sliderBounds.min);
   const [maxSliderValue, setMaxSliderValue] = useState(sliderBounds.max);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -148,6 +149,35 @@ export function ProductsToolbar({
     sliderBounds.max,
     sliderBounds.min,
   ]);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnDesktop = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileFiltersOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileFiltersOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    closeOnDesktop();
+    window.addEventListener("resize", closeOnDesktop);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("resize", closeOnDesktop);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileFiltersOpen]);
 
   const handleInputChange = useCallback(
     (type: "min" | "max", value: string) => {
@@ -584,8 +614,10 @@ export function ProductsToolbar({
     masterOptions.storages,
   ]);
 
-  return (
-    <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm lg:sticky lg:top-28 lg:max-h-[75vh] lg:overflow-y-auto">
+  const mobilePreviewFilters = activeFilters.slice(0, 2);
+
+  const toolbarContent = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-0.5">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -607,11 +639,17 @@ export function ProductsToolbar({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary" className="bg-slate-100 px-2.5 py-1 text-[0.7rem] text-slate-700">
+        <Badge
+          variant="secondary"
+          className="bg-slate-100 px-2.5 py-1 text-[0.7rem] text-slate-700"
+        >
           {resultCount} result{resultCount === 1 ? "" : "s"}
         </Badge>
         {activeFilters.length > 0 ? (
-          <Badge variant="outline" className="border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.7rem] text-slate-600">
+          <Badge
+            variant="outline"
+            className="border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.7rem] text-slate-600"
+          >
             {activeFilters.length} filter{activeFilters.length === 1 ? "" : "s"} active
           </Badge>
         ) : null}
@@ -718,8 +756,10 @@ export function ProductsToolbar({
         <div className="flex flex-wrap gap-1.5">
           {quickPriceRanges.map((range) => {
             const isActive =
-              (filters.minPrice ?? "") === (typeof range.min === "number" ? String(range.min) : "") &&
-              (filters.maxPrice ?? "") === (typeof range.max === "number" ? String(range.max) : "");
+              (filters.minPrice ?? "") ===
+                (typeof range.min === "number" ? String(range.min) : "") &&
+              (filters.maxPrice ?? "") ===
+                (typeof range.max === "number" ? String(range.max) : "");
             return (
               <Button
                 key={range.label}
@@ -757,11 +797,11 @@ export function ProductsToolbar({
                   const showSubSelect =
                     group.key === "company" && isChecked && subOptions.length > 0;
                   return (
-                  <div key={option.value} className="space-y-1">
-                    <label
-                      className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition",
-                        isChecked
+                    <div key={option.value} className="space-y-1">
+                      <label
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition",
+                          isChecked
                             ? "border-primary/50 bg-primary/5 text-slate-900 shadow-sm"
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                         )}
@@ -905,6 +945,96 @@ export function ProductsToolbar({
           </div>
         </div>
       ) : null}
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <div className="lg:hidden">
+        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 flex-1 justify-start border-slate-300 text-slate-700"
+              onClick={() => setMobileFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+              Filters
+              {activeFilters.length > 0 ? (
+                <span className="ml-1 rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                  {activeFilters.length}
+                </span>
+              ) : null}
+            </Button>
+            <Badge
+              variant="secondary"
+              className="bg-slate-100 px-2.5 py-1 text-[0.7rem] text-slate-700"
+            >
+              {resultCount} result{resultCount === 1 ? "" : "s"}
+            </Badge>
+          </div>
+          {mobilePreviewFilters.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {mobilePreviewFilters.map((item) => (
+                <Badge
+                  key={item.key}
+                  variant="outline"
+                  className="max-w-full truncate border-slate-300 bg-white px-2.5 py-1 text-[0.7rem] text-slate-700"
+                >
+                  {item.label}
+                </Badge>
+              ))}
+              {activeFilters.length > mobilePreviewFilters.length ? (
+                <Badge
+                  variant="outline"
+                  className="border-slate-300 bg-white px-2.5 py-1 text-[0.7rem] text-slate-600"
+                >
+                  +{activeFilters.length - mobilePreviewFilters.length} more
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {mobileFiltersOpen ? (
+        <div
+          className="fixed inset-0 z-50 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Product filters"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/45"
+            onClick={() => setMobileFiltersOpen(false)}
+            aria-label="Close filters"
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-[min(90vw,360px)] flex-col border-r border-slate-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-900">Filters</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-slate-500 hover:text-slate-900"
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label="Close filters panel"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+              {toolbarContent}
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      <aside className="hidden space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm lg:sticky lg:top-28 lg:block lg:max-h-[75vh] lg:overflow-y-auto">
+        {toolbarContent}
+      </aside>
+    </>
   );
 }

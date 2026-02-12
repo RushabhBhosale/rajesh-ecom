@@ -34,15 +34,13 @@ export function ProductsSortControl({ sort }: ProductsSortControlProps) {
         });
       });
     },
-    [pathname, router, searchParams, startTransition]
+    [pathname, router, searchParams, startTransition],
   );
 
   const sortOptions = [
     { value: "created-desc", label: "Newest" },
     { value: "price-asc", label: "Price ↑" },
     { value: "price-desc", label: "Price ↓" },
-    { value: "name-asc", label: "Name A–Z" },
-    { value: "name-desc", label: "Name Z–A" },
   ];
 
   return (

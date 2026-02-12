@@ -8,6 +8,7 @@ import { ProductDetailInteractive } from "@/components/products/product-detail-i
 import { sanitizeRichText } from "@/lib/sanitize-html";
 import { Button } from "@/components/ui/button";
 import { getProductById, listProducts } from "@/lib/products";
+import { brandName } from "@/utils/variable";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -25,13 +26,13 @@ export async function generateMetadata({
 
   if (!product) {
     return {
-      title: "Product not found | Rajesh Renewed",
+      title: `Product not found | ${brandName}`,
       description: "The requested product could not be located in our catalog.",
     };
   }
 
   return {
-    title: `${product.name} | Rajesh Renewed`,
+    title: `${product.name} | ${brandName}`,
     description: product.description,
     alternates: {
       canonical: `/products/${product.id}`,

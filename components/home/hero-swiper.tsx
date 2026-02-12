@@ -42,12 +42,14 @@ export function HeroSwiper() {
                 Buy Refurbished <br /> Laptop Today
               </div>
               <div className="mt-10">
-                <Button
-                  variant="secondary"
-                  className="font-bold rounded-none w-36 h-10"
-                >
-                  Shop now
-                </Button>
+                <Link href="/products">
+                  <Button
+                    variant="secondary"
+                    className="font-bold rounded-none w-36 h-10"
+                  >
+                    Shop now
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -59,12 +61,14 @@ export function HeroSwiper() {
                 Get the best Gaming Laptops
               </div>
               <div className="mt-10">
-                <Button
-                  variant="secondary"
-                  className="font-bold rounded-none w-36 h-10"
-                >
-                  Shop now
-                </Button>
+                <Link href="/products">
+                  <Button
+                    variant="secondary"
+                    className="font-bold rounded-none w-36 h-10"
+                  >
+                    Shop now
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -77,12 +81,14 @@ export function HeroSwiper() {
                 <br /> Smarter prices
               </div>
               <div className="mt-10">
-                <Button
-                  variant="secondary"
-                  className="font-bold text-white bg-black rounded-none w-36 h-10"
-                >
-                  Shop now
-                </Button>
+                <Link href="/products">
+                  <Button
+                    variant="secondary"
+                    className="font-bold text-white bg-black rounded-none w-36 h-10"
+                  >
+                    Shop now
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

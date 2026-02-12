@@ -1,5 +1,7 @@
+import { brandName } from "@/utils/variable";
+
 export const metadata = {
-  title: "Offline | Rajesh Renewed",
+  title: `Offline | ${brandName}`,
   description: "You are offline. Browse cached pages or reconnect to continue shopping.",
 };
 

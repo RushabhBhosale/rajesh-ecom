@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
+import { brandName } from "@/utils/variable";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Rajesh Renewed",
+    name: brandName,
     short_name: "Rajesh",
     description:
       "Premium renewed electronics with enterprise-grade QA, fast delivery, and responsive support.",

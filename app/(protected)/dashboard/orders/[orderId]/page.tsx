@@ -7,7 +7,7 @@ import { getOrderStatusLabel } from "@/lib/order-status";
 import { getOrderForUser } from "@/lib/orders";
 
 interface OrderDetailPageProps {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }
 
 export default async function OrderDetailPage({
@@ -18,7 +18,8 @@ export default async function OrderDetailPage({
     redirect("/login");
   }
 
-  const order = await getOrderForUser(params.orderId, user.id);
+  const { orderId } = await params;
+  const order = await getOrderForUser(orderId, user.id);
   if (!order) {
     notFound();
   }

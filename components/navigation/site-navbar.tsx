@@ -12,6 +12,7 @@ import type { SessionUser } from "@/lib/auth";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductSummary } from "@/lib/products";
 import { cn } from "@/lib/utils";
+import { brandName } from "@/utils/variable";
 import {
   useCartStore,
   useCartHydration,
@@ -355,7 +356,7 @@ export function SiteNavbar() {
               <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                 R
               </span>
-              Rajesh Renewed
+              {brandName}
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
               {navLinks.map((link) => (

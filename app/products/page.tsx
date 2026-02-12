@@ -5,8 +5,9 @@ import { ProductCard } from "@/components/products/product-card";
 import { ProductsToolbar } from "@/components/products/products-toolbar";
 import { ProductsSortControl } from "@/components/products/products-sort-control";
 import { Button } from "@/components/ui/button";
-import { getProductFacets, listProducts } from "@/lib/products";
+import { getProductFacets, listProducts, type ListProductsOptions } from "@/lib/products";
 import type { ProductCondition } from "@/lib/product-constants";
+import { brandName } from "@/utils/variable";
 import { Package } from "lucide-react";
 
 function normalizeToken(value?: string | null) {
@@ -14,7 +15,7 @@ function normalizeToken(value?: string | null) {
 }
 
 export const metadata = {
-  title: "Enterprise Products | Rajesh Renewed",
+  title: `Enterprise Products | ${brandName}`,
   description:
     "Browse our comprehensive catalog of certified refurbished enterprise technology. Search and filter by category, condition, and price.",
 };
@@ -22,7 +23,7 @@ export const metadata = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     category?: string;
     categoryName?: string;
@@ -39,8 +40,9 @@ export default async function ProductsPage({
     graphics?: string;
     os?: string;
     companySubMaster?: string;
-  };
+  }>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const facets = await getProductFacets();
 
   const allowedSortOptions = new Set([
@@ -57,18 +59,18 @@ export default async function ProductsPage({
   ]);
 
   const rawSearch =
-    typeof searchParams.search === "string" ? searchParams.search : undefined;
+    typeof resolvedSearchParams.search === "string" ? resolvedSearchParams.search : undefined;
   const fallbackSearch =
-    typeof searchParams.q === "string" ? searchParams.q : undefined;
+    typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : undefined;
   const search = (rawSearch ?? fallbackSearch)?.trim();
 
   const rawCategory =
-    typeof searchParams.category === "string"
-      ? searchParams.category
+    typeof resolvedSearchParams.category === "string"
+      ? resolvedSearchParams.category
       : undefined;
   const rawCategoryName =
-    typeof searchParams.categoryName === "string"
-      ? searchParams.categoryName
+    typeof resolvedSearchParams.categoryName === "string"
+      ? resolvedSearchParams.categoryName
       : undefined;
 
   const matchCategory = (value?: string) => {
@@ -89,8 +91,8 @@ export default async function ProductsPage({
   const category = matchCategory(rawCategory) ?? matchCategory(rawCategoryName);
 
   const rawCondition =
-    typeof searchParams.condition === "string"
-      ? searchParams.condition
+    typeof resolvedSearchParams.condition === "string"
+      ? resolvedSearchParams.condition
       : undefined;
   const condition =
     rawCondition && facets.conditions.includes(rawCondition as ProductCondition)
@@ -98,28 +100,28 @@ export default async function ProductsPage({
       : undefined;
 
   const minPrice = Number.isFinite(
-    Number.parseInt(searchParams.minPrice ?? "", 10)
+    Number.parseInt(resolvedSearchParams.minPrice ?? "", 10)
   )
-    ? Number.parseInt(searchParams.minPrice as string, 10)
+    ? Number.parseInt(resolvedSearchParams.minPrice as string, 10)
     : undefined;
 
   const maxPrice = Number.isFinite(
-    Number.parseInt(searchParams.maxPrice ?? "", 10)
+    Number.parseInt(resolvedSearchParams.maxPrice ?? "", 10)
   )
-    ? Number.parseInt(searchParams.maxPrice as string, 10)
+    ? Number.parseInt(resolvedSearchParams.maxPrice as string, 10)
     : undefined;
 
   const rawCompany =
-    typeof searchParams.company === "string"
-      ? searchParams.company
+    typeof resolvedSearchParams.company === "string"
+      ? resolvedSearchParams.company
       : undefined;
   const rawCompanyName =
-    typeof searchParams.companyName === "string"
-      ? searchParams.companyName
+    typeof resolvedSearchParams.companyName === "string"
+      ? resolvedSearchParams.companyName
       : undefined;
   const rawCompanySub =
-    typeof searchParams.companySubMaster === "string"
-      ? searchParams.companySubMaster
+    typeof resolvedSearchParams.companySubMaster === "string"
+      ? resolvedSearchParams.companySubMaster
       : undefined;
   const subMasterOption = rawCompanySub
     ? facets.companySubMasters.find((item) => item.id === rawCompanySub)
@@ -151,44 +153,44 @@ export default async function ProductsPage({
       : undefined;
 
   const rawProcessor =
-    typeof searchParams.processor === "string"
-      ? searchParams.processor
+    typeof resolvedSearchParams.processor === "string"
+      ? resolvedSearchParams.processor
       : undefined;
   const processorId = facets.processors.some((item) => item.id === rawProcessor)
     ? rawProcessor
     : undefined;
 
   const rawRam =
-    typeof searchParams.ram === "string" ? searchParams.ram : undefined;
+    typeof resolvedSearchParams.ram === "string" ? resolvedSearchParams.ram : undefined;
   const ramId = facets.rams.some((item) => item.id === rawRam)
     ? rawRam
     : undefined;
 
   const rawStorage =
-    typeof searchParams.storage === "string"
-      ? searchParams.storage
+    typeof resolvedSearchParams.storage === "string"
+      ? resolvedSearchParams.storage
       : undefined;
   const storageId = facets.storages.some((item) => item.id === rawStorage)
     ? rawStorage
     : undefined;
 
   const rawGraphics =
-    typeof searchParams.graphics === "string"
-      ? searchParams.graphics
+    typeof resolvedSearchParams.graphics === "string"
+      ? resolvedSearchParams.graphics
       : undefined;
   const graphicsId = facets.graphics.some((item) => item.id === rawGraphics)
     ? rawGraphics
     : undefined;
 
-  const rawOs = typeof searchParams.os === "string" ? searchParams.os : undefined;
+  const rawOs = typeof resolvedSearchParams.os === "string" ? resolvedSearchParams.os : undefined;
   const osId = facets.operatingSystems.some((item) => item.id === rawOs)
     ? rawOs
     : undefined;
 
-  const sort:any =
-    typeof searchParams.sort === "string" &&
-    allowedSortOptions.has(searchParams.sort)
-      ? searchParams.sort
+  const sort: ListProductsOptions["sort"] =
+    typeof resolvedSearchParams.sort === "string" &&
+    allowedSortOptions.has(resolvedSearchParams.sort)
+      ? (resolvedSearchParams.sort as ListProductsOptions["sort"])
       : undefined;
 
   const products = await listProducts({

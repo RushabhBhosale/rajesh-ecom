@@ -77,6 +77,61 @@ function buildFallbackVariant(): CheckoutVariant {
   };
 }
 
+function normalizeVariantToken(value?: string | null) {
+  return value?.toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "") ?? "";
+}
+
+function resolveMatchedVariant({
+  variantInput,
+  productName,
+  variants,
+}: {
+  variantInput?: string | null;
+  productName: string;
+  variants: CheckoutVariant[];
+}): CheckoutVariant | undefined {
+  const defaultVariant = variants.find((variant) => variant.isDefault) ?? variants[0];
+  if (!variantInput) {
+    return defaultVariant;
+  }
+
+  const trimmedInput = variantInput.trim();
+  if (!trimmedInput) {
+    return defaultVariant;
+  }
+
+  const lowerInput = trimmedInput.toLowerCase();
+  const directMatch = variants.find(
+    (variant) => variant.id === trimmedInput || variant.label.toLowerCase() === lowerInput
+  );
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const normalizedInput = normalizeVariantToken(trimmedInput);
+  if (!normalizedInput) {
+    return defaultVariant;
+  }
+
+  const normalizedLabelMatch = variants.find(
+    (variant) => normalizeVariantToken(variant.label) === normalizedInput
+  );
+  if (normalizedLabelMatch) {
+    return normalizedLabelMatch;
+  }
+
+  // Frontend default selections can serialize the product name instead of the raw variant label.
+  if (normalizeVariantToken(productName) === normalizedInput) {
+    return defaultVariant;
+  }
+
+  if (variants.length === 1) {
+    return variants[0];
+  }
+
+  return undefined;
+}
+
 export async function POST(request: Request) {
   const decremented: Array<{ variantId: string; quantity: number }> = [];
 
@@ -133,11 +188,11 @@ export async function POST(request: Request) {
         normalizedVariantsFromMap.length > 0
           ? normalizedVariantsFromMap
           : [buildFallbackVariant()];
-      const matchedVariant = variantLabel
-        ? normalizedVariants.find(
-            (variant) => variant.label.toLowerCase() === variantLabel.toLowerCase()
-          )
-        : normalizedVariants.find((variant) => variant.isDefault) ?? normalizedVariants[0];
+      const matchedVariant = resolveMatchedVariant({
+        variantInput: variantLabel,
+        productName: product.name,
+        variants: normalizedVariants,
+      });
       if (variantLabel && !matchedVariant) {
         throw new Error("INVALID_VARIANT_SELECTION");
       }

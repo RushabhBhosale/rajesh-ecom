@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 
 import { formatCurrency } from "@/lib/currency";
 import { getOrderStatusLabel } from "@/lib/order-status";
+import { brandName } from "@/utils/variable";
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
@@ -99,9 +100,9 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
 
   const transporter = getTransporter();
   const statusLabel = getOrderStatusLabel(payload.status);
-  const subject = `Your Rajesh Renewed order #${payload.orderNumber}`;
+  const subject = `Your ${brandName} order #${payload.orderNumber}`;
 
-  const textBody = `Hi ${payload.customerName},\n\nThank you for your order!\n\nOrder reference: #${payload.orderNumber}\nStatus: ${statusLabel}\nPayment: ${payload.paymentMethod} (${payload.paymentStatus})\nTotal: ${formatCurrency(payload.total)}\n\nItems:\n${renderItems(payload.items)}\n\nShipping to:\n${renderAddress(payload.shippingAddress)}\n\nOur operations team will be in touch with scheduling details.\n\nRegards,\nRajesh Renewed`;
+  const textBody = `Hi ${payload.customerName},\n\nThank you for your order!\n\nOrder reference: #${payload.orderNumber}\nStatus: ${statusLabel}\nPayment: ${payload.paymentMethod} (${payload.paymentStatus})\nTotal: ${formatCurrency(payload.total)}\n\nItems:\n${renderItems(payload.items)}\n\nShipping to:\n${renderAddress(payload.shippingAddress)}\n\nOur operations team will be in touch with scheduling details.\n\nRegards,\n${brandName}`;
 
   const htmlBody = `<!doctype html>
 <html>
@@ -130,7 +131,7 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
     <h3 style="margin-bottom: 0.5rem;">Shipping to</h3>
     <p style="white-space: pre-line;">${renderAddress(payload.shippingAddress)}</p>
     <p>Our operations team will be in touch with scheduling details.</p>
-    <p style="margin-top: 2rem;">Regards,<br />Rajesh Renewed</p>
+    <p style="margin-top: 2rem;">Regards,<br />${brandName}</p>
   </body>
 </html>`;
 
