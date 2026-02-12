@@ -8,6 +8,10 @@ function mapDocument(doc: Partial<StoreSettingDocument> | null | undefined): Sto
     gstRate: doc?.gstRate,
     shippingEnabled: doc?.shippingEnabled,
     shippingAmount: doc?.shippingAmount,
+    topBarEnabled: doc?.topBarEnabled,
+    topBarMessage: doc?.topBarMessage,
+    topBarCtaText: doc?.topBarCtaText,
+    topBarCtaHref: doc?.topBarCtaHref,
   });
 }
 
@@ -24,11 +28,12 @@ export async function updateStoreSettings(input: Partial<StoreSettings>): Promis
   await connectDB();
   const normalized = mapDocument({ ...defaultStoreSettings, ...input });
 
-  const result = await StoreSettingModel.findOneAndUpdate(
+  await StoreSettingModel.collection.updateOne(
     { key: "store" },
-    { key: "store", ...normalized },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  ).lean<StoreSettingDocument | null>();
+    { $set: { key: "store", ...normalized } },
+    { upsert: true }
+  );
 
+  const result = await StoreSettingModel.findOne({ key: "store" }).lean<StoreSettingDocument | null>();
   return mapDocument(result);
 }

@@ -2,16 +2,27 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ProductCard } from "@/components/products/product-card";
+import { ProductsPagination } from "@/components/products/products-pagination";
 import { ProductsToolbar } from "@/components/products/products-toolbar";
 import { ProductsSortControl } from "@/components/products/products-sort-control";
 import { Button } from "@/components/ui/button";
-import { getProductFacets, listProducts, type ListProductsOptions } from "@/lib/products";
+import {
+  getProductFacets,
+  listProducts,
+  type ListProductsOptions,
+} from "@/lib/products";
 import type { ProductCondition } from "@/lib/product-constants";
 import { brandName } from "@/utils/variable";
 import { Package } from "lucide-react";
 
 function normalizeToken(value?: string | null) {
-  return value?.toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, "") ?? "";
+  return (
+    value
+      ?.toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "") ?? ""
+  );
 }
 
 export const metadata = {
@@ -40,8 +51,11 @@ export default async function ProductsPage({
     graphics?: string;
     os?: string;
     companySubMaster?: string;
+    page?: string;
+    pageSize?: string;
   }>;
 }) {
+  const DEFAULT_PAGE_SIZE = 12;
   const resolvedSearchParams = await searchParams;
   const facets = await getProductFacets();
 
@@ -59,9 +73,13 @@ export default async function ProductsPage({
   ]);
 
   const rawSearch =
-    typeof resolvedSearchParams.search === "string" ? resolvedSearchParams.search : undefined;
+    typeof resolvedSearchParams.search === "string"
+      ? resolvedSearchParams.search
+      : undefined;
   const fallbackSearch =
-    typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : undefined;
+    typeof resolvedSearchParams.q === "string"
+      ? resolvedSearchParams.q
+      : undefined;
   const search = (rawSearch ?? fallbackSearch)?.trim();
 
   const rawCategory =
@@ -85,7 +103,7 @@ export default async function ProductsPage({
       return undefined;
     }
     return facets.categories.find(
-      (categoryOption) => normalizeToken(categoryOption) === normalized
+      (categoryOption) => normalizeToken(categoryOption) === normalized,
     );
   };
   const category = matchCategory(rawCategory) ?? matchCategory(rawCategoryName);
@@ -100,13 +118,13 @@ export default async function ProductsPage({
       : undefined;
 
   const minPrice = Number.isFinite(
-    Number.parseInt(resolvedSearchParams.minPrice ?? "", 10)
+    Number.parseInt(resolvedSearchParams.minPrice ?? "", 10),
   )
     ? Number.parseInt(resolvedSearchParams.minPrice as string, 10)
     : undefined;
 
   const maxPrice = Number.isFinite(
-    Number.parseInt(resolvedSearchParams.maxPrice ?? "", 10)
+    Number.parseInt(resolvedSearchParams.maxPrice ?? "", 10),
   )
     ? Number.parseInt(resolvedSearchParams.maxPrice as string, 10)
     : undefined;
@@ -139,7 +157,7 @@ export default async function ProductsPage({
       return undefined;
     }
     const match = facets.companies.find(
-      (item) => normalizeToken(item.name) === token
+      (item) => normalizeToken(item.name) === token,
     );
     return match?.id;
   };
@@ -161,7 +179,9 @@ export default async function ProductsPage({
     : undefined;
 
   const rawRam =
-    typeof resolvedSearchParams.ram === "string" ? resolvedSearchParams.ram : undefined;
+    typeof resolvedSearchParams.ram === "string"
+      ? resolvedSearchParams.ram
+      : undefined;
   const ramId = facets.rams.some((item) => item.id === rawRam)
     ? rawRam
     : undefined;
@@ -182,7 +202,10 @@ export default async function ProductsPage({
     ? rawGraphics
     : undefined;
 
-  const rawOs = typeof resolvedSearchParams.os === "string" ? resolvedSearchParams.os : undefined;
+  const rawOs =
+    typeof resolvedSearchParams.os === "string"
+      ? resolvedSearchParams.os
+      : undefined;
   const osId = facets.operatingSystems.some((item) => item.id === rawOs)
     ? rawOs
     : undefined;
@@ -192,6 +215,24 @@ export default async function ProductsPage({
     allowedSortOptions.has(resolvedSearchParams.sort)
       ? (resolvedSearchParams.sort as ListProductsOptions["sort"])
       : undefined;
+
+  const rawPage =
+    typeof resolvedSearchParams.page === "string"
+      ? Number.parseInt(resolvedSearchParams.page, 10)
+      : Number.NaN;
+  const requestedPage =
+    Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+  const rawPageSize =
+    typeof resolvedSearchParams.pageSize === "string"
+      ? Number.parseInt(resolvedSearchParams.pageSize, 10)
+      : Number.NaN;
+  const pageSizeOptions = new Set([6, 12, 24, 48]);
+  const pageSize =
+    Number.isFinite(rawPageSize) &&
+    rawPageSize > 0 &&
+    pageSizeOptions.has(rawPageSize)
+      ? rawPageSize
+      : DEFAULT_PAGE_SIZE;
 
   const products = await listProducts({
     search,
@@ -225,7 +266,15 @@ export default async function ProductsPage({
     sort: sort ?? undefined,
   };
 
-  const emptyState = !products.length;
+  const totalResults = products.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProducts = products.slice(startIndex, endIndex);
+  const emptyState = totalResults === 0;
+  const pageStartItem = emptyState ? 0 : startIndex + 1;
+  const pageEndItem = emptyState ? 0 : Math.min(endIndex, totalResults);
 
   return (
     <main className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-slate-100">
@@ -265,7 +314,13 @@ export default async function ProductsPage({
       <section className="flex-1 py-10">
         <div className="mx-auto px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
-            <Suspense fallback={<div className="text-sm text-muted-foreground">Loading filters…</div>}>
+            <Suspense
+              fallback={
+                <div className="text-sm text-muted-foreground">
+                  Loading filters…
+                </div>
+              }
+            >
               <ProductsToolbar
                 categories={facets.categories}
                 conditions={facets.conditions}
@@ -280,7 +335,7 @@ export default async function ProductsPage({
                 priceRange={facets.priceRange}
                 companySubMasters={facets.companySubMasters}
                 filters={filterSnapshot}
-                resultCount={products.length}
+                resultCount={totalResults}
               />
             </Suspense>
 
@@ -288,13 +343,19 @@ export default async function ProductsPage({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Showing {products.length} curated devices
+                    Showing {pageStartItem}-{pageEndItem} of {totalResults} curated devices
                   </p>
                   <h2 className="text-2xl font-bold text-slate-900">
                     Enterprise hardware ready to deploy
                   </h2>
                 </div>
-                <Suspense fallback={<div className="text-sm text-muted-foreground">Loading sort…</div>}>
+                <Suspense
+                  fallback={
+                    <div className="text-sm text-muted-foreground">
+                      Loading sort…
+                    </div>
+                  }
+                >
                   <ProductsSortControl sort={filterSnapshot.sort} />
                 </Suspense>
               </div>
@@ -308,7 +369,8 @@ export default async function ProductsPage({
                     No products match your filters yet
                   </h3>
                   <p className="mt-3 text-base text-slate-600">
-                    Adjust your filters or reset them to explore the full catalog.
+                    Adjust your filters or reset them to explore the full
+                    catalog.
                   </p>
                   <div className="mt-6 flex justify-center">
                     <Button
@@ -321,18 +383,25 @@ export default async function ProductsPage({
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {products.map((product) => (
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
+                  {paginatedProducts.map((product) => (
                     <div
                       key={product.id}
                       id={product.id}
-                      className="scroll-mt-28"
+                      className="h-full scroll-mt-28"
                     >
                       <ProductCard product={product} />
                     </div>
                   ))}
                 </div>
               )}
+              {!emptyState ? (
+                <ProductsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                />
+              ) : null}
             </div>
           </div>
         </div>

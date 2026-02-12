@@ -22,7 +22,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   }, [initialSettings]);
 
   const handleCheckbox =
-    (key: "gstEnabled" | "shippingEnabled") => (event: React.ChangeEvent<HTMLInputElement>) => {
+    (key: "gstEnabled" | "shippingEnabled" | "topBarEnabled") => (event: React.ChangeEvent<HTMLInputElement>) => {
       setSettings((prev) => ({ ...prev, [key]: event.target.checked }));
     };
 
@@ -30,6 +30,12 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     (key: "gstRate" | "shippingAmount") => (event: React.ChangeEvent<HTMLInputElement>) => {
       const parsed = Number.parseFloat(event.target.value);
       setSettings((prev) => ({ ...prev, [key]: Number.isFinite(parsed) ? parsed : 0 }));
+    };
+
+  const handleText =
+    (key: "topBarMessage" | "topBarCtaText" | "topBarCtaHref") =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setSettings((prev) => ({ ...prev, [key]: event.target.value }));
     };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -126,6 +132,61 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               disabled={!settings.shippingEnabled}
             />
             <p className="text-xs text-muted-foreground">Leave at 0 for complimentary shipping.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Top banner</CardTitle>
+          <CardDescription>
+            Control the top announcement bar content shown on storefront pages.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex items-center gap-3 text-sm font-medium text-foreground">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary"
+              checked={settings.topBarEnabled}
+              onChange={handleCheckbox("topBarEnabled")}
+            />
+            Show top banner
+          </label>
+          <div className="space-y-2">
+            <Label htmlFor="topBarMessage">Banner message</Label>
+            <Input
+              id="topBarMessage"
+              value={settings.topBarMessage}
+              onChange={handleText("topBarMessage")}
+              maxLength={140}
+              disabled={!settings.topBarEnabled}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="topBarCtaText">CTA text</Label>
+              <Input
+                id="topBarCtaText"
+                value={settings.topBarCtaText}
+                onChange={handleText("topBarCtaText")}
+                maxLength={60}
+                disabled={!settings.topBarEnabled}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="topBarCtaHref">CTA URL</Label>
+              <Input
+                id="topBarCtaHref"
+                value={settings.topBarCtaHref}
+                onChange={handleText("topBarCtaHref")}
+                placeholder="/products"
+                disabled={!settings.topBarEnabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use an internal path (example: <code>/products</code>).
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

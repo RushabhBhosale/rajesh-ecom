@@ -7,6 +7,8 @@ import {
   Laptop,
   ArrowRight,
   Sparkles,
+  Shield,
+  CheckCircle2,
 } from "lucide-react";
 
 import { ProductCard } from "@/components/products/product-card";
@@ -18,23 +20,34 @@ type Product = Awaited<ReturnType<typeof listProducts>>[number];
 
 function SectionTitle({
   title,
+  subtitle,
   actionHref,
   actionText,
 }: {
   title: string;
+  subtitle?: string;
   actionHref?: string;
   actionText?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <h2 className="text-primary text-2xl font-bold sm:text-3xl">{title}</h2>
+    <div className="flex items-end justify-between gap-4">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-4xl">
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+            {subtitle}
+          </p>
+        )}
+      </div>
       {actionHref && actionText ? (
         <Link
           href={actionHref}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+          className="group inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-700 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-50"
         >
           {actionText}
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
       ) : null}
     </div>
@@ -42,189 +55,165 @@ function SectionTitle({
 }
 
 function TrustRow() {
+  const benefits = [
+    {
+      icon: PackageCheckIcon,
+      title: "Pan India Delivery",
+      description: "Fast shipping across India with tracking",
+    },
+    {
+      icon: CreditCard,
+      title: "Secure Payments",
+      description: "Encrypted checkout with trusted methods",
+    },
+    {
+      icon: RotateCcw,
+      title: "Easy Returns",
+      description: "Simple 7-day returns on eligible items",
+    },
+    {
+      icon: Headset,
+      title: "Dedicated Support",
+      description: "Quick responses from our team",
+    },
+  ];
+
   return (
-    <section className="py-10">
+    <section className="relative py-16">
+      {/* Subtle divider line */}
+      <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent dark:via-neutral-800" />
+
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
-            <PackageCheckIcon className="h-6 w-6 text-primary2" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-primary text-base font-semibold">
-              Pan India Delivery
-            </div>
-            <p className="mt-1 text-primary2 text-sm leading-6">
-              Fast shipping across India with tracking.
-            </p>
-          </div>
-        </div>
+        {benefits.map((benefit, idx) => {
+          const Icon = benefit.icon;
+          return (
+            <div
+              key={benefit.title}
+              className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 transition-all duration-300 hover:shadow-lg animate-in fade-in-0 slide-in-from-bottom-4 dark:border-neutral-800 dark:bg-neutral-900"
+              style={{
+                animationDelay: `${idx * 100}ms`,
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-neutral-100 transition-colors group-hover:bg-neutral-900 dark:bg-neutral-800 dark:group-hover:bg-neutral-700">
+                  <Icon className="h-5 w-5 text-neutral-700 transition-colors group-hover:text-white dark:text-neutral-300 dark:group-hover:text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
+                    {benefit.title}
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    {benefit.description}
+                  </p>
+                </div>
+              </div>
 
-        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
-            <CreditCard className="h-6 w-6 text-primary2" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-primary text-base font-semibold">
-              Secure Payments
+              {/* Subtle hover effect */}
+              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute inset-0 bg-gradient-to-br from-neutral-50/50 to-transparent dark:from-neutral-800/50" />
+              </div>
             </div>
-            <p className="mt-1 text-primary2 text-sm leading-6">
-              Encrypted checkout with trusted methods.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
-            <RotateCcw className="h-6 w-6 text-primary2" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-primary text-base font-semibold">
-              Easy Returns
-            </div>
-            <p className="mt-1 text-primary2 text-sm leading-6">
-              Simple 7-day returns on eligible items.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-200">
-            <Headset className="h-6 w-6 text-primary2" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-primary text-base font-semibold">
-              Dedicated Support
-            </div>
-            <p className="mt-1 text-primary2 text-sm leading-6">
-              Quick responses from our team.
-            </p>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </section>
   );
 }
 
 function PromoTiles() {
+  const promos = [
+    {
+      href: {
+        pathname: "/products",
+        query: { category: "Laptops", companyName: "Apple" },
+      },
+      badge: "Premium picks",
+      title: "MacBooks & Premium",
+      description: "Clean builds, top condition",
+      gradient: "from-neutral-800 via-neutral-700 to-neutral-800",
+      accentColor: "text-neutral-300",
+      badgeColor: "text-neutral-400",
+      glowColor: "bg-neutral-400/10",
+    },
+    {
+      href: {
+        pathname: "/products",
+        query: { category: "Laptops", companyName: "Dell" },
+      },
+      badge: "Workstation deals",
+      title: "Premium Dell Laptops",
+      description: "Business-ready, powerful, reliable",
+      gradient: "from-neutral-800 via-neutral-750 to-neutral-800",
+      accentColor: "text-neutral-200",
+      badgeColor: "text-neutral-400",
+      glowColor: "bg-neutral-300/10",
+    },
+    {
+      href: {
+        pathname: "/products",
+        query: { category: "Gaming Laptops", search: "gaming" },
+      },
+      badge: "Performance",
+      title: "Gaming Laptops",
+      description: "High FPS builds, serious cooling",
+      gradient: "from-neutral-900 via-neutral-800 to-neutral-900",
+      accentColor: "text-neutral-200",
+      badgeColor: "text-neutral-400",
+      glowColor: "bg-neutral-400/10",
+    },
+    {
+      href: "/products?category=Tablets",
+      badge: "Flexible",
+      title: "2-in-1 / Detachables",
+      description: "Touch, pen, and portability",
+      gradient: "from-neutral-900 via-neutral-800 to-neutral-900",
+      accentColor: "text-neutral-300",
+      badgeColor: "text-neutral-500",
+      glowColor: "bg-neutral-400/10",
+    },
+  ];
+
   return (
-    <section className="py-12">
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* MacBooks / Premium */}
-        <Link
-          href={{
-            pathname: "/products",
-            query: { category: "Laptops", companyName: "Apple" },
-          }}
-          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
-      border border-amber-400/30 bg-gradient-to-br from-slate-900 to-slate-800
-      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-amber-400/50"
-        >
-          <div className="text-amber-400 text-xs font-semibold uppercase tracking-widest">
-            Premium picks
-          </div>
+    <section className="py-16">
+      <SectionTitle
+        title="Shop by Category"
+        subtitle="Curated collections for every need"
+      />
 
-          <div className="mt-2 text-amber-300 text-2xl font-bold">
-            MacBooks & Premium
-          </div>
+      <div className="mt-8 grid gap-5 lg:grid-cols-4">
+        {promos.map((promo) => (
+          <Link
+            key={promo.title}
+            href={promo.href}
+            className={`group relative flex h-full min-h-[240px] flex-col overflow-hidden rounded-2xl border border-neutral-700/40 bg-gradient-to-br ${promo.gradient} p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:border-neutral-600/60 hover:shadow-xl`}
+          >
+            <div
+              className={`text-xs font-semibold uppercase tracking-widest ${promo.badgeColor}`}
+            >
+              {promo.badge}
+            </div>
 
-          <div className="mt-2 text-slate-300 text-sm">
-            Clean builds, top condition.
-          </div>
+            <div
+              className={`mt-3 text-2xl font-bold tracking-tight ${promo.accentColor}`}
+            >
+              {promo.title}
+            </div>
 
-          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-amber-400 group-hover:text-amber-300 transition">
-            Shop now <ArrowRight className="h-4 w-4" />
-          </div>
+            <div className="mt-2 text-sm text-neutral-400">
+              {promo.description}
+            </div>
 
-          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-amber-400/15 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        </Link>
+            <div className="mt-auto inline-flex items-center gap-2 pt-6 text-sm font-semibold text-neutral-300 transition group-hover:text-white">
+              Shop now <ArrowRight className="h-4 w-4" />
+            </div>
 
-        {/* Dell */}
-        <Link
-          href={{
-            pathname: "/products",
-            query: { category: "Laptops", companyName: "Dell" },
-          }}
-          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
-      border border-blue-400/30 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900
-      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-blue-400/50"
-        >
-          <div className="text-blue-300 text-xs font-semibold uppercase tracking-widest">
-            Workstation deals
-          </div>
-
-          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
-            Premium Dell Laptops
-          </div>
-
-          <div className="mt-2 text-blue-200 text-sm">
-            Business-ready, powerful, reliable.
-          </div>
-
-          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-300 group-hover:text-blue-200 transition">
-            Shop now <ArrowRight className="h-4 w-4" />
-          </div>
-
-          <div className="pointer-events-none absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        </Link>
-
-        {/* Gaming */}
-        <Link
-          href={{
-            pathname: "/products",
-            query: { category: "Gaming Laptops", search: "gaming" },
-          }}
-          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
-      border border-red-400/30 bg-gradient-to-br from-slate-900 via-red-950/90 to-slate-900
-      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-red-400/50"
-        >
-          <div className="text-red-400 text-xs font-semibold uppercase tracking-widest">
-            Performance
-          </div>
-
-          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
-            OG Gaming Laptops
-          </div>
-
-          <div className="mt-2 text-slate-300 text-sm">
-            High FPS builds, serious cooling.
-          </div>
-
-          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-red-400 group-hover:text-red-300 transition">
-            Shop now <ArrowRight className="h-4 w-4" />
-          </div>
-
-          <div className="pointer-events-none absolute -right-16 top-12 h-48 w-48 rounded-full bg-red-400/15 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        </Link>
-
-        {/* 2-in-1 / Tablets */}
-        <Link
-          href="/products?category=Tablets"
-          className="group relative flex h-full flex-col overflow-hidden rounded-3xl
-      border border-slate-700/60 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
-      p-7 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-slate-500/80"
-        >
-          <div className="text-slate-300 text-xs font-semibold uppercase tracking-widest">
-            Flexible
-          </div>
-
-          <div className="mt-2 text-white text-2xl font-extrabold tracking-tight">
-            2-in-1 / Detachables
-          </div>
-
-          <div className="mt-2 text-slate-400 text-sm">
-            Touch, pen, and portability.
-          </div>
-
-          <div className="mt-auto pt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:text-white transition">
-            Shop now <ArrowRight className="h-4 w-4" />
-          </div>
-
-          <div className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full bg-slate-400/10 blur-3xl" />
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        </Link>
+            {/* Subtle glow effect */}
+            <div
+              className={`pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full ${promo.glowColor} blur-3xl`}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+          </Link>
+        ))}
       </div>
     </section>
   );
@@ -232,7 +221,7 @@ function PromoTiles() {
 
 function ProductGrid({ items }: { items: Product[] }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {items.map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}
@@ -250,22 +239,27 @@ function BudgetRow({
   href: string;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-primary text-lg font-bold">{title}</div>
+    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex items-center justify-between gap-4 border-b border-neutral-200 px-6 py-4 dark:border-neutral-800">
+        <div className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+          {title}
+        </div>
         <Link
           href={href}
-          className="text-sm font-semibold text-primary hover:underline"
+          className="group inline-flex items-center gap-1 text-sm font-semibold text-neutral-700 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-50"
         >
           View all
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
-      <div className="mt-5 flex gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {items.slice(0, 8).map((p) => (
-          <div key={p.id} className="w-[260px] shrink-0">
-            <ProductCard product={p} />
-          </div>
-        ))}
+      <div className="overflow-x-auto p-6 pb-4">
+        <div className="flex gap-5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {items.slice(0, 8).map((p) => (
+            <div key={p.id} className="w-[260px] shrink-0">
+              <ProductCard product={p} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -293,17 +287,201 @@ function FAQ() {
 
   return (
     <section className="py-16">
-      <SectionTitle title="Frequently Asked Questions" />
-      <div className="mt-6 grid gap-4">
-        {faqs.map((f) => (
+      <SectionTitle
+        title="Frequently Asked Questions"
+        subtitle="Everything you need to know"
+      />
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+        {faqs.map((f, idx) => (
           <div
             key={f.q}
-            className="rounded-2xl border border-slate-200 bg-white p-6"
+            className="group rounded-2xl border border-neutral-200 bg-white p-6 transition-all duration-300 hover:border-neutral-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+            style={{
+              animationDelay: `${idx * 100}ms`,
+            }}
           >
-            <div className="text-primary font-semibold">{f.q}</div>
-            <div className="mt-2 text-primary2 text-sm leading-6">{f.a}</div>
+            <div className="font-semibold text-neutral-900 dark:text-neutral-50">
+              {f.q}
+            </div>
+            <div className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+              {f.a}
+            </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function WhyRefurbished() {
+  const benefits = [
+    "Better specs per rupee compared to new devices",
+    "Tested devices with warranty support",
+    "Great for office, student, and WFH use-cases",
+    "Eco-friendly choice by extending device life",
+  ];
+
+  return (
+    <section className="relative overflow-hidden py-20">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.02] dark:opacity-[0.04]">
+        <div
+          className="h-full w-full"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgb(0 0 0) 1px, transparent 1px),
+              linear-gradient(to bottom, rgb(0 0 0) 1px, transparent 1px)
+            `,
+            backgroundSize: "32px 32px",
+          }}
+        />
+      </div>
+
+      <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-1.5 text-xs font-semibold text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
+            <Sparkles className="h-3.5 w-3.5" />
+            Why refurbished makes sense
+          </div>
+
+          <h3 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-4xl">
+            Save more without compromising on performance
+          </h3>
+
+          <p className="text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
+            Refurbished laptops are thoroughly checked, cleaned, and tested. You
+            get premium specs at a better price — ideal for students,
+            professionals, and businesses building fleets.
+          </p>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Button
+              asChild
+              className="bg-neutral-900 text-white transition-all hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              <Link href="/products">Shop laptops</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-neutral-300 transition-all hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-600"
+            >
+              <Link href="/register">Get bulk pricing</Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="mb-6 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
+            <div className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
+              Key Benefits
+            </div>
+          </div>
+
+          <ul className="space-y-4">
+            {benefits.map((benefit) => (
+              <li key={benefit} className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-neutral-600 dark:text-neutral-400" />
+                <span className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  {benefit}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Testimonials() {
+  const testimonials = [
+    {
+      quote:
+        "Great experience. The laptop condition was excellent and delivery was quick.",
+      author: "Verified Customer",
+    },
+    {
+      quote: "Solid performance and clean device. Support team responded fast.",
+      author: "Verified Customer",
+    },
+  ];
+
+  return (
+    <section className="py-16">
+      <SectionTitle
+        title="Hear It From Customers"
+        subtitle="Real experiences from our community"
+      />
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {testimonials.map((testimonial, idx) => (
+          <div
+            key={idx}
+            className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <div className="text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
+              "{testimonial.quote}"
+            </div>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
+                <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+                  {testimonial.author[0]}
+                </span>
+              </div>
+              <div className="font-semibold text-neutral-900 dark:text-neutral-50">
+                {testimonial.author}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BottomCTA() {
+  return (
+    <section className="py-20">
+      <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-gradient-to-br from-neutral-50 to-white p-12 text-center shadow-lg dark:border-neutral-800 dark:from-neutral-900 dark:to-neutral-950">
+        {/* Subtle grid background */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.015] dark:opacity-[0.03]">
+          <div
+            className="h-full w-full"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgb(0 0 0) 1px, transparent 1px),
+                linear-gradient(to bottom, rgb(0 0 0) 1px, transparent 1px)
+              `,
+              backgroundSize: "24px 24px",
+            }}
+          />
+        </div>
+
+        <div className="relative">
+          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+            Ready to upgrade?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-neutral-600 dark:text-neutral-400">
+            Explore today's best refurbished deals and find the right laptop for
+            your needs.
+          </p>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button
+              asChild
+              className="bg-neutral-900 text-white transition-all hover:bg-neutral-800 dark:bg-neutral-50 dark:text-neutral-900 dark:hover:bg-neutral-200"
+            >
+              <Link href="/products">Shop now</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-neutral-300 transition-all hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-600"
+            >
+              <Link href="/login">My account</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -328,40 +506,38 @@ export default async function HomePage() {
       (acc[b] ??= []).push(item);
       return acc;
     },
-    {}
+    {},
   );
   const topBrands = Object.entries(brandBuckets)
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, 3);
 
   const under20 = popular.filter(
-    (p) => typeof p.price === "number" && p.price <= 20000
+    (p) => typeof p.price === "number" && p.price <= 20000,
   );
   const under30 = popular.filter(
-    (p) => typeof p.price === "number" && p.price > 20000 && p.price <= 30000
+    (p) => typeof p.price === "number" && p.price > 20000 && p.price <= 30000,
   );
   const under40 = popular.filter(
-    (p) => typeof p.price === "number" && p.price > 30000 && p.price <= 40000
+    (p) => typeof p.price === "number" && p.price > 30000 && p.price <= 40000,
   );
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-950 dark:to-neutral-900">
       <HeroSwiper />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <TrustRow />
 
         {/* CRAZY DEALS */}
-        <section className="py-8">
+        <section className="py-16">
           <SectionTitle
             title="Crazy Refurbished Deals"
+            subtitle="Handpicked deals with the best value-to-spec ratio"
             actionHref="/products"
             actionText="See all products"
           />
-          <p className="mt-2 text-primary2 text-sm">
-            Handpicked deals with the best value-to-spec ratio.
-          </p>
-          <div className="mt-6">
+          <div className="mt-8">
             <ProductGrid items={crazyDeals} />
           </div>
         </section>
@@ -371,15 +547,19 @@ export default async function HomePage() {
 
         {/* BRAND SECTIONS */}
         {topBrands.length ? (
-          <section className="py-10">
-            {topBrands.map(([brand, items]) => (
-              <div key={brand} className="py-8 border-t border-slate-200">
+          <section className="py-8">
+            {topBrands.map(([brand, items], idx) => (
+              <div
+                key={brand}
+                className="border-t border-neutral-200 py-16 dark:border-neutral-800"
+              >
                 <SectionTitle
                   title={`${brand} Refurbished Laptops`}
+                  subtitle={`Certified ${brand} devices at unbeatable prices`}
                   actionHref={`/products?company=${encodeURIComponent(brand)}`}
                   actionText="View all"
                 />
-                <div className="mt-6">
+                <div className="mt-8">
                   <ProductGrid items={items.slice(0, 8)} />
                 </div>
               </div>
@@ -388,135 +568,55 @@ export default async function HomePage() {
         ) : null}
 
         {/* BUDGET SECTION */}
-        <section className="py-12 border-t border-slate-200">
+        <section className="border-t border-neutral-200 py-16 dark:border-neutral-800">
           <SectionTitle
             title="Budget Refurbished Laptops"
+            subtitle="Quality devices at every price point"
             actionHref="/products"
             actionText="Browse all"
           />
-          <div className="mt-6 flex flex-col gap-5">
-            <BudgetRow
-              title="Under ₹20,000"
-              items={under20}
-              href="/products?maxPrice=20000"
-            />
-            <BudgetRow
-              title="₹20,000 – ₹30,000"
-              items={under30}
-              href="/products?minPrice=20000&maxPrice=30000"
-            />
-            <BudgetRow
-              title="₹30,000 – ₹40,000"
-              items={under40}
-              href="/products?minPrice=30000&maxPrice=40000"
-            />
+          <div className="mt-8 flex flex-col gap-5">
+            {under20.length > 0 && (
+              <BudgetRow
+                title="Under ₹20,000"
+                items={under20}
+                href="/products?maxPrice=20000"
+              />
+            )}
+            {under30.length > 0 && (
+              <BudgetRow
+                title="₹20,000 – ₹30,000"
+                items={under30}
+                href="/products?minPrice=20000&maxPrice=30000"
+              />
+            )}
+            {under40.length > 0 && (
+              <BudgetRow
+                title="₹30,000 – ₹40,000"
+                items={under40}
+                href="/products?minPrice=30000&maxPrice=40000"
+              />
+            )}
           </div>
         </section>
 
-        {/* WHY REFURBISHED / CONTENT BLOCK */}
-        <section className="py-14 border-t border-slate-200">
-          <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-primary2">
-                <Sparkles className="h-4 w-4" />
-                Why refurbished makes sense
-              </div>
-
-              <h3 className="text-primary text-2xl font-bold sm:text-3xl">
-                Save more without compromising on performance.
-              </h3>
-              <p className="text-primary2 text-sm leading-7">
-                Refurbished laptops are thoroughly checked, cleaned, and tested.
-                You get premium specs at a better price — ideal for students,
-                professionals, and businesses building fleets.
-              </p>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  asChild
-                  className="bg-primary text-white hover:opacity-90"
-                >
-                  <Link href="/products">Shop laptops</Link>
-                </Button>
-                <Button asChild variant="outline" className="border-slate-300">
-                  <Link href="/register">Get bulk pricing</Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-primary text-lg font-bold">Key Benefits</div>
-              <ul className="mt-4 space-y-3 text-primary2 text-sm">
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
-                  Better specs per rupee compared to new devices.
-                </li>
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
-                  Tested devices with warranty support.
-                </li>
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
-                  Great for office, student, and WFH use-cases.
-                </li>
-                <li className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary2" />
-                  Eco-friendly choice by extending device life.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
+        {/* WHY REFURBISHED */}
+        <div className="border-t border-neutral-200 dark:border-neutral-800">
+          <WhyRefurbished />
+        </div>
 
         {/* TESTIMONIALS */}
-        <section className="py-16 border-t border-slate-200">
-          <SectionTitle title="Hear It From Customers" />
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="text-primary2 text-sm leading-7">
-                “Great experience. The laptop condition was excellent and
-                delivery was quick.”
-              </div>
-              <div className="mt-4 text-primary font-semibold">
-                Verified Customer
-              </div>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-              <div className="text-primary2 text-sm leading-7">
-                “Solid performance and clean device. Support team responded
-                fast.”
-              </div>
-              <div className="mt-4 text-primary font-semibold">
-                Verified Customer
-              </div>
-            </div>
-          </div>
-        </section>
+        <div className="border-t border-neutral-200 dark:border-neutral-800">
+          <Testimonials />
+        </div>
 
-        <FAQ />
+        {/* FAQ */}
+        <div className="border-t border-neutral-200 dark:border-neutral-800">
+          <FAQ />
+        </div>
 
         {/* Bottom CTA */}
-        <section className="pb-20">
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-10 text-center">
-            <div className="text-primary text-2xl font-bold">
-              Ready to upgrade?
-            </div>
-            <p className="mt-2 text-primary2 text-sm">
-              Explore today’s best refurbished deals and find the right laptop.
-            </p>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button
-                asChild
-                className="bg-primary text-white hover:opacity-90"
-              >
-                <Link href="/products">Shop now</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-slate-300">
-                <Link href="/login">My account</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
+        <BottomCTA />
       </div>
     </main>
   );

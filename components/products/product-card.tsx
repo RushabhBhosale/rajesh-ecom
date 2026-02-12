@@ -57,8 +57,8 @@ export function ProductCard({ product, href }: ProductCardProps) {
       : 0;
 
   return (
-    <Link href={detailsHref} className="group block">
-      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col min-h-[420px] sm:min-h-[500px]">
+    <Link href={detailsHref} className="group block h-full">
+      <Card className="flex h-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl lg:min-h-[500px]">
         {/* Image Container */}
         <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
           {showSale && (
@@ -85,7 +85,7 @@ export function ProductCard({ product, href }: ProductCardProps) {
         {/* Content Container */}
         <div className="flex flex-col flex-1 p-4">
           {/* Category/Brand */}
-          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">
+          <p className="mb-1 line-clamp-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
             {taxonomy || product.category}
           </p>
 
@@ -94,12 +94,12 @@ export function ProductCard({ product, href }: ProductCardProps) {
             {product.name}
           </h3>
 
-          {/* Quick Specs */}
-          {quickSpecs && (
-            <p className="text-[11px] text-slate-600 line-clamp-1 mb-3">
-              {quickSpecs}
-            </p>
-          )}
+          {/* Keep this row height stable even when specs are missing */}
+          <p
+            className={`mb-3 line-clamp-1 text-[11px] text-slate-600 ${quickSpecs ? "" : "invisible"}`}
+          >
+            {quickSpecs || "No specs"}
+          </p>
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -108,11 +108,15 @@ export function ProductCard({ product, href }: ProductCardProps) {
           <div className="border-t border-slate-200 pt-3 mt-2">
             <div className="flex items-end justify-between mb-2">
               <div>
-                {showSale && originalPrice && (
-                  <p className="text-[11px] text-slate-500 line-through font-medium mb-0.5">
-                    {formatCurrency(originalPrice)}
-                  </p>
-                )}
+                <p
+                  className={`mb-0.5 text-[11px] font-medium text-slate-500 line-through ${
+                    showSale && originalPrice ? "" : "invisible"
+                  }`}
+                >
+                  {showSale && originalPrice
+                    ? formatCurrency(originalPrice)
+                    : formatCurrency(displayedPrice)}
+                </p>
                 <p className="text-xl font-bold text-slate-900">
                   {formatCurrency(displayedPrice)}
                 </p>

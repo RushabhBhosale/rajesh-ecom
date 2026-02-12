@@ -620,17 +620,17 @@ export function ProductsToolbar({
     <>
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-0.5">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-500">
             Filter catalog
           </p>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-neutral-600">
             Narrow down these {resultCount} device{resultCount === 1 ? "" : "s"}.
           </p>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="text-xs text-slate-500 hover:text-slate-900"
+          className="text-xs text-neutral-500 hover:text-neutral-900"
           onClick={clearFilters}
           disabled={isPending}
         >
@@ -641,27 +641,27 @@ export function ProductsToolbar({
       <div className="flex flex-wrap gap-2">
         <Badge
           variant="secondary"
-          className="bg-slate-100 px-2.5 py-1 text-[0.7rem] text-slate-700"
+          className="bg-neutral-100 px-2.5 py-1 text-[0.7rem] text-neutral-700"
         >
           {resultCount} result{resultCount === 1 ? "" : "s"}
         </Badge>
         {activeFilters.length > 0 ? (
           <Badge
             variant="outline"
-            className="border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.7rem] text-slate-600"
+            className="border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[0.7rem] text-neutral-600"
           >
             {activeFilters.length} filter{activeFilters.length === 1 ? "" : "s"} active
           </Badge>
         ) : null}
       </div>
 
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-inner">
+      <div className="space-y-3 rounded-2xl border border-neutral-200 bg-gradient-to-b from-white to-neutral-50/80 p-3 shadow-inner">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               Price range
             </p>
-            <p className="text-[0.7rem] text-slate-500">
+            <p className="text-[0.7rem] text-neutral-500">
               Catalog: ₹{priceRange.minPrice.toLocaleString("en-IN")} - ₹
               {priceRange.maxPrice.toLocaleString("en-IN")}
             </p>
@@ -670,7 +670,7 @@ export function ProductsToolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-slate-500 hover:text-slate-900"
+              className="text-xs text-neutral-500 hover:text-neutral-900"
               onClick={clearPriceFilter}
               disabled={isPending}
             >
@@ -680,7 +680,7 @@ export function ProductsToolbar({
         </div>
         <div className="space-y-1.5">
           <div className="price-range-slider relative h-8">
-            <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200" />
+            <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-neutral-200" />
             <div
               className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary/60"
               style={{
@@ -717,7 +717,7 @@ export function ProductsToolbar({
               className="absolute inset-x-0 top-0 h-8 w-full bg-transparent"
             />
           </div>
-          <div className="flex items-center justify-between text-[0.65rem] text-slate-500">
+          <div className="flex items-center justify-between text-[0.65rem] text-neutral-500">
             <span>₹{minSliderValue.toLocaleString("en-IN")}</span>
             <span>₹{maxSliderValue.toLocaleString("en-IN")}</span>
           </div>
@@ -733,7 +733,7 @@ export function ProductsToolbar({
             className="h-9 bg-white text-xs"
             aria-label="Minimum price"
           />
-          <span className="text-xs text-slate-400">to</span>
+          <span className="text-xs text-neutral-400">to</span>
           <Input
             type="number"
             min="0"
@@ -767,8 +767,8 @@ export function ProductsToolbar({
                 size="sm"
                 variant={isActive ? "default" : "outline"}
                 className={cn(
-                  "border-slate-200 px-3 py-1 text-[0.7rem]",
-                  isActive ? "bg-primary text-primary-foreground" : "bg-white text-slate-600"
+                  "border-neutral-200 px-3 py-1 text-[0.7rem]",
+                  isActive ? "bg-primary text-primary-foreground" : "bg-white text-neutral-600"
                 )}
                 onClick={() => handleQuickPrice(range.min, range.max)}
                 disabled={isPending}
@@ -783,7 +783,7 @@ export function ProductsToolbar({
       <div className="space-y-4">
         {primaryGroups.map((group) => (
           <div key={group.key} className="space-y-2">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               {group.title}
             </p>
             {group.options.length ? (
@@ -802,13 +802,13 @@ export function ProductsToolbar({
                         className={cn(
                           "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition",
                           isChecked
-                            ? "border-primary/50 bg-primary/5 text-slate-900 shadow-sm"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                            ? "border-primary/50 bg-primary/5 text-neutral-900 shadow-sm"
+                            : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
                         )}
                       >
                         <input
                           type="checkbox"
-                          className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
+                          className="h-3.5 w-3.5 rounded border-neutral-300 text-primary focus:ring-1 focus:ring-primary"
                           checked={isChecked}
                           onChange={() => toggleFilter(group.key, option.value)}
                           disabled={isPending}
@@ -817,17 +817,17 @@ export function ProductsToolbar({
                         <span className="truncate">{option.label}</span>
                       </label>
                       {showSubSelect ? (
-                        <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
+                        <div className="space-y-1 rounded-lg border border-neutral-200 bg-neutral-50/60 px-2.5 py-2">
                           {subOptions.map((subOption) => {
                             const isSubChecked = filters.companySubMaster === subOption.value;
                             return (
                               <label
                                 key={subOption.value}
-                                className="flex cursor-pointer items-center gap-2 pl-3 text-[11px] text-slate-700"
+                                className="flex cursor-pointer items-center gap-2 pl-3 text-[11px] text-neutral-700"
                               >
                                 <input
                                   type="checkbox"
-                                  className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
+                                  className="h-3.5 w-3.5 rounded border-neutral-300 text-primary focus:ring-1 focus:ring-primary"
                                   checked={isSubChecked}
                                   onChange={() =>
                                     updateParams({
@@ -848,23 +848,23 @@ export function ProductsToolbar({
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-400">No options available</p>
+              <p className="text-xs text-neutral-400">No options available</p>
             )}
           </div>
         ))}
       </div>
 
       {advancedGroups.length ? (
-        <div className="space-y-2 border-t border-slate-200 pt-3">
+        <div className="space-y-2 border-t border-neutral-200 pt-3">
           <details className="group">
-            <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-slate-500 hover:text-slate-800">
+            <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-neutral-500 hover:text-neutral-800">
               <span>Advanced filters</span>
               <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
             </summary>
             <div className="mt-2 space-y-3">
               {advancedGroups.map((group) => (
                 <div key={group.key} className="space-y-1.5">
-                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-500">
                     {group.title}
                   </p>
                   {group.options.length ? (
@@ -877,13 +877,13 @@ export function ProductsToolbar({
                             className={cn(
                               "flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs transition",
                               isChecked
-                                ? "border-primary/50 bg-primary/5 text-slate-900 shadow-sm"
-                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                                ? "border-primary/50 bg-primary/5 text-neutral-900 shadow-sm"
+                                : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300"
                             )}
                           >
                             <input
                               type="checkbox"
-                              className="h-3.5 w-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary"
+                              className="h-3.5 w-3.5 rounded border-neutral-300 text-primary focus:ring-1 focus:ring-primary"
                               checked={isChecked}
                               onChange={() => toggleFilter(group.key, option.value)}
                               disabled={isPending}
@@ -895,7 +895,7 @@ export function ProductsToolbar({
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400">No options available</p>
+                    <p className="text-xs text-neutral-400">No options available</p>
                   )}
                 </div>
               ))}
@@ -905,8 +905,8 @@ export function ProductsToolbar({
       ) : null}
 
       {activeFilters.length ? (
-        <div className="space-y-2 border-t border-slate-200 pt-3">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <div className="space-y-2 border-t border-neutral-200 pt-3">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-neutral-500">
             Active filters
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -914,12 +914,12 @@ export function ProductsToolbar({
               <Badge
                 key={item.key}
                 variant="outline"
-                className="flex items-center gap-1 border-slate-300 bg-white px-2.5 py-1 text-[0.7rem] text-slate-700"
+                className="flex items-center gap-1 border-neutral-300 bg-white px-2.5 py-1 text-[0.7rem] text-neutral-700"
               >
                 {item.label}
                 <button
                   type="button"
-                  className="text-slate-400 transition-colors hover:text-slate-600"
+                  className="text-neutral-400 transition-colors hover:text-neutral-600"
                   onClick={() => {
                     if (item.key === "price") {
                       updateParams({ minPrice: null, maxPrice: null });
@@ -951,25 +951,25 @@ export function ProductsToolbar({
   return (
     <>
       <div className="lg:hidden">
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+        <div className="space-y-2 rounded-2xl border border-neutral-200 bg-gradient-to-b from-white to-neutral-50/90 p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
-              className="h-9 flex-1 justify-start border-slate-300 text-slate-700"
+              className="h-9 flex-1 justify-start border-neutral-300 text-neutral-700"
               onClick={() => setMobileFiltersOpen(true)}
             >
-              <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+              <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
               Filters
               {activeFilters.length > 0 ? (
-                <span className="ml-1 rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                <span className="ml-1 rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                   {activeFilters.length}
                 </span>
               ) : null}
             </Button>
             <Badge
               variant="secondary"
-              className="bg-slate-100 px-2.5 py-1 text-[0.7rem] text-slate-700"
+              className="bg-neutral-100 px-2.5 py-1 text-[0.7rem] text-neutral-700"
             >
               {resultCount} result{resultCount === 1 ? "" : "s"}
             </Badge>
@@ -980,7 +980,7 @@ export function ProductsToolbar({
                 <Badge
                   key={item.key}
                   variant="outline"
-                  className="max-w-full truncate border-slate-300 bg-white px-2.5 py-1 text-[0.7rem] text-slate-700"
+                  className="max-w-full truncate border-neutral-300 bg-white px-2.5 py-1 text-[0.7rem] text-neutral-700"
                 >
                   {item.label}
                 </Badge>
@@ -988,7 +988,7 @@ export function ProductsToolbar({
               {activeFilters.length > mobilePreviewFilters.length ? (
                 <Badge
                   variant="outline"
-                  className="border-slate-300 bg-white px-2.5 py-1 text-[0.7rem] text-slate-600"
+                  className="border-neutral-300 bg-white px-2.5 py-1 text-[0.7rem] text-neutral-600"
                 >
                   +{activeFilters.length - mobilePreviewFilters.length} more
                 </Badge>
@@ -1007,18 +1007,18 @@ export function ProductsToolbar({
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/45"
+            className="absolute inset-0 bg-neutral-900/45"
             onClick={() => setMobileFiltersOpen(false)}
             aria-label="Close filters"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(90vw,360px)] flex-col border-r border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <p className="text-sm font-semibold text-slate-900">Filters</p>
+          <aside className="absolute inset-y-0 left-0 flex w-[min(90vw,360px)] flex-col border-r border-neutral-200 bg-gradient-to-b from-white to-neutral-50 shadow-xl">
+            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
+              <p className="text-sm font-semibold text-neutral-900">Filters</p>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="text-slate-500 hover:text-slate-900"
+                className="text-neutral-500 hover:text-neutral-900"
                 onClick={() => setMobileFiltersOpen(false)}
                 aria-label="Close filters panel"
               >
@@ -1032,7 +1032,7 @@ export function ProductsToolbar({
         </div>
       ) : null}
 
-      <aside className="hidden space-y-4 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm lg:sticky lg:top-28 lg:block lg:max-h-[75vh] lg:overflow-y-auto">
+      <aside className="hidden space-y-4 rounded-2xl border border-neutral-200 bg-gradient-to-b from-white to-neutral-50/80 p-4 shadow-sm lg:sticky lg:top-28 lg:block lg:max-h-[75vh] lg:overflow-y-auto">
         {toolbarContent}
       </aside>
     </>

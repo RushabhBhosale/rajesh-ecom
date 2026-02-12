@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import type { SessionUser } from "@/lib/auth";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductSummary } from "@/lib/products";
+import { defaultStoreSettings, type StoreSettings } from "@/lib/store-settings";
 import { cn } from "@/lib/utils";
 import { brandName } from "@/utils/variable";
 import {
@@ -35,6 +36,14 @@ export function SiteNavbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [topBarSettings, setTopBarSettings] = useState(
+    () => ({
+      enabled: defaultStoreSettings.topBarEnabled,
+      message: defaultStoreSettings.topBarMessage,
+      ctaText: defaultStoreSettings.topBarCtaText,
+      ctaHref: defaultStoreSettings.topBarCtaHref,
+    }),
+  );
   const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [isFetchingUser, setIsFetchingUser] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,6 +116,67 @@ export function SiteNavbar() {
   }, [isAdminArea, pathname]);
 
   useEffect(() => {
+    if (isAdminArea) {
+      return;
+    }
+
+    let isActive = true;
+    const controller = new AbortController();
+
+    async function fetchTopBarSettings() {
+      try {
+        const response = await fetch("/api/settings", {
+          method: "GET",
+          signal: controller.signal,
+          cache: "no-store",
+        });
+
+        if (!response.ok || !isActive) {
+          return;
+        }
+
+        const data: { settings?: Partial<StoreSettings> } = await response.json();
+        const next = data?.settings;
+        if (!next || !isActive) {
+          return;
+        }
+
+        setTopBarSettings({
+          enabled: Boolean(next.topBarEnabled ?? defaultStoreSettings.topBarEnabled),
+          message:
+            typeof next.topBarMessage === "string" && next.topBarMessage.trim().length > 0
+              ? next.topBarMessage
+              : defaultStoreSettings.topBarMessage,
+          ctaText:
+            typeof next.topBarCtaText === "string" && next.topBarCtaText.trim().length > 0
+              ? next.topBarCtaText
+              : defaultStoreSettings.topBarCtaText,
+          ctaHref:
+            typeof next.topBarCtaHref === "string" && next.topBarCtaHref.startsWith("/")
+              ? next.topBarCtaHref
+              : defaultStoreSettings.topBarCtaHref,
+        });
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setTopBarSettings({
+            enabled: defaultStoreSettings.topBarEnabled,
+            message: defaultStoreSettings.topBarMessage,
+            ctaText: defaultStoreSettings.topBarCtaText,
+            ctaHref: defaultStoreSettings.topBarCtaHref,
+          });
+        }
+      }
+    }
+
+    void fetchTopBarSettings();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [isAdminArea, pathname]);
+
+  useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
       if (
         userMenuRef.current &&
@@ -169,7 +239,7 @@ export function SiteNavbar() {
       try {
         const response = await fetch(
           `/api/products?search=${encodeURIComponent(query)}&limit=6`,
-          { signal: controller.signal }
+          { signal: controller.signal },
         );
         if (!response.ok) {
           throw new Error("Unable to search products");
@@ -211,7 +281,7 @@ export function SiteNavbar() {
     function handlePointerDown(event: PointerEvent) {
       const targets = [desktopSearchRef.current, mobileSearchRef.current];
       const clickedInside = targets.some(
-        (target) => target && target.contains(event.target as Node)
+        (target) => target && target.contains(event.target as Node),
       );
       if (!clickedInside) {
         setShowSuggestions(false);
@@ -232,6 +302,28 @@ export function SiteNavbar() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -281,13 +373,13 @@ export function SiteNavbar() {
     return (
       <div
         className={cn(
-          "absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border/60 bg-background/98 shadow-xl backdrop-blur-sm",
-          variant === "mobile" ? "max-h-72" : "max-h-96"
+          "absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-xl backdrop-blur-sm",
+          variant === "mobile" ? "max-h-72" : "max-h-96",
         )}
       >
-        <div className="divide-y divide-border/60">
+        <div className="divide-y divide-neutral-200">
           {isSearching ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground">
+            <p className="px-4 py-3 text-sm text-neutral-500">
               Searching products...
             </p>
           ) : suggestions.length ? (
@@ -299,28 +391,28 @@ export function SiteNavbar() {
                 <Link
                   key={product.id}
                   href={`/products/${product.id}`}
-                  className="flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-muted/60"
+                  className="flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-neutral-100/70"
                   onClick={() => {
                     setShowSuggestions(false);
                     setMenuOpen(false);
                   }}
                 >
                   <div className="flex-1 space-y-1">
-                    <p className="line-clamp-2 font-semibold text-foreground">
+                    <p className="line-clamp-2 font-semibold text-neutral-900">
                       {product.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-neutral-500">
                       {taxonomy || "View product"}
                     </p>
                   </div>
-                  <span className="whitespace-nowrap text-xs font-semibold text-foreground">
+                  <span className="whitespace-nowrap text-xs font-semibold text-neutral-900">
                     {formatCurrency(product.price)}
                   </span>
                 </Link>
               );
             })
           ) : (
-            <p className="px-4 py-3 text-sm text-muted-foreground">
+            <p className="px-4 py-3 text-sm text-neutral-500">
               No matching products yet
             </p>
           )}
@@ -335,37 +427,39 @@ export function SiteNavbar() {
 
   return (
     <>
-      <div className="hidden border-b border-border/60 bg-primary text-primary-foreground md:block">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 text-xs font-semibold">
-          <p>Free 2-day shipping on business orders over $499.</p>
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
-          >
-            Browse featured inventory
-          </Link>
+      {topBarSettings.enabled ? (
+        <div className="hidden border-b border-neutral-200 bg-white text-neutral-700 md:block">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-2 text-xs font-semibold">
+            <p>{topBarSettings.message}</p>
+            <Link
+              href={topBarSettings.ctaHref}
+              className="inline-flex items-center gap-1 text-neutral-600 underline-offset-4 transition-colors hover:text-neutral-900 hover:underline"
+            >
+              {topBarSettings.ctaText}
+            </Link>
+          </div>
         </div>
-      </div>
-      <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/95 backdrop-blur">
+      ) : null}
+      <header className="sticky top-0 z-40 w-full border-b border-neutral-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-8">
             <Link
               href="/"
-              className="flex items-center gap-2 text-base font-semibold text-foreground"
+              className="flex items-center gap-2 text-base font-semibold text-neutral-900"
             >
-              <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="inline-flex size-8 items-center justify-center rounded-full bg-neutral-900 text-white">
                 R
               </span>
               {brandName}
             </Link>
-            <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
+            <nav className="hidden items-center gap-6 text-sm font-medium text-neutral-500 lg:flex">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "transition-colors hover:text-foreground",
-                    pathname === link.href ? "text-foreground" : undefined
+                    "transition-colors hover:text-neutral-900",
+                    pathname === link.href ? "text-neutral-900" : undefined,
                   )}
                 >
                   {link.label}
@@ -380,7 +474,7 @@ export function SiteNavbar() {
             role="search"
           >
             <Search
-              className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500"
               aria-hidden
             />
             <Input
@@ -396,7 +490,7 @@ export function SiteNavbar() {
                 }
               }}
               placeholder="Search for laptops, tablets, accessories..."
-              className="h-11 rounded-full border-border/70 bg-muted/70 pl-10 pr-14 text-sm"
+              className="h-11 rounded-full border-neutral-200 bg-white/80 pl-10 pr-14 text-sm"
               aria-label="Search products"
             />
             <Button
@@ -415,8 +509,8 @@ export function SiteNavbar() {
                 <button
                   type="button"
                   className={cn(
-                    "flex items-center gap-2 rounded-full border border-border/60 bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    isFetchingUser && "opacity-75"
+                    "flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    isFetchingUser && "opacity-75",
                   )}
                   onClick={() => setUserMenuOpen((prev) => !prev)}
                   aria-haspopup="menu"
@@ -424,7 +518,7 @@ export function SiteNavbar() {
                   aria-label="Account options"
                   disabled={isFetchingUser}
                 >
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-neutral-100 text-sm font-semibold text-neutral-900">
                     {userInitial || "U"}
                   </span>
                   <span className="hidden max-w-[140px] truncate md:inline">
@@ -434,16 +528,16 @@ export function SiteNavbar() {
                 {userMenuOpen ? (
                   <div
                     role="menu"
-                    className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-border/60 bg-background/95 p-2 text-sm shadow-lg"
+                    className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-neutral-200 bg-white/95 p-2 text-sm shadow-lg"
                   >
-                    <div className="space-y-1 rounded-md bg-muted/40 p-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <div className="space-y-1 rounded-md bg-neutral-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-neutral-500">
                         Signed in
                       </p>
-                      <p className="truncate font-semibold text-foreground">
+                      <p className="truncate font-semibold text-neutral-900">
                         {currentUser.name || currentUser.email}
                       </p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="truncate text-xs text-neutral-500">
                         {currentUser.email}
                       </p>
                     </div>
@@ -480,7 +574,7 @@ export function SiteNavbar() {
                 ) : null}
               </div>
             ) : isFetchingUser ? (
-              <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
+              <div className="h-9 w-24 animate-pulse rounded-full bg-neutral-200" />
             ) : (
               authLinks.map((link) => (
                 <Button
@@ -512,7 +606,7 @@ export function SiteNavbar() {
           </div>
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md border border-border/60 p-2 text-muted-foreground md:hidden"
+            className="inline-flex items-center justify-center rounded-md border border-neutral-200 p-2 text-neutral-600 md:hidden"
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label={menuOpen ? "Close navigation" : "Open navigation"}
           >
@@ -523,8 +617,34 @@ export function SiteNavbar() {
             )}
           </button>
         </div>
-        {menuOpen ? (
-          <div className="border-t border-border/60 bg-background/95 px-4 py-4 md:hidden">
+      </header>
+      {menuOpen ? (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-neutral-900/45"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close navigation menu"
+          />
+          <aside
+            className="absolute inset-y-0 right-0 flex h-full w-[calc(100%-20px)] max-w-sm flex-col overflow-y-auto border-l border-neutral-200 bg-white p-4 shadow-2xl backdrop-blur-3xl animate-in slide-in-from-right duration-300"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation menu"
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Menu
+              </p>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border border-neutral-200 p-2 text-neutral-600"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close navigation"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
             <form
               ref={mobileSearchRef}
               className="relative mb-4"
@@ -544,7 +664,7 @@ export function SiteNavbar() {
                   }
                 }}
                 placeholder="Search for products"
-                className="h-11 rounded-full border-border/70 bg-muted/70 pl-4 pr-12 text-sm"
+                className="h-11 rounded-full border-neutral-200 bg-white/80 pl-4 pr-12 text-sm"
                 aria-label="Search products"
               />
               <Button
@@ -564,27 +684,27 @@ export function SiteNavbar() {
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
+                    "rounded-md px-2 py-1 text-neutral-600 transition-colors hover:bg-neutral-100/70 hover:text-neutral-900",
                     pathname === link.href
-                      ? "bg-muted/60 text-foreground"
-                      : undefined
+                      ? "bg-neutral-100/70 text-neutral-900"
+                      : undefined,
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
             </nav>
-            <div className="mt-4 flex flex-col gap-2">
+            <div className="mt-4 flex flex-col gap-2 pb-2">
               {currentUser ? (
                 <>
-                  <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <div className="rounded-lg border border-neutral-200 bg-neutral-50/80 p-4 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-neutral-500">
                       Signed in
                     </p>
-                    <p className="font-semibold text-foreground">
+                    <p className="font-semibold text-neutral-900">
                       {currentUser.name || currentUser.email}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-neutral-500">
                       {currentUser.email}
                     </p>
                   </div>
@@ -619,7 +739,7 @@ export function SiteNavbar() {
                   />
                 </>
               ) : isFetchingUser ? (
-                <div className="h-10 w-full animate-pulse rounded-lg bg-muted" />
+                <div className="h-10 w-full animate-pulse rounded-lg bg-neutral-200" />
               ) : (
                 authLinks.map((link) => (
                   <Button
@@ -656,9 +776,9 @@ export function SiteNavbar() {
                 </Link>
               </Button>
             </div>
-          </div>
-        ) : null}
-      </header>
+          </aside>
+        </div>
+      ) : null}
     </>
   );
 }

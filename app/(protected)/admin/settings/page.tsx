@@ -15,7 +15,7 @@ export default async function AdminSettingsPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold text-foreground">Store settings</h1>
         <p className="text-sm text-muted-foreground">
-          Control GST and shipping charges applied during checkout.
+          Control checkout pricing rules and storefront announcement banner content.
         </p>
       </div>
 

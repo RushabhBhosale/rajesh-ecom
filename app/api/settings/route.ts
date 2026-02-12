@@ -5,6 +5,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { defaultStoreSettings, normalizeStoreSettings } from "@/lib/store-settings";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store-settings/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const numericInput = (max?: number) =>
   z
     .preprocess(
@@ -26,15 +29,33 @@ const settingsSchema = z.object({
   gstRate: numericInput(100), // percentage 0-100
   shippingEnabled: z.boolean().optional(),
   shippingAmount: numericInput(),
+  topBarEnabled: z.boolean().optional(),
+  topBarMessage: z.string().trim().max(140).optional(),
+  topBarCtaText: z.string().trim().max(60).optional(),
+  topBarCtaHref: z.string().trim().max(300).optional(),
 });
 
 export async function GET() {
   try {
     const settings = await getStoreSettings();
-    return NextResponse.json({ settings });
+    return NextResponse.json(
+      { settings },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Failed to load store settings", error);
-    return NextResponse.json({ settings: defaultStoreSettings });
+    return NextResponse.json(
+      { settings: defaultStoreSettings },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   }
 }
 
