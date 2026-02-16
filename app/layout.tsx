@@ -5,6 +5,7 @@ import "./globals.css";
 import { ToasterProvider } from "@/components/providers/toaster-provider";
 import { SiteNavbar } from "@/components/navigation/site-navbar";
 import { SiteFooter } from "@/components/navigation/site-footer";
+import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import { brandName } from "@/utils/variable";
 
@@ -67,6 +68,7 @@ export default function RootLayout({
           <div className="flex-1">{children}</div>
           <SiteFooter />
         </div>
+        <MobileBottomNav />
       </body>
     </html>
   );
