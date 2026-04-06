@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
+import {
+  createOrderEmailPayload,
+  sendOrderStatusUpdateEmail,
+} from "@/lib/mailer";
 import { ORDER_STATUS_VALUES, type OrderStatusValue } from "@/lib/order-status";
 import { getOrderById } from "@/lib/orders";
 import { OrderModel } from "@/models/order";
@@ -12,7 +16,15 @@ const STATUS_VALUES = ORDER_STATUS_VALUES as [OrderStatusValue, ...OrderStatusVa
 
 const payloadSchema = z.object({
   status: z.enum(STATUS_VALUES),
+  note: z.string().trim().max(280, "Status note must be 280 characters or less.").optional(),
 });
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return { ...(value as Record<string, unknown>) };
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -28,7 +40,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { status } = payloadSchema.parse(await request.json());
+    const { status, note } = payloadSchema.parse(await request.json());
 
     await connectDB();
     const order = await OrderModel.findById(orderId);
@@ -36,7 +48,36 @@ export async function PATCH(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    const update: Record<string, unknown> = { status };
+    const previousStatus = order.status;
+    if (status === previousStatus) {
+      const currentSummary = await getOrderById(orderId);
+      return NextResponse.json({ order: currentSummary }, { status: 200 });
+    }
+
+    const normalizedNote = note?.trim() ?? "";
+    const existingMetadata = toRecord(order.metadata);
+    const existingStatusUpdates = Array.isArray(existingMetadata.statusUpdates)
+      ? existingMetadata.statusUpdates
+          .filter((entry) => entry && typeof entry === "object")
+          .map((entry) => ({ ...(entry as Record<string, unknown>) }))
+      : [];
+
+    const updateMetadata: Record<string, unknown> = {
+      ...existingMetadata,
+      latestStatusNote: normalizedNote || null,
+      statusUpdates: [
+        {
+          previousStatus,
+          status,
+          note: normalizedNote || null,
+          updatedAt: new Date().toISOString(),
+          updatedBy: actor.email,
+        },
+        ...existingStatusUpdates,
+      ].slice(0, 25),
+    };
+
+    const update: Record<string, unknown> = { status, metadata: updateMetadata };
     if (order.paymentMethod === "cod" && status === "delivered") {
       update.paymentStatus = "paid";
     }
@@ -56,6 +97,17 @@ export async function PATCH(
     }
 
     const summary = await getOrderById(updated._id.toString());
+    if (summary && summary.status !== previousStatus) {
+      const emailPayload = createOrderEmailPayload(summary);
+      void sendOrderStatusUpdateEmail({
+        ...emailPayload,
+        previousStatus,
+        statusNote: normalizedNote || null,
+      }).catch((emailError) => {
+        console.error("Order status email failed", emailError);
+      });
+    }
+
     return NextResponse.json({ order: summary }, { status: 200 });
   } catch (error) {
     console.error("Update order status failed", error);

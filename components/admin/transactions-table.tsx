@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Receipt } from "lucide-react";
+import Link from "next/link";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
@@ -35,10 +36,29 @@ export function TransactionsTable({ data }: TransactionsTableProps) {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Transaction" />,
         cell: ({ row }) => (
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">TX-{getShortId(row.original.id)}</p>
-            <p className="text-xs text-muted-foreground">Order #{getShortId(row.original.orderId)}</p>
+            <Link
+              href={`/admin/transactions/${row.original.id}`}
+              className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+            >
+              TX-{getShortId(row.original.id)}
+            </Link>
           </div>
         ),
+      },
+      {
+        accessorKey: "orderId",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Order" />,
+        cell: ({ row }) =>
+          row.original.orderId ? (
+            <Link
+              href={`/admin/orders/${row.original.orderId}`}
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Order #{getShortId(row.original.orderId)}
+            </Link>
+          ) : (
+            <span className="text-sm text-muted-foreground">Unavailable</span>
+          ),
       },
       {
         accessorKey: "paymentMethod",
@@ -93,8 +113,22 @@ export function TransactionsTable({ data }: TransactionsTableProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">TX-{getShortId(transaction.id)}</p>
-              <p className="text-xs text-muted-foreground">Order #{getShortId(transaction.orderId)}</p>
+              <Link
+                href={`/admin/transactions/${transaction.id}`}
+                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                TX-{getShortId(transaction.id)}
+              </Link>
+              {transaction.orderId ? (
+                <Link
+                  href={`/admin/orders/${transaction.orderId}`}
+                  className="block text-xs text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  Order #{getShortId(transaction.orderId)}
+                </Link>
+              ) : (
+                <p className="text-xs text-muted-foreground">Order unavailable</p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-foreground">{currencyFormatter.format(transaction.amount)}</p>

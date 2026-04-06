@@ -16,10 +16,11 @@ export const metadata: Metadata = {
 export default async function EditSubMasterPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const [submaster, masters, submasters] = await Promise.all([
-    getSubMasterOptionById(params.id),
+    getSubMasterOptionById(id),
     listMasterOptions(masterTypes),
     listSubMasterOptions(),
   ]);

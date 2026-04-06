@@ -25,6 +25,7 @@ export default async function OrderDetailPage({
   }
 
   const created = new Date(order.createdAt);
+  const invoiceIssuedAt = new Date(order.invoiceIssuedAt);
   const statusLabel = getOrderStatusLabel(order.status);
   const paymentMethodLabel =
     order.paymentMethod === "cod" ? "Cash on delivery" : "Razorpay";
@@ -43,6 +44,13 @@ export default async function OrderDetailPage({
         <p className="text-sm text-muted-foreground">
           Placed on{" "}
           {created.toLocaleString(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Invoice {order.invoiceNumber} · Issued{" "}
+          {invoiceIssuedAt.toLocaleString(undefined, {
             dateStyle: "medium",
             timeStyle: "short",
           })}
@@ -120,6 +128,30 @@ export default async function OrderDetailPage({
         </div>
 
         <aside className="space-y-4 rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Invoice
+            </p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {order.invoiceNumber}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Issued{" "}
+              {invoiceIssuedAt.toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+            <a
+              href={`/api/orders/${order.id}/invoice`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              View invoice
+            </a>
+          </div>
+
           <div className="space-y-2">
             <h2 className="text-lg font-semibold text-foreground">
               Payment summary

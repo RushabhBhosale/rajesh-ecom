@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -113,7 +114,14 @@ export function MasterTable({ data }: MasterTableProps) {
               filtered.map((option) => (
                 <TableRow key={option.id}>
                   <TableCell className="font-medium">{masterTypeLabels[option.type]}</TableCell>
-                  <TableCell>{option.name}</TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/admin/masters/${option.id}`}
+                      className="font-medium text-foreground underline-offset-4 hover:underline"
+                    >
+                      {option.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {option.description || "—"}
                   </TableCell>

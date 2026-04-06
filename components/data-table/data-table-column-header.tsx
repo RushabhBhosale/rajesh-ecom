@@ -21,7 +21,13 @@ export function DataTableColumnHeader<TData, TValue>({
 
   if (!column.getCanSort()) {
     return (
-      <span className={cn("text-xs font-semibold uppercase tracking-wide text-muted-foreground", align === "center" && "text-center", align === "right" && "text-right")}>
+      <span
+        className={cn(
+          "text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+          align === "center" && "text-center",
+          align === "right" && "text-right",
+        )}
+      >
         {title}
       </span>
     );

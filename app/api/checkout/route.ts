@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { checkoutPayloadSchema } from "@/lib/checkout-validation";
 import { connectDB } from "@/lib/db";
+import { buildInvoiceNumber } from "@/lib/invoice";
 import { sendOrderConfirmationEmail } from "@/lib/mailer";
 import { getRazorpayClient, getRazorpayKeyId } from "@/lib/razorpay";
 import { getStoreSettings } from "@/lib/store-settings/server";
@@ -290,6 +291,17 @@ export async function POST(request: Request) {
       notes: payload.notes ?? "",
     });
 
+    const invoiceIssuedAt =
+      order.createdAt instanceof Date ? order.createdAt : new Date();
+    const invoiceNumber = buildInvoiceNumber({
+      orderId: order._id.toString(),
+      issuedAt: invoiceIssuedAt,
+    });
+
+    order.invoiceNumber = invoiceNumber;
+    order.invoiceIssuedAt = invoiceIssuedAt;
+    await order.save();
+
     const transaction = await TransactionModel.create({
       orderId: order._id,
       amount: total,
@@ -304,12 +316,16 @@ export async function POST(request: Request) {
       customerName: order.customerName,
       orderId: order._id.toString(),
       orderNumber: order._id.toString().slice(-6).toUpperCase(),
+      invoiceNumber,
+      invoiceIssuedAt: invoiceIssuedAt.toISOString(),
       status: order.status,
-      paymentMethod: order.paymentMethod === "cod" ? "Cash on delivery" : "Razorpay",
+      paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
-      total,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      shipping: order.shipping,
+      total: order.total,
       currency: order.currency,
-      shipping: shippingAmount,
       items: orderItems.map((item) => ({
         name: item.name,
         quantity: item.quantity,

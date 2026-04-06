@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import {
+  createOrderEmailPayload,
+  sendOrderStatusUpdateEmail,
+} from "@/lib/mailer";
 import { getOrderById } from "@/lib/orders";
 import { OrderModel } from "@/models/order";
 
@@ -30,10 +34,21 @@ export async function POST(
       }, { status: 400 });
     }
 
+    const previousStatus = order.status;
     order.status = "returned";
     await order.save();
 
     const summary = await getOrderById(order._id.toString());
+    if (summary && summary.status !== previousStatus) {
+      const emailPayload = createOrderEmailPayload(summary);
+      void sendOrderStatusUpdateEmail({
+        ...emailPayload,
+        previousStatus,
+      }).catch((emailError) => {
+        console.error("Return status email failed", emailError);
+      });
+    }
+
     return NextResponse.json({ order: summary }, { status: 200 });
   } catch (error) {
     console.error("Request return failed", error);

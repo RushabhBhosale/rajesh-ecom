@@ -10,8 +10,13 @@ export const metadata: Metadata = {
   title: "Edit master | Rajesh Control",
 };
 
-export default async function EditMasterPage({ params }: { params: { id: string } }) {
-  const master = await getMasterOptionById(params.id);
+export default async function EditMasterPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const master = await getMasterOptionById(id);
 
   if (!master) {
     notFound();

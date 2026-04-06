@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -381,7 +382,14 @@ export function AdminDashboardContent({ metrics }: AdminDashboardContentProps) {
               <TableBody>
                 {metrics.recentOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {order.orderNumber}
+                      </Link>
+                    </TableCell>
                     <TableCell>{order.customerName}</TableCell>
                     <TableCell>{getOrderStatusLabel(order.status)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(order.total)}</TableCell>

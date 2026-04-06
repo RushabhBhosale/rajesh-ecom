@@ -14,6 +14,7 @@ export default async function AdminInventoryPage() {
     .flatMap((product) =>
       product.variants.map((variant) => ({
         id: variant.id,
+        productId: product.id,
         sku: variant.sku || `${product.name} ${variant.label}`.trim(),
         productName: product.name,
         variantLabel: variant.label,

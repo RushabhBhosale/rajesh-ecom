@@ -50,6 +50,8 @@ const OrderSchema = new Schema(
     shipping: { type: Number, required: true, min: 0, default: 0 },
     total: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "INR" },
+    invoiceNumber: { type: String, default: "", trim: true, uppercase: true },
+    invoiceIssuedAt: { type: Date, default: null },
     paymentMethod: { type: String, enum: paymentMethods, required: true },
     paymentStatus: { type: String, enum: paymentStatuses, default: "pending" },
     status: { type: String, enum: [...ORDER_STATUS_VALUES], default: "placed" },

@@ -3,6 +3,11 @@ import { ZodError } from "zod";
 
 import { razorpayVerificationSchema } from "@/lib/checkout-validation";
 import { connectDB } from "@/lib/db";
+import {
+  createOrderEmailPayload,
+  sendOrderStatusUpdateEmail,
+} from "@/lib/mailer";
+import { getOrderById } from "@/lib/orders";
 import { verifyRazorpaySignature } from "@/lib/razorpay";
 import { OrderModel } from "@/models/order";
 import { TransactionModel } from "@/models/transaction";
@@ -48,6 +53,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
     }
 
+    const previousStatus = order.status;
+    const previousPaymentStatus = order.paymentStatus;
+
     await OrderModel.findByIdAndUpdate(order._id, {
       paymentStatus: "paid",
       status: "processing",
@@ -66,6 +74,19 @@ export async function POST(request: Request) {
       },
       { sort: { createdAt: -1 } }
     );
+
+    if (previousStatus !== "processing" || previousPaymentStatus !== "paid") {
+      const summary = await getOrderById(order._id.toString());
+      if (summary) {
+        const emailPayload = createOrderEmailPayload(summary);
+        void sendOrderStatusUpdateEmail({
+          ...emailPayload,
+          previousStatus,
+        }).catch((emailError) => {
+          console.error("Order status email failed", emailError);
+        });
+      }
+    }
 
     return NextResponse.json({ message: "Payment verified" }, { status: 200 });
   } catch (error) {

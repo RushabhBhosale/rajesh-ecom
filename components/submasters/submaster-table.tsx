@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -186,7 +187,14 @@ export function SubMasterTable({ data }: SubMasterTableProps) {
                   <TableCell className="font-medium">
                     {masterTypeLabels[option.masterType]}
                   </TableCell>
-                  <TableCell>{parentLookup.buildPath(option)}</TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/admin/submasters/${option.id}`}
+                      className="text-foreground underline-offset-4 hover:underline"
+                    >
+                      {parentLookup.buildPath(option)}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {option.description || "—"}
                   </TableCell>

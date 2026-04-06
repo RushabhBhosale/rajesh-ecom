@@ -27,6 +27,7 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
 
   const created = new Date(order.createdAt);
   const updated = new Date(order.updatedAt);
+  const invoiceIssuedAt = new Date(order.invoiceIssuedAt);
   const statusLabel = getOrderStatusLabel(order.status);
   const paymentMethodLabel = order.paymentMethod === "cod" ? "Cash on delivery" : "Razorpay";
 
@@ -40,6 +41,9 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
         <p className="text-sm text-muted-foreground">
           Created on {created.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · Last updated {updated.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
         </p>
+        <p className="text-sm text-muted-foreground">
+          Invoice {order.invoiceNumber} · Issued {invoiceIssuedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+        </p>
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
@@ -51,6 +55,12 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
               </span>
               <OrderStatusSelect orderId={order.id} status={order.status as OrderStatusValue} />
             </div>
+            {order.latestStatusNote ? (
+              <p className="text-xs text-muted-foreground">
+                Latest status note:{" "}
+                <span className="font-medium text-foreground">{order.latestStatusNote}</span>
+              </p>
+            ) : null}
 
             <dl className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
               <div>
@@ -109,6 +119,22 @@ export default async function AdminOrderDetailPage({ params }: AdminOrderDetailP
         </div>
 
         <aside className="space-y-4 rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Invoice</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{order.invoiceNumber}</p>
+            <p className="text-xs text-muted-foreground">
+              Issued {invoiceIssuedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+            </p>
+            <a
+              href={`/api/orders/${order.id}/invoice`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              View invoice
+            </a>
+          </div>
+
           <div className="space-y-2 text-sm text-muted-foreground">
             <h2 className="text-lg font-semibold text-foreground">Payment summary</h2>
             <div className="flex items-center justify-between">

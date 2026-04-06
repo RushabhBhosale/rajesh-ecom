@@ -47,7 +47,12 @@ export function OrdersTable({ data }: OrdersTableProps) {
         header: ({ column }) => <DataTableColumnHeader column={column} title="Order" />,
         cell: ({ row }) => (
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">#{row.original.orderNumber}</p>
+            <Link
+              href={`/admin/orders/${row.original.id}`}
+              className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+            >
+              #{row.original.orderNumber}
+            </Link>
             <p className="text-xs text-muted-foreground">{dateFormatter.format(new Date(row.original.createdAt))}</p>
           </div>
         ),
@@ -193,7 +198,12 @@ export function OrdersTable({ data }: OrdersTableProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">#{order.orderNumber}</p>
+              <Link
+                href={`/admin/orders/${order.id}`}
+                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                #{order.orderNumber}
+              </Link>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" aria-hidden />
                 {dateFormatter.format(new Date(order.createdAt))}

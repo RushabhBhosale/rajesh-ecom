@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/data-table/data-table";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 export interface InventoryItem {
   id: string;
+  productId: string;
   sku: string;
   productName: string;
   variantLabel: string;
@@ -146,9 +148,12 @@ export function InventoryTable({ items }: InventoryTableProps) {
           const original = row.original;
           return (
             <div className="space-y-1">
-              <p className="font-semibold text-foreground">
+              <Link
+                href={`/admin/products/${original.productId}`}
+                className="font-semibold text-foreground underline-offset-4 hover:underline"
+              >
                 {original.sku || "—"}
-              </p>
+              </Link>
               <p className="text-xs text-muted-foreground">
                 {original.category}
                 {original.company ? ` • ${original.company}` : ""}
@@ -236,9 +241,12 @@ export function InventoryTable({ items }: InventoryTableProps) {
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">
+              <Link
+                href={`/admin/products/${row.productId}`}
+                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+              >
                 {row.sku || "—"}
-              </p>
+              </Link>
               <p className="text-xs text-muted-foreground">
                 {row.category}
                 {row.company ? ` • ${row.company}` : ""}

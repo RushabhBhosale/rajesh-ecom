@@ -15,6 +15,7 @@ export const adminNavLinks: AdminNavLink[] = [
   },
   { href: "/admin/inventory", label: "Inventory", roles: ["admin", "superadmin"] },
   { href: "/admin/orders", label: "Orders", roles: ["admin", "superadmin"] },
+  { href: "/admin/invoices", label: "Invoices", roles: ["admin", "superadmin"] },
   {
     href: "/admin/transactions",
     label: "Transactions",

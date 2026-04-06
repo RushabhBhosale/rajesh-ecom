@@ -8,8 +8,13 @@ export const metadata: Metadata = {
   title: "Edit category | Rajesh Control",
 };
 
-export default async function EditCategoryPage({ params }: { params: { categoryId: string } }) {
-  const category = await getCategoryById(params.categoryId);
+export default async function EditCategoryPage({
+  params,
+}: {
+  params: Promise<{ categoryId: string }>;
+}) {
+  const { categoryId } = await params;
+  const category = await getCategoryById(categoryId);
 
   if (!category) {
     notFound();

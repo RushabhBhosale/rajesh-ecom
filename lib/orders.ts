@@ -1,4 +1,5 @@
 import { connectDB } from "@/lib/db";
+import { resolveInvoiceDetails } from "@/lib/invoice";
 import { OrderModel, type OrderDocument } from "@/models/order";
 
 export interface OrderItemSummary {
@@ -17,6 +18,8 @@ export interface OrderItemSummary {
 export interface OrderSummary {
   id: string;
   orderNumber: string;
+  invoiceNumber: string;
+  invoiceIssuedAt: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -31,6 +34,7 @@ export interface OrderSummary {
   itemCount: number;
   createdAt: string;
   updatedAt: string;
+  latestStatusNote?: string | null;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
   razorpaySignature: string | null;
@@ -61,9 +65,27 @@ function mapOrder(order: OrderDocument): OrderSummary {
       }))
     : [];
 
+  const metadata =
+    order.metadata && typeof order.metadata === "object" && !Array.isArray(order.metadata)
+      ? (order.metadata as Record<string, unknown>)
+      : {};
+  const latestStatusNote =
+    typeof metadata.latestStatusNote === "string" && metadata.latestStatusNote.trim()
+      ? metadata.latestStatusNote.trim()
+      : null;
+
+  const { invoiceNumber, invoiceIssuedAt } = resolveInvoiceDetails({
+    orderId: order._id.toString(),
+    issuedAt: order.createdAt,
+    invoiceNumber: order.invoiceNumber,
+    invoiceIssuedAt: order.invoiceIssuedAt ?? order.createdAt,
+  });
+
   return {
     id: order._id.toString(),
     orderNumber: order._id.toString().slice(-6).toUpperCase(),
+    invoiceNumber,
+    invoiceIssuedAt: invoiceIssuedAt.toISOString(),
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     customerPhone: order.customerPhone,
@@ -78,6 +100,7 @@ function mapOrder(order: OrderDocument): OrderSummary {
     itemCount: items.reduce((total, item) => total + item.quantity, 0),
     createdAt: order.createdAt?.toISOString?.() ?? new Date().toISOString(),
     updatedAt: order.updatedAt?.toISOString?.() ?? new Date().toISOString(),
+    latestStatusNote,
     razorpayOrderId: order.razorpayOrderId || null,
     razorpayPaymentId: order.razorpayPaymentId || null,
     razorpaySignature: order.razorpaySignature || null,

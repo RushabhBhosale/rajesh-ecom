@@ -41,3 +41,12 @@ export async function listTransactions(): Promise<TransactionSummary[]> {
 
   return (transactions ?? []).map(mapTransaction);
 }
+
+export async function getTransactionById(id: string): Promise<TransactionSummary | null> {
+  await connectDB();
+  const transaction = await TransactionModel.findById(id).lean<TransactionDocument | null>();
+  if (!transaction) {
+    return null;
+  }
+  return mapTransaction(transaction);
+}

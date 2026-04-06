@@ -22,7 +22,12 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Folder className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <span className="font-medium text-foreground">{row.original.name}</span>
+            <Link
+              href={`/admin/categories/${row.original.id}`}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              {row.original.name}
+            </Link>
           </div>
         ),
       },
@@ -90,7 +95,12 @@ export function CategoriesTable({ data }: CategoriesTableProps) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Folder className="h-5 w-5 text-muted-foreground" aria-hidden />
-                <span className="text-base font-semibold text-foreground">{category.name}</span>
+                <Link
+                  href={`/admin/categories/${category.id}`}
+                  className="text-base font-semibold text-foreground underline-offset-4 hover:underline"
+                >
+                  {category.name}
+                </Link>
               </div>
               <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                 {category.productCount} products
